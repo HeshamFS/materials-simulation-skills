@@ -1,0 +1,13 @@
+# Development dependencies for materials-simulation-skills
+# Install with: pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+# Testing
+pytest>=7.0
+pytest-cov>=4.0
+hypothesis>=6.0
+
+# Optional for advanced features
+scipy>=1.7
+scikit-learn>=1.0

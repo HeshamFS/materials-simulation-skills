@@ -1,0 +1,4 @@
+# Core dependencies for materials-simulation-skills
+# Install with: pip install -r requirements.txt
+
+numpy>=1.21

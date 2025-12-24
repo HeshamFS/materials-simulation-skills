@@ -1,0 +1,9 @@
+{
+  "dx": 1e-6,
+  "dt": 1e-4,
+  "output_dir": "output",
+  "parameters": {
+    "mobility": 1.0
+  },
+  "material_source": "materials-project"
+}

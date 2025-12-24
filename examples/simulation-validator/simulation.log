@@ -1,0 +1,4 @@
+Iteration 1 residual=1e-2 dt=1e-4
+Iteration 2 residual=5e-3 dt=1e-4
+Iteration 3 residual=3e-3 dt=5e-5
+Warning: dt reduced

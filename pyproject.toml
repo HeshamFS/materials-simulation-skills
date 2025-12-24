@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "materials-simulation-skills"
+version = "1.0.0"
+description = "Agent Skills for materials science simulations - numerical methods, validation, and parameter optimization"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+authors = [
+    {name = "Materials Simulation Skills Contributors"}
+]
+keywords = [
+    "materials-science",
+    "simulation",
+    "numerical-methods",
+    "agent-skills",
+    "finite-difference",
+    "mesh-generation",
+    "parameter-optimization",
+    "design-of-experiments",
+    "cfl-condition",
+    "phase-field"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+
+dependencies = [
+    "numpy>=1.21",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "hypothesis>=6.0",
+]
+full = [
+    "scipy>=1.7",
+    "scikit-learn>=1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/username/materials-simulation-skills"
+Documentation = "https://github.com/username/materials-simulation-skills#readme"
+Repository = "https://github.com/username/materials-simulation-skills.git"
+Issues = "https://github.com/username/materials-simulation-skills/issues"
+
+[tool.setuptools]
+packages = ["skills"]
+package-dir = {"" = "."}
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt", "*.json"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "-ra",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["skills"]
+omit = ["tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
