@@ -1,7 +1,35 @@
+# Exclude all dot folders by default
+.*/
+
+# But include specific dot folders we need
+!.kiro/
+!.github/
+!.git/
+!.claude/
+
+# Python
 __pycache__/
 *.pyc
-.pytest_cache/
-.coverage
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
 dist/
 build/
+
+# Temporary files
+*.log
+*.tmp
+temp_*.json
+timing_results.json
+scaling_results.json
+memory_results.json
+
+# OS
+Thumbs.db
 .DS_Store
+*.swp
+*.swo
+*~

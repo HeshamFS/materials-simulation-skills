@@ -1,0 +1,22 @@
+{
+  "mesh": {
+    "nx": 256,
+    "ny": 256,
+    "nz": 256
+  },
+  "fields": {
+    "concentration": {
+      "components": 2,
+      "bytes_per_value": 8
+    },
+    "temperature": {
+      "components": 1,
+      "bytes_per_value": 8
+    }
+  },
+  "solver": {
+    "type": "iterative",
+    "workspace_multiplier": 5
+  },
+  "processors": 4
+}

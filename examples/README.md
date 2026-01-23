@@ -30,6 +30,7 @@ bash examples/simulation-validator/run_preflight.sh
 | `parameter-optimization/` | DOE sampling, optimizer selection, sensitivity analysis |
 | `simulation-orchestrator/` | Parameter sweeps, campaign management, result aggregation |
 | `post-processing/` | Field extraction, time series analysis, statistics, derived quantities |
+| `performance-profiling/` | Timing analysis, scaling studies, memory profiling, bottleneck detection |
 
 ---
 
@@ -299,6 +300,30 @@ bash examples/post-processing/run_derived_quantities.sh
 - Statistical analysis of field distributions
 - Computing volume fractions, gradients, interface areas
 - Comparison with reference/experimental data
+
+### performance-profiling/
+
+Demonstrates performance analysis and optimization for simulations.
+
+```bash
+# Analyze timing from simulation log
+bash examples/performance-profiling/run_timing_analysis.sh
+
+# Analyze strong scaling
+bash examples/performance-profiling/run_scaling_analysis.sh
+
+# Estimate memory requirements
+bash examples/performance-profiling/run_memory_profiling.sh
+
+# Complete profiling workflow
+bash examples/performance-profiling/run_complete_workflow.sh
+```
+
+**Use cases:**
+- Identifying computational bottlenecks
+- Analyzing parallel scaling efficiency
+- Estimating memory requirements
+- Receiving optimization recommendations
 
 ---
 

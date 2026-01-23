@@ -34,6 +34,7 @@ when the skill triggers. Scripts are executed directly for reliability.
 | `parameter-optimization` | DOE sampling, optimizer selection, sensitivity analysis |
 | `simulation-orchestrator` | Parameter sweeps, campaign management, result aggregation |
 | `post-processing` | Field extraction, time series analysis, statistics, derived quantities |
+| `performance-profiling` | Timing analysis, scaling studies, memory profiling, bottleneck detection |
 
 ### Additional Resources
 - Examples for each skill in `examples/`

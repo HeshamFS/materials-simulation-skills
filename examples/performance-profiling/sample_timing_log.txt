@@ -1,0 +1,11 @@
+[2024-01-15 10:00:00] Starting simulation
+[2024-01-15 10:00:05] Phase: Mesh Generation, Time: 5.23s
+[2024-01-15 10:00:15] Phase: Assembly, Time: 10.45s
+[2024-01-15 10:01:30] Phase: Linear Solver, Time: 75.12s
+[2024-01-15 10:01:35] Phase: Update Fields, Time: 5.67s
+[2024-01-15 10:01:40] Phase: I/O, Time: 4.89s
+[2024-01-15 10:01:45] Phase: Assembly, Time: 9.87s
+[2024-01-15 10:03:00] Phase: Linear Solver, Time: 74.56s
+[2024-01-15 10:03:05] Phase: Update Fields, Time: 5.34s
+[2024-01-15 10:03:10] Phase: I/O, Time: 4.92s
+[2024-01-15 10:03:15] Simulation complete

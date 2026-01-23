@@ -1,0 +1,9 @@
+{
+  "runs": [
+    {"processors": 1, "problem_size": 1000000, "time": 200.0},
+    {"processors": 2, "problem_size": 1000000, "time": 110.0},
+    {"processors": 4, "problem_size": 1000000, "time": 60.0},
+    {"processors": 8, "problem_size": 1000000, "time": 35.0},
+    {"processors": 16, "problem_size": 1000000, "time": 22.0}
+  ]
+}
