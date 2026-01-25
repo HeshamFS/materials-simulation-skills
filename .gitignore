@@ -2,10 +2,9 @@
 .*/
 
 # But include specific dot folders we need
-!.kiro/
 !.github/
 !.git/
-!.claude/
+
 
 # Python
 __pycache__/

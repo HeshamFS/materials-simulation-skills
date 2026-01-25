@@ -1232,6 +1232,255 @@ class TestCliJsonSchema(unittest.TestCase):
             },
         )
 
+    # Nonlinear solver tests
+
+    def test_nonlinear_solver_selector_schema(self):
+        cmd = [
+            str(
+                ROOT
+                / "skills"
+                / "core-numerical"
+                / "nonlinear-solvers"
+                / "scripts"
+                / "solver_selector.py"
+            ),
+            "--jacobian-available",
+            "--size",
+            "1000",
+            "--smooth",
+            "--json",
+        ]
+        result = self.run_cmd(cmd)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        assert_schema(
+            payload,
+            {
+                "inputs": {
+                    "jacobian_available": bool,
+                    "jacobian_expensive": bool,
+                    "problem_size": int,
+                    "spd_hessian": bool,
+                    "smooth_objective": bool,
+                    "constraint_type": str,
+                    "memory_limited": bool,
+                    "high_accuracy": bool,
+                },
+                "results": {
+                    "recommended": [str],
+                    "alternatives": [str],
+                    "notes": [str],
+                },
+            },
+        )
+
+    def test_nonlinear_convergence_analyzer_schema(self):
+        cmd = [
+            str(
+                ROOT
+                / "skills"
+                / "core-numerical"
+                / "nonlinear-solvers"
+                / "scripts"
+                / "convergence_analyzer.py"
+            ),
+            "--residuals",
+            "1,0.1,0.01,0.001",
+            "--tolerance",
+            "1e-6",
+            "--json",
+        ]
+        result = self.run_cmd(cmd)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        assert_schema(
+            payload,
+            {
+                "inputs": {
+                    "residuals": [float],
+                    "tolerance": (int, float),
+                },
+                "results": {
+                    "converged": bool,
+                    "iterations": int,
+                    "final_residual": (int, float),
+                    "convergence_type": str,
+                    "estimated_rate": (type(None), int, float),
+                    "diagnosis": str,
+                    "recommended_action": str,
+                },
+            },
+        )
+
+    def test_nonlinear_jacobian_diagnostics_schema(self):
+        matrix_path = ROOT / "tests" / "integration" / "jacobian_matrix.txt"
+        matrix_path.write_text("2 1\n1 3\n")
+        try:
+            cmd = [
+                str(
+                    ROOT
+                    / "skills"
+                    / "core-numerical"
+                    / "nonlinear-solvers"
+                    / "scripts"
+                    / "jacobian_diagnostics.py"
+                ),
+                "--matrix",
+                str(matrix_path),
+                "--json",
+            ]
+            result = self.run_cmd(cmd)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payload = json.loads(result.stdout)
+            assert_schema(
+                payload,
+                {
+                    "inputs": {
+                        "matrix": str,
+                        "finite_diff_matrix": (type(None), str),
+                        "tolerance": (int, float),
+                    },
+                    "results": {
+                        "shape": [int],
+                        "condition_number": (int, float),
+                        "rank_deficient": bool,
+                        "estimated_rank": int,
+                        "singular_value_min": (int, float),
+                        "singular_value_max": (int, float),
+                        "jacobian_quality": str,
+                        "finite_diff_error": (type(None), int, float),
+                        "notes": [str],
+                    },
+                },
+            )
+        finally:
+            matrix_path.unlink(missing_ok=True)
+
+    def test_nonlinear_globalization_advisor_schema(self):
+        cmd = [
+            str(
+                ROOT
+                / "skills"
+                / "core-numerical"
+                / "nonlinear-solvers"
+                / "scripts"
+                / "globalization_advisor.py"
+            ),
+            "--problem-type",
+            "optimization",
+            "--jacobian-quality",
+            "good",
+            "--json",
+        ]
+        result = self.run_cmd(cmd)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        assert_schema(
+            payload,
+            {
+                "inputs": {
+                    "problem_type": str,
+                    "jacobian_quality": str,
+                    "previous_failures": int,
+                    "oscillating_residual": bool,
+                    "step_rejection_rate": (int, float),
+                },
+                "results": {
+                    "strategy": str,
+                    "line_search_type": (type(None), str),
+                    "trust_region_type": (type(None), str),
+                    "initial_damping": (int, float),
+                    "parameters": dict,
+                    "notes": [str],
+                },
+            },
+        )
+
+    def test_nonlinear_residual_monitor_schema(self):
+        cmd = [
+            str(
+                ROOT
+                / "skills"
+                / "core-numerical"
+                / "nonlinear-solvers"
+                / "scripts"
+                / "residual_monitor.py"
+            ),
+            "--residuals",
+            "1,0.5,0.25,0.125",
+            "--target-tolerance",
+            "1e-8",
+            "--json",
+        ]
+        result = self.run_cmd(cmd)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        assert_schema(
+            payload,
+            {
+                "inputs": {
+                    "residuals": [float],
+                    "function_evals": (type(None), list),
+                    "step_sizes": (type(None), list),
+                    "target_tolerance": (int, float),
+                },
+                "results": {
+                    "residual_reduction": (int, float),
+                    "iterations": int,
+                    "converged": bool,
+                    "patterns_detected": [str],
+                    "alerts": [str],
+                    "recommendations": [str],
+                },
+            },
+        )
+
+    def test_nonlinear_step_quality_schema(self):
+        cmd = [
+            str(
+                ROOT
+                / "skills"
+                / "core-numerical"
+                / "nonlinear-solvers"
+                / "scripts"
+                / "step_quality.py"
+            ),
+            "--predicted-reduction",
+            "1.0",
+            "--actual-reduction",
+            "0.8",
+            "--step-norm",
+            "0.5",
+            "--gradient-norm",
+            "1.0",
+            "--trust-radius",
+            "1.0",
+            "--json",
+        ]
+        result = self.run_cmd(cmd)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        assert_schema(
+            payload,
+            {
+                "inputs": {
+                    "predicted_reduction": (int, float),
+                    "actual_reduction": (int, float),
+                    "step_norm": (int, float),
+                    "gradient_norm": (int, float),
+                    "trust_radius": (type(None), int, float),
+                },
+                "results": {
+                    "ratio": (type(None), int, float),
+                    "step_quality": str,
+                    "accept_step": bool,
+                    "trust_radius_action": (type(None), str),
+                    "suggested_trust_radius": (type(None), int, float),
+                    "notes": [str],
+                },
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
