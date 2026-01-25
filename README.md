@@ -23,6 +23,7 @@ when the skill triggers. Scripts are executed directly for reliability.
 | `numerical-stability` | CFL analysis, von Neumann stability, stiffness detection |
 | `numerical-integration` | Integrator selection, error norms, adaptive stepping |
 | `linear-solvers` | Solver selection, preconditioner advice, convergence diagnostics |
+| `nonlinear-solvers` | Newton/quasi-Newton selection, convergence diagnostics, globalization strategies |
 | `time-stepping` | Time step planning, output scheduling, checkpointing |
 | `differentiation-schemes` | Scheme selection, stencil generation, truncation error |
 | `mesh-generation` | Grid sizing, mesh quality metrics |
