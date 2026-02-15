@@ -103,6 +103,13 @@ def compute_volume_fraction(
     if not values:
         return {"volume_fraction": None, "count_above": 0, "total": 0}
 
+    # Check for NaN/Inf values that would silently corrupt results
+    for v in values:
+        if not math.isfinite(v):
+            raise ValueError(
+                f"Field contains non-finite value ({v}); cannot compute volume fraction"
+            )
+
     if above:
         count = sum(1 for v in values if v >= threshold)
     else:
@@ -197,7 +204,15 @@ def compute_gradient_2d(
 ) -> Tuple[List[List[float]], List[List[float]]]:
     """Compute gradient of 2D field using central differences."""
     ny = len(field)
-    nx = len(field[0]) if ny > 0 else 0
+    if ny == 0:
+        return [], []
+    nx = len(field[0])
+    # Validate uniform row lengths (ragged arrays would crash)
+    for j in range(ny):
+        if len(field[j]) != nx:
+            raise ValueError(
+                f"Ragged array: row 0 has {nx} columns but row {j} has {len(field[j])}"
+            )
 
     grad_x = [[0.0] * nx for _ in range(ny)]
     grad_y = [[0.0] * nx for _ in range(ny)]
@@ -228,10 +243,26 @@ def compute_gradient_magnitude(
     spacing: Dict[str, float]
 ) -> Dict[str, Any]:
     """Compute gradient magnitude of field."""
+    # Check for NaN/Inf in input field
+    flat = flatten_field(field)
+    for v in flat:
+        if not math.isfinite(v):
+            raise ValueError(
+                f"Field contains non-finite value ({v}); cannot compute gradient"
+            )
+
     shape = get_field_shape(field)
 
     if len(shape) == 1:
-        # 1D gradient
+        # 1D gradient — need at least 2 elements
+        if shape[0] < 2:
+            return {
+                "gradient_magnitude": [0.0] * shape[0],
+                "max": 0.0,
+                "mean": 0.0,
+                "method": "central_difference_1d",
+                "notes": ["Single-element field; gradient is zero"]
+            }
         dx = spacing["dx"]
         grad = []
         for i in range(len(field)):
@@ -498,7 +529,18 @@ def main():
 
         # Output
         if args.json:
-            print(json.dumps(result, indent=2))
+            envelope = {
+                "inputs": {
+                    "input_file": args.input,
+                    "quantity": args.quantity,
+                    "field": args.field,
+                    "threshold": args.threshold,
+                    "dx": spacing["dx"],
+                    "dy": spacing["dy"],
+                },
+                "results": result,
+            }
+            print(json.dumps(envelope, indent=2))
         else:
             print(f"Derived Quantity: {args.quantity}")
             print(f"Source: {args.input}")

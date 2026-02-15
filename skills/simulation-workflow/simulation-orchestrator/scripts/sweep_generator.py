@@ -18,6 +18,7 @@ Output (JSON):
 """
 
 import argparse
+import copy
 import itertools
 import json
 import os
@@ -39,10 +40,20 @@ def parse_param_spec(spec: str) -> Tuple[str, float, float, int]:
     parts = spec.strip().split(":")
     if len(parts) == 4:
         name, min_val, max_val, count = parts
-        return name, float(min_val), float(max_val), int(count)
+        fmin, fmax = float(min_val), float(max_val)
+        if fmin >= fmax:
+            raise ValueError(
+                f"Invalid range for '{name}': min ({fmin}) must be less than max ({fmax})"
+            )
+        return name, fmin, fmax, int(count)
     elif len(parts) == 3:
         name, min_val, max_val = parts
-        return name, float(min_val), float(max_val), -1
+        fmin, fmax = float(min_val), float(max_val)
+        if fmin >= fmax:
+            raise ValueError(
+                f"Invalid range for '{name}': min ({fmin}) must be less than max ({fmax})"
+            )
+        return name, fmin, fmax, -1
     else:
         raise ValueError(
             f"Invalid param spec: {spec}. Use 'name:min:max:count' or 'name:min:max'"
@@ -127,7 +138,7 @@ def load_base_config(path: str) -> Dict[str, Any]:
 
 def merge_config(base: Dict[str, Any], overrides: Dict[str, float]) -> Dict[str, Any]:
     """Merge override parameters into base config."""
-    result = base.copy()
+    result = copy.deepcopy(base)
     result.update(overrides)
     return result
 

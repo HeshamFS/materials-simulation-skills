@@ -55,6 +55,8 @@ def compute_amplification(
     n = len(coeffs)
     if n == 0:
         raise ValueError("coeffs must be non-empty")
+    if not np.all(np.isfinite(coeffs)):
+        raise ValueError("coeffs must be finite (no NaN or Inf values)")
 
     if offset is None:
         offset = n // 2

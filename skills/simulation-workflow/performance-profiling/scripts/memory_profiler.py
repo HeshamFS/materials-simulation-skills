@@ -43,11 +43,11 @@ def load_parameters(path: str) -> Dict:
 def estimate_field_memory(mesh: Dict, fields: Dict) -> float:
     """
     Estimate memory for field variables.
-    
+
     Args:
         mesh: Mesh parameters (nx, ny, nz)
         fields: Field definitions
-    
+
     Returns:
         Memory in GB
     """
@@ -55,13 +55,21 @@ def estimate_field_memory(mesh: Dict, fields: Dict) -> float:
     nx = mesh.get('nx', 1)
     ny = mesh.get('ny', 1)
     nz = mesh.get('nz', 1)
+    # Validate mesh dimensions
+    for name, val in [('nx', nx), ('ny', ny), ('nz', nz)]:
+        if not isinstance(val, int) or val <= 0:
+            raise ValueError(f"Mesh dimension '{name}' must be a positive integer, got {val}")
     mesh_points = nx * ny * nz
-    
+
     # Calculate memory for all fields
     total_bytes = 0
     for field_name, field_spec in fields.items():
         components = field_spec.get('components', 1)
         bytes_per_value = field_spec.get('bytes_per_value', 8)  # default: double precision
+        if not isinstance(components, int) or components <= 0:
+            raise ValueError(f"Field '{field_name}' components must be a positive integer, got {components}")
+        if not isinstance(bytes_per_value, (int, float)) or bytes_per_value <= 0:
+            raise ValueError(f"Field '{field_name}' bytes_per_value must be positive, got {bytes_per_value}")
         total_bytes += mesh_points * components * bytes_per_value
     
     # Convert to GB
@@ -112,6 +120,8 @@ def compute_total_memory(params: Dict, available_gb: Optional[float] = None) -> 
     fields = params['fields']
     solver = params.get('solver', {'type': 'iterative', 'workspace_multiplier': 5})
     processors = params.get('processors', 1)
+    if not isinstance(processors, int) or processors <= 0:
+        raise ValueError(f"processors must be a positive integer, got {processors}")
     
     # Calculate mesh points
     nx = mesh.get('nx', 1)
@@ -167,7 +177,7 @@ def main():
                     'params_file': args.params,
                     'available_gb': args.available_gb
                 },
-                'memory_profile': profile
+                'results': profile
             }
             print(json.dumps(output, indent=2))
         else:
@@ -195,7 +205,7 @@ def main():
             print(json.dumps({'error': f'Unexpected error: {e}'}))
         else:
             print(f"Unexpected error: {e}", file=sys.stderr)
-        sys.exit(3)
+        sys.exit(1)
 
 
 if __name__ == '__main__':

@@ -52,9 +52,21 @@ def compute_cfl(
     if safety <= 0:
         raise ValueError("safety must be positive")
 
-    v = None if velocity is None else abs(velocity)
-    d = None if diffusivity is None else abs(diffusivity)
-    k = None if reaction_rate is None else abs(reaction_rate)
+    v = None
+    if velocity is not None:
+        if velocity < 0:
+            notes.append("Negative velocity detected; using absolute value for stability analysis")
+        v = abs(velocity)
+    d = None
+    if diffusivity is not None:
+        if diffusivity < 0:
+            notes.append("Negative diffusivity detected; may indicate spinodal decomposition; using absolute value")
+        d = abs(diffusivity)
+    k = None
+    if reaction_rate is not None:
+        if reaction_rate < 0:
+            notes.append("Negative reaction rate detected; using absolute value for stability analysis")
+        k = abs(reaction_rate)
 
     if advection_limit is None:
         advection_limit = 1.0 if scheme == "explicit" else math.inf

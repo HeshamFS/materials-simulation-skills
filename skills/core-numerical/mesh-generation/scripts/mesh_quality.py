@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import math
 import sys
 from typing import Dict
 
 
 def compute_quality(dx: float, dy: float, dz: float) -> Dict[str, object]:
-    if dx <= 0 or dy <= 0 or dz <= 0:
-        raise ValueError("dx, dy, dz must be positive")
+    for name, val in [("dx", dx), ("dy", dy), ("dz", dz)]:
+        if not math.isfinite(val) or val <= 0:
+            raise ValueError(f"{name} must be a finite positive number, got {val}")
 
     sizes = [dx, dy, dz]
     aspect_ratio = max(sizes) / min(sizes)
