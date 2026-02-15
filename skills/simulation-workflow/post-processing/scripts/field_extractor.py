@@ -74,8 +74,12 @@ def list_available_fields(data: Dict[str, Any]) -> List[str]:
     else:
         # Try to find field-like keys
         for key, value in data.items():
-            if isinstance(value, (list, dict)) and not key.startswith("_"):
-                fields.append(key)
+            if key == "fields" and isinstance(value, dict):
+                # Nested fields format: {"fields": {"phi": {...}, ...}}
+                fields.extend(value.keys())
+            elif isinstance(value, (list, dict)) and not key.startswith("_"):
+                if key not in ("fields",):
+                    fields.append(key)
 
     return sorted(set(fields))
 

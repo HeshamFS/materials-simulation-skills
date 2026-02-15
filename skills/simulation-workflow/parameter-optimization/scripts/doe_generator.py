@@ -3,6 +3,7 @@ import argparse
 import json
 import random
 import sys
+import warnings
 from typing import Dict, List
 
 
@@ -60,7 +61,13 @@ def generate_doe(dim: int, budget: int, method: str, seed: int) -> Dict[str, obj
     if method == "lhs":
         samples = lhs_samples(dim, budget, seed)
     elif method in {"sobol", "quasi-random"}:
-        # Note: "sobol" is kept for backward compatibility but uses quasi-random
+        if method == "sobol":
+            warnings.warn(
+                "Method 'sobol' is deprecated; use 'quasi-random' instead. "
+                "This is NOT a true Sobol sequence but a quasi-random additive recurrence.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         samples = quasi_random_samples(dim, budget, seed)
     else:
         samples = factorial_samples(dim, budget)

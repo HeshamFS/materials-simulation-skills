@@ -34,7 +34,7 @@ Before running any scripts, collect from the user:
 Is dimension <= 3 AND full coverage needed?
 ├── YES → Use factorial
 └── NO → Is sensitivity analysis the goal?
-    ├── YES → Use sobol (quasi-random)
+    ├── YES → Use quasi-random (preferred; "sobol" is accepted but deprecated)
     └── NO → Use lhs (Latin Hypercube)
 ```
 

@@ -307,8 +307,10 @@ def main():
                     'scaling_file': args.scaling,
                     'memory_file': args.memory
                 },
-                'bottlenecks': bottlenecks,
-                'recommendations': recommendations
+                'results': {
+                    'bottlenecks': bottlenecks,
+                    'recommendations': recommendations
+                }
             }
             print(json.dumps(output, indent=2))
         else:

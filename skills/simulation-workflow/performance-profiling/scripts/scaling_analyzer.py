@@ -193,7 +193,7 @@ def main():
                     'data_file': args.data,
                     'scaling_type': args.type
                 },
-                'scaling_analysis': analysis
+                'results': analysis
             }
             print(json.dumps(output, indent=2))
         else:

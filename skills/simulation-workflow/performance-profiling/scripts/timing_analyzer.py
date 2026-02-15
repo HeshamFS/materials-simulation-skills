@@ -151,7 +151,7 @@ def main():
                     'log_file': args.log,
                     'pattern': args.pattern or 'default'
                 },
-                'timing_data': {
+                'results': {
                     'phases': [
                         {
                             'name': phase,
