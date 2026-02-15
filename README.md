@@ -11,6 +11,27 @@ Give your AI coding agent domain expertise in numerical methods, simulation best
 
 ---
 
+## Table of Contents
+
+- [The Problem](#the-problem)
+- [The Solution](#the-solution)
+- [What's Inside](#whats-inside)
+- [How Skills Work](#how-skills-work)
+- [Quick Start](#quick-start)
+- [Adding Skills to Your Agent](#adding-skills-to-your-agent)
+  - [Claude Code](#claude-code)
+  - [Gemini CLI](#gemini-cli)
+  - [OpenAI Codex](#openai-codex)
+  - [VS Code / GitHub Copilot](#vs-code--github-copilot)
+  - [Cursor](#cursor)
+  - [Other Agents](#other-agents)
+- [Repository Layout](#repository-layout)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgements](#acknowledgements)
+
+---
+
 ## The Problem
 
 Simulation engineers repeat the same guidance to AI agents constantly: *"Check the CFL number before running," "Use Richardson extrapolation for grid convergence," "Exit code 2 means bad input."* General-purpose agents lack the domain knowledge to run reliable numerical simulations without heavy hand-holding.
