@@ -149,6 +149,51 @@ class TestCflChecker(unittest.TestCase):
                 safety=0.0,
             )
 
+    def test_negative_diffusivity_produces_warning(self):
+        """Negative diffusivity should produce a warning note, not silent abs()."""
+        result = self.mod.compute_cfl(
+            dx=0.1,
+            dt=0.01,
+            velocity=None,
+            diffusivity=-0.1,
+            reaction_rate=None,
+            dimensions=1,
+            scheme="explicit",
+            advection_limit=None,
+            diffusion_limit=None,
+            reaction_limit=None,
+            safety=1.0,
+        )
+        # Should still compute with abs(diffusivity)
+        self.assertIsNotNone(result["metrics"]["fourier"])
+        # But must include a warning note
+        notes = result["notes"]
+        self.assertTrue(
+            any("Negative diffusivity" in n for n in notes),
+            f"Expected negative diffusivity warning in notes: {notes}",
+        )
+
+    def test_negative_velocity_produces_warning(self):
+        """Negative velocity should produce a warning note."""
+        result = self.mod.compute_cfl(
+            dx=0.1,
+            dt=0.01,
+            velocity=-1.0,
+            diffusivity=None,
+            reaction_rate=None,
+            dimensions=1,
+            scheme="explicit",
+            advection_limit=None,
+            diffusion_limit=None,
+            reaction_limit=None,
+            safety=1.0,
+        )
+        notes = result["notes"]
+        self.assertTrue(
+            any("Negative velocity" in n for n in notes),
+            f"Expected negative velocity warning in notes: {notes}",
+        )
+
     def test_diffusion_limit_dimensions(self):
         result = self.mod.compute_cfl(
             dx=0.1,

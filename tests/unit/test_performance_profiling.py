@@ -287,6 +287,38 @@ class TestMemoryProfiler(unittest.TestCase):
         self.assertGreater(len(profile['warnings']), 0)
 
 
+class TestMemoryProfilerRobustness(unittest.TestCase):
+    """Regression tests for memory_profiler.py bug fixes."""
+
+    def setUp(self):
+        import memory_profiler
+        self.module = memory_profiler
+
+    def test_negative_nx_raises(self):
+        """Negative mesh dimension must raise ValueError."""
+        mesh = {'nx': -10, 'ny': 100, 'nz': 100}
+        fields = {'phi': {'components': 1, 'bytes_per_value': 8}}
+        with self.assertRaises(ValueError):
+            self.module.estimate_field_memory(mesh, fields)
+
+    def test_zero_processors_raises(self):
+        """Zero processors must raise ValueError (division by zero guard)."""
+        params = {
+            'mesh': {'nx': 10, 'ny': 10, 'nz': 1},
+            'fields': {'phi': {'components': 1, 'bytes_per_value': 8}},
+            'processors': 0
+        }
+        with self.assertRaises(ValueError):
+            self.module.compute_total_memory(params)
+
+    def test_negative_bytes_per_value_raises(self):
+        """Negative bytes_per_value must raise ValueError."""
+        mesh = {'nx': 10, 'ny': 10, 'nz': 1}
+        fields = {'phi': {'components': 1, 'bytes_per_value': -8}}
+        with self.assertRaises(ValueError):
+            self.module.estimate_field_memory(mesh, fields)
+
+
 class TestBottleneckDetector(unittest.TestCase):
     """Tests for bottleneck_detector.py"""
     

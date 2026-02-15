@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 import unittest
@@ -360,7 +361,7 @@ class TestCliEdgeCases(unittest.TestCase):
         ]
         result = self.run_cmd(cmd)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("dx, dy, dz must be positive", result.stderr)
+        self.assertIn("must be a finite positive number", result.stderr)
 
     def test_preflight_invalid_config(self):
         cmd = [
@@ -596,6 +597,51 @@ class TestCliEdgeCases(unittest.TestCase):
         result = self.run_cmd(cmd)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("abs_tol", result.stderr)
+
+
+    # Nonlinear solver edge cases
+
+    def test_nonlinear_solver_invalid_size(self):
+        cmd = [
+            str(
+                ROOT / "skills" / "core-numerical" / "nonlinear-solvers" / "scripts" / "solver_selector.py"
+            ),
+            "--size", "0",
+        ]
+        result = self.run_cmd(cmd)
+        self.assertNotEqual(result.returncode, 0)
+
+    def test_nonlinear_convergence_single_residual(self):
+        """Single residual may succeed but should still produce valid output."""
+        cmd = [
+            str(
+                ROOT / "skills" / "core-numerical" / "nonlinear-solvers" / "scripts" / "convergence_analyzer.py"
+            ),
+            "--residuals", "0.5",
+            "--json",
+        ]
+        result = self.run_cmd(cmd)
+        # The script accepts single residuals (trivially converged/not converged)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertIn("results", data)
+
+    def test_nonlinear_step_quality_zero_predicted(self):
+        cmd = [
+            str(
+                ROOT / "skills" / "core-numerical" / "nonlinear-solvers" / "scripts" / "step_quality.py"
+            ),
+            "--predicted-reduction", "0",
+            "--actual-reduction", "0.5",
+            "--step-norm", "0.1",
+            "--gradient-norm", "1.0",
+            "--json",
+        ]
+        result = self.run_cmd(cmd)
+        # Should succeed (ratio=None when predicted=0)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data = json.loads(result.stdout)
+        self.assertIn("results", data)
 
 
 if __name__ == "__main__":

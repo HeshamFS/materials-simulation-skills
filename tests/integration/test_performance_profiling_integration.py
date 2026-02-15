@@ -39,9 +39,9 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
         # Parse JSON output
         output = json.loads(result.stdout)
         self.assertIn('inputs', output)
-        self.assertIn('timing_data', output)
-        self.assertIn('phases', output['timing_data'])
-        self.assertGreater(len(output['timing_data']['phases']), 0)
+        self.assertIn('results', output)
+        self.assertIn('phases', output['results'])
+        self.assertGreater(len(output['results']['phases']), 0)
     
     def test_scaling_analyzer_cli(self):
         """Test scaling analyzer CLI with example data"""
@@ -57,9 +57,9 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
         # Parse JSON output
         output = json.loads(result.stdout)
         self.assertIn('inputs', output)
-        self.assertIn('scaling_analysis', output)
-        self.assertEqual(output['scaling_analysis']['type'], 'strong')
-        self.assertGreater(len(output['scaling_analysis']['results']), 0)
+        self.assertIn('results', output)
+        self.assertEqual(output['results']['type'], 'strong')
+        self.assertGreater(len(output['results']['results']), 0)
     
     def test_memory_profiler_cli(self):
         """Test memory profiler CLI with example data"""
@@ -75,8 +75,8 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
         # Parse JSON output
         output = json.loads(result.stdout)
         self.assertIn('inputs', output)
-        self.assertIn('memory_profile', output)
-        self.assertGreater(output['memory_profile']['total_memory_gb'], 0)
+        self.assertIn('results', output)
+        self.assertGreater(output['results']['total_memory_gb'], 0)
     
     def test_bottleneck_detector_cli(self):
         """Test bottleneck detector CLI with chained outputs"""
@@ -104,9 +104,10 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
             # Parse JSON output
             output = json.loads(result.stdout)
             self.assertIn('inputs', output)
-            self.assertIn('bottlenecks', output)
-            self.assertIn('recommendations', output)
-            self.assertGreater(len(output['recommendations']), 0)
+            self.assertIn('results', output)
+            self.assertIn('bottlenecks', output['results'])
+            self.assertIn('recommendations', output['results'])
+            self.assertGreater(len(output['results']['recommendations']), 0)
         finally:
             os.unlink(timing_file)
     

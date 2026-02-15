@@ -163,6 +163,47 @@ class TestDerivedQuantities(unittest.TestCase):
         self.assertIsNone(result["centroid_x"])
 
 
+class TestDerivedQuantitiesRobustness(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "derived_quantities",
+            "skills/simulation-workflow/post-processing/scripts/derived_quantities.py",
+        )
+
+    def test_volume_fraction_with_nan_raises(self):
+        """NaN in field must raise ValueError, not silently miscount."""
+        field = [0.0, float("nan"), 1.0]
+        with self.assertRaises(ValueError):
+            self.mod.compute_volume_fraction(field, threshold=0.5)
+
+    def test_volume_fraction_with_inf(self):
+        """Inf in field must raise ValueError."""
+        field = [0.0, float("inf"), 1.0]
+        with self.assertRaises(ValueError):
+            self.mod.compute_volume_fraction(field, threshold=0.5)
+
+    def test_gradient_magnitude_single_element(self):
+        """Single-element 1D field should not raise IndexError."""
+        field = [1.0]
+        spacing = {"dx": 1.0, "dy": 1.0, "dz": 1.0}
+        result = self.mod.compute_gradient_magnitude(field, spacing)
+        self.assertEqual(result["max"], 0.0)
+
+    def test_gradient_2d_ragged_array_raises(self):
+        """Ragged 2D array must raise ValueError."""
+        field = [[0.0, 1.0], [0.0, 1.0, 2.0]]
+        with self.assertRaises(ValueError):
+            self.mod.compute_gradient_2d(field, 1.0, 1.0)
+
+    def test_gradient_magnitude_with_nan_raises(self):
+        """NaN in field must raise ValueError for gradient computation."""
+        field = [0.0, float("nan"), 2.0]
+        spacing = {"dx": 1.0, "dy": 1.0, "dz": 1.0}
+        with self.assertRaises(ValueError):
+            self.mod.compute_gradient_magnitude(field, spacing)
+
+
 class TestDerivedQuantitiesIO(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -139,6 +139,22 @@ class TestVonNeumannAnalyzer(unittest.TestCase):
         )
         self.assertFalse(result["results"]["stable"])
 
+    def test_nan_coefficients_raise(self):
+        """NaN in coefficients must raise ValueError."""
+        coeffs = np.array([0.2, float("nan"), 0.2], dtype=float)
+        with self.assertRaises(ValueError):
+            self.mod.compute_amplification(
+                coeffs=coeffs, dx=1.0, nk=64, offset=None, kmin=None, kmax=None,
+            )
+
+    def test_inf_coefficients_raise(self):
+        """Inf in coefficients must raise ValueError."""
+        coeffs = np.array([0.2, float("inf"), 0.2], dtype=float)
+        with self.assertRaises(ValueError):
+            self.mod.compute_amplification(
+                coeffs=coeffs, dx=1.0, nk=64, offset=None, kmin=None, kmax=None,
+            )
+
     def test_lax_friedrichs_advection_stable(self):
         cfl = 0.8
         coeffs = np.array([0.5 * (1.0 + cfl), 0.0, 0.5 * (1.0 - cfl)], dtype=float)

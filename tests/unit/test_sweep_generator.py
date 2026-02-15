@@ -186,6 +186,27 @@ class TestSweepGenerator(unittest.TestCase):
             )
         self.assertIn("Unknown method", str(ctx.exception))
 
+    def test_merge_config_deep_copy(self):
+        """merge_config must deep-copy nested dicts to prevent cross-contamination."""
+        base = {"solver": "CG", "nested": {"a": 1, "b": [2, 3]}}
+        overrides = {"dt": 0.001}
+        merged = self.mod.merge_config(base, overrides)
+        # Mutating the merged dict must not affect base
+        merged["nested"]["a"] = 999
+        merged["nested"]["b"].append(4)
+        self.assertEqual(base["nested"]["a"], 1)
+        self.assertEqual(base["nested"]["b"], [2, 3])
+
+    def test_parse_param_spec_min_greater_than_max_raises(self):
+        """Reversed range (min > max) must raise ValueError."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_param_spec("dt:0.01:0.001:5")
+
+    def test_parse_param_spec_equal_min_max_raises(self):
+        """Equal min and max must raise ValueError."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_param_spec("dt:0.01:0.01:5")
+
     def test_config_content(self):
         """Test generated config file content."""
         output_dir = os.path.join(self.temp_dir, "sweep_content")
