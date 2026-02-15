@@ -28,7 +28,7 @@ All contributors are expected to follow the [Contributor Covenant Code of Conduc
 ### 1. Fork and Clone
 
 ```bash
-git clone https://github.com/<your-username>/materials-simulation-skills.git
+git clone https://github.com/heshamfs/materials-simulation-skills.git
 cd materials-simulation-skills
 ```
 
