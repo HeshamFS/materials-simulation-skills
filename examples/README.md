@@ -31,6 +31,8 @@ bash examples/simulation-validator/run_preflight.sh
 | `simulation-orchestrator/` | Parameter sweeps, campaign management, result aggregation |
 | `post-processing/` | Field extraction, time series analysis, statistics, derived quantities |
 | `performance-profiling/` | Timing analysis, scaling studies, memory profiling, bottleneck detection |
+| `convergence-study/` | Spatial/temporal convergence, Richardson extrapolation, GCI |
+| `end-to-end-workflow/` | Full 8-step pipeline chaining multiple skills together |
 
 ---
 
@@ -324,6 +326,46 @@ bash examples/performance-profiling/run_complete_workflow.sh
 - Analyzing parallel scaling efficiency
 - Estimating memory requirements
 - Receiving optimization recommendations
+
+### convergence-study/
+
+Demonstrates solution verification via spatial/temporal convergence analysis.
+
+```bash
+# Spatial convergence (h-refinement) with 4 mesh levels
+bash examples/convergence-study/run_h_refinement.sh
+
+# Grid Convergence Index (GCI) per ASME V&V 20
+bash examples/convergence-study/run_gci.sh
+
+# Richardson extrapolation from 2 levels
+bash examples/convergence-study/run_richardson.sh
+```
+
+**Use cases:**
+- Verifying mesh independence
+- Computing observed convergence order
+- Generating convergence tables for publications
+- ASME V&V 20 compliance (GCI)
+
+### end-to-end-workflow/
+
+Demonstrates a complete simulation pipeline chaining 8 skills together.
+
+```bash
+# Run full 8-step pipeline
+bash examples/end-to-end-workflow/run_full_workflow.sh
+```
+
+**Pipeline:**
+1. CFL stability check (numerical-stability)
+2. Stiffness detection (numerical-stability)
+3. Integrator selection (numerical-integration)
+4. Time step planning (time-stepping)
+5. Mesh quality assessment (mesh-generation)
+6. DOE sampling (parameter-optimization)
+7. Post-processing (post-processing)
+8. Result validation (simulation-validator)
 
 ---
 

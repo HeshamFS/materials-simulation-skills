@@ -58,6 +58,9 @@ jobs:
           python -m py_compile skills/simulation-workflow/parameter-optimization/scripts/*.py
           python -m py_compile skills/simulation-workflow/simulation-orchestrator/scripts/*.py
           python -m py_compile skills/simulation-workflow/post-processing/scripts/*.py
+          python -m py_compile skills/simulation-workflow/performance-profiling/scripts/*.py
+          python -m py_compile skills/core-numerical/nonlinear-solvers/scripts/*.py
+          python -m py_compile skills/core-numerical/convergence-study/scripts/*.py
 
   examples:
     runs-on: ubuntu-latest
@@ -124,3 +127,13 @@ jobs:
           python skills/simulation-workflow/post-processing/scripts/time_series_analyzer.py --input examples/post-processing/history.json --quantity energy --json
           python skills/simulation-workflow/post-processing/scripts/statistical_analyzer.py --input examples/post-processing/field_output.json --field phi --json
           python skills/simulation-workflow/post-processing/scripts/derived_quantities.py --input examples/post-processing/field_output.json --quantity volume_fraction --field phi --threshold 0.5 --json
+
+      - name: Test example scripts (convergence-study)
+        run: |
+          python skills/core-numerical/convergence-study/scripts/h_refinement.py --spacings 0.4,0.2,0.1,0.05 --values 0.5,0.125,0.03125,0.0078125 --expected-order 2 --json
+          python skills/core-numerical/convergence-study/scripts/gci_calculator.py --spacings 0.4,0.2,0.1 --values 0.5,0.125,0.03125 --json
+          python skills/core-numerical/convergence-study/scripts/richardson_extrapolation.py --spacings 0.2,0.1 --values 0.125,0.03125 --order 2 --json
+
+      - name: Test end-to-end workflow
+        run: |
+          bash examples/end-to-end-workflow/run_full_workflow.sh

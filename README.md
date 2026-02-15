@@ -27,6 +27,7 @@ when the skill triggers. Scripts are executed directly for reliability.
 | `time-stepping` | Time step planning, output scheduling, checkpointing |
 | `differentiation-schemes` | Scheme selection, stencil generation, truncation error |
 | `mesh-generation` | Grid sizing, mesh quality metrics |
+| `convergence-study` | Spatial/temporal convergence analysis, Richardson extrapolation, GCI |
 
 ### Simulation Workflow Skills (`skills/simulation-workflow/`)
 | Skill | Description |
@@ -62,13 +63,18 @@ supports `SKILL.md`-based skills.
 ## Quick start
 Run the full test suite:
 ```bash
-python3 -m unittest discover -s tests
+pip install -r requirements-dev.txt
+python -m pytest tests/ -v --tb=short
 ```
 
 Browse and run examples:
 ```bash
 cat examples/README.md
 ```
+
+## Contributing
+
+We welcome contributions of all kinds -- new skills, bug fixes, documentation, and examples. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines, templates, and the skill taxonomy.
 
 ## Repository layout
 ```
