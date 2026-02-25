@@ -13,7 +13,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 SCRIPTS_DIR = REPO_ROOT / 'skills' / 'simulation-workflow' / 'performance-profiling' / 'scripts'
-EXAMPLES_DIR = REPO_ROOT / 'examples' / 'performance-profiling'
+FIXTURES_DIR = REPO_ROOT / 'tests' / 'fixtures' / 'performance-profiling'
 
 
 class TestPerformanceProfilingCLI(unittest.TestCase):
@@ -28,7 +28,7 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
     
     def test_timing_analyzer_cli(self):
         """Test timing analyzer CLI with example data"""
-        log_file = EXAMPLES_DIR / 'sample_timing_log.txt'
+        log_file = FIXTURES_DIR / 'sample_timing_log.txt'
         result = self.run_script('timing_analyzer.py', [
             '--log', str(log_file),
             '--json'
@@ -45,7 +45,7 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
     
     def test_scaling_analyzer_cli(self):
         """Test scaling analyzer CLI with example data"""
-        data_file = EXAMPLES_DIR / 'sample_scaling_data.json'
+        data_file = FIXTURES_DIR / 'sample_scaling_data.json'
         result = self.run_script('scaling_analyzer.py', [
             '--data', str(data_file),
             '--type', 'strong',
@@ -63,7 +63,7 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
     
     def test_memory_profiler_cli(self):
         """Test memory profiler CLI with example data"""
-        params_file = EXAMPLES_DIR / 'sample_simulation_params.json'
+        params_file = FIXTURES_DIR / 'sample_simulation_params.json'
         result = self.run_script('memory_profiler.py', [
             '--params', str(params_file),
             '--available-gb', '16.0',
@@ -81,7 +81,7 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
     def test_bottleneck_detector_cli(self):
         """Test bottleneck detector CLI with chained outputs"""
         # First, generate timing analysis
-        log_file = EXAMPLES_DIR / 'sample_timing_log.txt'
+        log_file = FIXTURES_DIR / 'sample_timing_log.txt'
         timing_result = self.run_script('timing_analyzer.py', [
             '--log', str(log_file),
             '--json'
@@ -126,7 +126,7 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
     
     def test_cross_platform_paths(self):
         """Test that scripts handle cross-platform paths correctly"""
-        log_file = EXAMPLES_DIR / 'sample_timing_log.txt'
+        log_file = FIXTURES_DIR / 'sample_timing_log.txt'
         
         # Test with forward slashes
         result = self.run_script('timing_analyzer.py', [

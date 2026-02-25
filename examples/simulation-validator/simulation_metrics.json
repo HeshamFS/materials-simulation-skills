@@ -1,8 +1,0 @@
-{
-  "mass_initial": 1.0,
-  "mass_final": 1.0005,
-  "energy_history": [10.0, 9.5, 9.0],
-  "field_min": 0.0,
-  "field_max": 1.0,
-  "has_nan": false
-}

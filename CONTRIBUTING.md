@@ -2,7 +2,7 @@
 
 Thanks for your interest in contributing! This project provides open-source **Agent Skills** for computational materials science and numerical simulation workflows. Each skill is a structured folder (SKILL.md + scripts + references) that AI agents discover by name and load on demand.
 
-Our goal is to grow from the current 13 skills across 2 categories to approximately **38 skills across 8 categories**, covering everything from core numerical methods to materials physics, HPC deployment, and robustness techniques. Every contribution -- whether a new skill, a bug fix, improved documentation, or better examples -- helps the community build more reliable simulation workflows.
+Our goal is to grow from the current 17 skills across 4 categories to approximately **38 skills across 8 categories**, covering everything from core numerical methods to materials physics, HPC deployment, and robustness techniques. Every contribution -- whether a new skill, a bug fix, improved documentation, or better tests -- helps the community build more reliable simulation workflows.
 
 All contributors are expected to follow the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
@@ -15,7 +15,6 @@ All contributors are expected to follow the [Contributor Covenant Code of Conduc
 | Report a bug | File an issue using the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md) | Beginner |
 | Fix a bug | Reproduce the issue, add a test, submit a fix | Beginner |
 | Improve documentation | Fix typos, clarify SKILL.md sections, expand references | Beginner |
-| Add examples | Create shell scripts and sample data demonstrating a skill | Beginner |
 | Add tests | Increase coverage with unit, integration, or property tests | Intermediate |
 | Propose a skill | Open a [skill proposal](.github/ISSUE_TEMPLATE/skill_proposal.md) issue | Intermediate |
 | Implement a planned skill | Pick a skill from the [taxonomy](#skill-taxonomy--roadmap) and implement it | Advanced |
@@ -208,8 +207,6 @@ Before submitting your PR, verify every item:
 - [ ] Scripts use exit code 2 for validation errors, exit code 1 for runtime errors
 - [ ] Unit tests in `tests/unit/test_{script_name}.py`
 - [ ] Integration tests in `tests/integration/`
-- [ ] At least one example in `examples/{skill-name}/`
-- [ ] Example includes a `run_*.sh` shell script and sample data
 - [ ] Reference docs placed in `references/` directory
 - [ ] Skill added to the top-level `README.md`
 - [ ] All file paths use forward slashes (even on Windows)
@@ -312,6 +309,7 @@ tests/
     integration/
         _schema.py          # assert_schema() helper
         test_cli_your_skill.py
+    fixtures/               # Sample data files for CI smoke tests
 ```
 
 ### Unit Tests
@@ -446,32 +444,6 @@ python -m pytest tests/ --cov=skills --cov-report=term-missing
 
 ---
 
-## Example Requirements
-
-Each skill needs at least one example in `examples/{skill-name}/`. Examples serve as documentation and as a quick smoke test.
-
-### Shell Script Template
-
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-python3 "$ROOT_DIR/skills/{category}/{skill-name}/scripts/your_script.py" \
-  --param 1.0 \
-  --json
-```
-
-### Requirements
-
-- Shell scripts must run from the repository root
-- Include sample data files (JSON, TXT, CSV) where applicable
-- Add a `README.md` in the example directory explaining what the example demonstrates
-- Use `set -euo pipefail` in all shell scripts
-- Use the `ROOT_DIR` pattern shown above for portable paths
-
----
-
 ## Pull Request Guidelines
 
 ### Before Submitting
@@ -487,7 +459,7 @@ python3 "$ROOT_DIR/skills/{category}/{skill-name}/scripts/your_script.py" \
 - **Script patterns**: argparse, `--json`, pure-function core, error handling
 - **Test coverage**: Unit tests for core logic, integration tests for CLI, edge cases for invalid input
 - **Cross-platform compatibility**: No OS-specific paths, commands, or assumptions
-- **Documentation**: References in `references/`, example in `examples/`, README updated
+- **Documentation**: References in `references/`, README updated
 
 ### Review Process
 
@@ -499,7 +471,7 @@ python3 "$ROOT_DIR/skills/{category}/{skill-name}/scripts/your_script.py" \
 
 ## Skill Taxonomy & Roadmap
 
-The project is organized into categories. The first three categories are established with 14 skills; the remaining five are open directions where the community can propose and build new skills over time.
+The project is organized into categories. The first four categories are established with 17 skills; the remaining five are open directions where the community can propose and build new skills over time.
 
 ### Overview
 
@@ -511,6 +483,7 @@ The project is organized into categories. The first three categories are establi
 | verification-validation | Open | Code verification, benchmarking, uncertainty quantification |
 | data-management | Open | Data formats, visualization, checkpointing |
 | hpc-deployment | 1 skill | Parallel computing, job scheduling, build systems |
+| ontology | 3 skills | Materials science ontology exploration, mapping, and validation |
 | simulation-patterns | Open | Multi-physics coupling, transient strategies, inverse methods |
 | robustness | Open | Handling discontinuities, numerical artifacts, difficult physics |
 
@@ -544,6 +517,16 @@ The project is organized into categories. The first three categories are establi
 | slurm-job-script-generator | Generate `sbatch` scripts, sanity-check resource requests, and standardize `#SBATCH` directives |
 
 Contributions welcome: expand this category with scheduler portability (PBS/LSF), MPI decomposition guidance, job arrays, build toolchains, and cluster-friendly profiling workflows.
+
+### ontology/ (3 skills)
+
+| Skill | Description |
+|-------|-------------|
+| ontology-explorer | Parse OWL/XML ontologies, browse class hierarchies, look up properties, search for concepts |
+| ontology-mapper | Map natural-language materials terms and crystal parameters to ontology classes |
+| ontology-validator | Validate annotations against ontology constraints, check completeness, verify relationships |
+
+Currently supports CMSO (Computational Material Sample Ontology) from the OCDO ecosystem. Contributions welcome: add support for ASMO (simulation methods), CDCO/PODO/PLDO/LDO (crystallographic defects), SPARQL query capabilities, and JSON-LD/Turtle format support.
 
 ### materials-physics/ (open for contributions)
 

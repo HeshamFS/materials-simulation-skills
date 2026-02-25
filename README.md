@@ -16,6 +16,10 @@ Give your AI coding agent domain expertise in numerical methods, simulation best
 - [The Problem](#the-problem)
 - [The Solution](#the-solution)
 - [What's Inside](#whats-inside)
+  - [Core Numerical Skills](#core-numerical-skills-skillscore-numerical)
+  - [Simulation Workflow Skills](#simulation-workflow-skills-skillssimulation-workflow)
+  - [HPC Deployment Skills](#hpc-deployment-skills-skillshpc-deployment)
+  - [Ontology Skills](#ontology-skills-skillsontology)
 - [How Skills Work](#how-skills-work)
 - [Quick Start](#quick-start)
 - [Adding Skills to Your Agent](#adding-skills-to-your-agent)
@@ -56,7 +60,7 @@ No prompt engineering. No copy-pasting formulas. The agent finds the right skill
 
 ## What's Inside
 
-**14 skills** | **57 scripts** | **746 tests** | **51 examples** | Cross-platform CI on Python 3.10-3.12
+**17 skills** | **67 scripts** | **857 tests** | Cross-platform CI on Python 3.10-3.12
 
 ### Core Numerical Skills (`skills/core-numerical/`)
 
@@ -92,6 +96,16 @@ Deployment and job submission tooling for running simulations on HPC systems.
 | Skill | What it does |
 |-------|-------------|
 | `slurm-job-script-generator` | Generate `sbatch` scripts, sanity-check resource requests, and standardize `#SBATCH` directives |
+
+### Ontology Skills (`skills/ontology/`)
+
+Materials science ontology understanding, mapping, and validation.
+
+| Skill | What it does |
+|-------|-------------|
+| `ontology-explorer` | Parse OWL/XML ontologies, browse class hierarchies, look up properties, search concepts (CMSO, ASMO, OCDO ecosystem) |
+| `ontology-mapper` | Map natural-language materials terms and crystal parameters to ontology classes and properties (CMSO, ASMO) |
+| `ontology-validator` | Validate annotations against ontology constraints, check completeness, verify relationship domain/range |
 
 ---
 
@@ -129,26 +143,10 @@ cd materials-simulation-skills
 pip install -r requirements-dev.txt
 ```
 
-### Run a script directly
-
-```bash
-# Check CFL stability
-python skills/core-numerical/numerical-stability/scripts/cfl_checker.py \
-  --dx 0.01 --dt 0.001 --velocity 2.0 --diffusivity 1e-5 --json
-
-# Generate a Latin Hypercube DOE
-python skills/simulation-workflow/parameter-optimization/scripts/doe_generator.py \
-  --params '{"temp": [300, 600], "pressure": [1, 10]}' --samples 20 --method lhs --json
-
-# Analyze mesh quality
-python skills/core-numerical/mesh-generation/scripts/mesh_quality.py \
-  --mesh-file examples/mesh-generation/sample_mesh.json --json
-```
-
 ### Run the test suite
 
 ```bash
-python -m pytest tests/ -v --tb=short          # All 738 tests
+python -m pytest tests/ -v --tb=short          # All 857 tests
 python -m pytest tests/unit -v --tb=short       # Unit tests only
 python -m pytest tests/integration -v           # Integration tests only
 ```
@@ -261,10 +259,12 @@ The agent loads the skill's instructions, runs the appropriate scripts, and inte
 skills/
     core-numerical/          # 8 skills: stability, solvers, meshing, convergence, ...
     simulation-workflow/     # 5 skills: validation, optimization, orchestration, ...
-examples/                    # Shell scripts + sample data for every skill
+    hpc-deployment/          # 1 skill: SLURM job script generation
+    ontology/                # 3 skills: ontology exploration, mapping, validation
 tests/
     unit/                    # Pure-function tests via load_module()
     integration/             # Subprocess + JSON schema validation
+    fixtures/                # Sample data files for CI smoke tests
 .github/
     workflows/ci.yml         # Cross-platform CI (Ubuntu, Windows, macOS)
     ISSUE_TEMPLATE/          # Bug reports, skill proposals
@@ -275,11 +275,11 @@ tests/
 
 ## Contributing
 
-We welcome contributions of all kinds -- new skills, bug fixes, documentation, and examples. The project is designed to grow from 13 skills across 2 categories into a broader collection spanning materials physics, verification & validation, HPC deployment, and more.
+We welcome contributions of all kinds -- new skills, bug fixes, documentation, and tests. The project is designed to grow from 17 skills across 4 categories into a broader collection spanning materials physics, verification & validation, HPC deployment, and more.
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for:
 - Step-by-step guide to creating a new skill
-- Script, test, and example templates
+- Script and test templates
 - Skill taxonomy and open categories for community contributions
 - PR guidelines and checklists
 

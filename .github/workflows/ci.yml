@@ -61,8 +61,12 @@ jobs:
           python -m py_compile skills/simulation-workflow/performance-profiling/scripts/*.py
           python -m py_compile skills/core-numerical/nonlinear-solvers/scripts/*.py
           python -m py_compile skills/core-numerical/convergence-study/scripts/*.py
+          python -m py_compile skills/ontology/ontology-explorer/scripts/*.py
+          python -m py_compile skills/ontology/ontology-mapper/scripts/*.py
+          python -m py_compile skills/ontology/ontology-validator/scripts/*.py
+          python -m py_compile skills/hpc-deployment/slurm-job-script-generator/scripts/*.py
 
-  examples:
+  smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -77,63 +81,38 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Test example scripts (numerical-stability)
+      - name: Smoke test - core-numerical scripts
         run: |
           python skills/core-numerical/numerical-stability/scripts/cfl_checker.py --dx 0.1 --dt 0.01 --velocity 1.0 --json
           python skills/core-numerical/numerical-stability/scripts/stiffness_detector.py --eigs=-1,-100 --json
-
-      - name: Test example scripts (numerical-integration)
-        run: |
           python skills/core-numerical/numerical-integration/scripts/integrator_selector.py --stiff --json
           python skills/core-numerical/numerical-integration/scripts/error_norm.py --error 1e-3,1e-4,1e-5 --solution 1.0,1.0,1.0 --json
-
-      - name: Test example scripts (linear-solvers)
-        run: |
           python skills/core-numerical/linear-solvers/scripts/solver_selector.py --symmetric --positive-definite --size 1000 --json
           python skills/core-numerical/linear-solvers/scripts/preconditioner_advisor.py --matrix-type spd --json
-
-      - name: Test example scripts (time-stepping)
-        run: |
           python skills/core-numerical/time-stepping/scripts/timestep_planner.py --dt-target 0.1 --dt-limit 0.2 --json
           python skills/core-numerical/time-stepping/scripts/checkpoint_planner.py --run-time 1000 --checkpoint-cost 60 --json
-
-      - name: Test example scripts (differentiation-schemes)
-        run: |
           python skills/core-numerical/differentiation-schemes/scripts/scheme_selector.py --order 2 --smooth --json
           python skills/core-numerical/differentiation-schemes/scripts/stencil_generator.py --order 2 --json
-
-      - name: Test example scripts (mesh-generation)
-        run: |
           python skills/core-numerical/mesh-generation/scripts/grid_sizing.py --length 1.0 --resolution 100 --json
           python skills/core-numerical/mesh-generation/scripts/mesh_quality.py --dx 0.1 --dy 0.1 --dz 0.35 --json
-
-      - name: Test example scripts (simulation-validator)
-        run: |
-          python skills/simulation-workflow/simulation-validator/scripts/preflight_checker.py --config examples/simulation-validator/simulation_config.json --json
-          python skills/simulation-workflow/simulation-validator/scripts/runtime_monitor.py --log examples/simulation-validator/simulation.log --json
-
-      - name: Test example scripts (parameter-optimization)
-        run: |
-          python skills/simulation-workflow/parameter-optimization/scripts/doe_generator.py --params 3 --budget 10 --method lhs --json
-          python skills/simulation-workflow/parameter-optimization/scripts/optimizer_selector.py --dim 5 --budget 50 --json
-
-      - name: Test example scripts (simulation-orchestrator)
-        run: |
-          python skills/simulation-workflow/simulation-orchestrator/scripts/sweep_generator.py --base-config examples/simulation-orchestrator/base_config.json --params "dt:0.001:0.01:3" --method linspace --output-dir /tmp/sweep_test --json
-
-      - name: Test example scripts (post-processing)
-        run: |
-          python skills/simulation-workflow/post-processing/scripts/field_extractor.py --input examples/post-processing/field_output.json --field phi --json
-          python skills/simulation-workflow/post-processing/scripts/time_series_analyzer.py --input examples/post-processing/history.json --quantity energy --json
-          python skills/simulation-workflow/post-processing/scripts/statistical_analyzer.py --input examples/post-processing/field_output.json --field phi --json
-          python skills/simulation-workflow/post-processing/scripts/derived_quantities.py --input examples/post-processing/field_output.json --quantity volume_fraction --field phi --threshold 0.5 --json
-
-      - name: Test example scripts (convergence-study)
-        run: |
           python skills/core-numerical/convergence-study/scripts/h_refinement.py --spacings 0.4,0.2,0.1,0.05 --values 0.5,0.125,0.03125,0.0078125 --expected-order 2 --json
           python skills/core-numerical/convergence-study/scripts/gci_calculator.py --spacings 0.4,0.2,0.1 --values 0.5,0.125,0.03125 --json
           python skills/core-numerical/convergence-study/scripts/richardson_extrapolation.py --spacings 0.2,0.1 --values 0.125,0.03125 --order 2 --json
 
-      - name: Test end-to-end workflow
+      - name: Smoke test - simulation-workflow scripts
         run: |
-          bash examples/end-to-end-workflow/run_full_workflow.sh
+          python skills/simulation-workflow/simulation-validator/scripts/preflight_checker.py --config tests/fixtures/simulation-validator/simulation_config.json --json
+          python skills/simulation-workflow/simulation-validator/scripts/runtime_monitor.py --log tests/fixtures/simulation-validator/simulation.log --json
+          python skills/simulation-workflow/parameter-optimization/scripts/doe_generator.py --params 3 --budget 10 --method lhs --json
+          python skills/simulation-workflow/parameter-optimization/scripts/optimizer_selector.py --dim 5 --budget 50 --json
+          python skills/simulation-workflow/simulation-orchestrator/scripts/sweep_generator.py --base-config tests/fixtures/simulation-orchestrator/base_config.json --params "dt:0.001:0.01:3" --method linspace --output-dir /tmp/sweep_test --json
+          python skills/simulation-workflow/post-processing/scripts/field_extractor.py --input tests/fixtures/post-processing/field_output.json --field phi --json
+          python skills/simulation-workflow/post-processing/scripts/time_series_analyzer.py --input tests/fixtures/post-processing/history.json --quantity energy --json
+          python skills/simulation-workflow/post-processing/scripts/statistical_analyzer.py --input tests/fixtures/post-processing/field_output.json --field phi --json
+          python skills/simulation-workflow/post-processing/scripts/derived_quantities.py --input tests/fixtures/post-processing/field_output.json --quantity volume_fraction --field phi --threshold 0.5 --json
+
+      - name: Smoke test - ontology scripts
+        run: |
+          python skills/ontology/ontology-explorer/scripts/class_browser.py --ontology cmso --list-roots --json
+          python skills/ontology/ontology-mapper/scripts/concept_mapper.py --ontology cmso --term "unit cell" --json
+          python skills/ontology/ontology-mapper/scripts/crystal_mapper.py --ontology cmso --bravais FCC --space-group 225 --a 3.615 --json

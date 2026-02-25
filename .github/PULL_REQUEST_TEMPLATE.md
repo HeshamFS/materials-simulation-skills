@@ -7,7 +7,6 @@
 - [ ] New skill
 - [ ] Bug fix
 - [ ] Documentation
-- [ ] Examples
 - [ ] Tests
 - [ ] CI / infrastructure
 
@@ -43,9 +42,6 @@
 - [ ] Scripts use exit code 2 for validation errors, 1 for runtime errors
 - [ ] Unit tests added in `tests/unit/test_{script_name}.py`
 - [ ] Integration tests added in `tests/integration/`
-- [ ] At least one example in `examples/{skill-name}/`
-- [ ] Example includes a `run_*.sh` shell script
-- [ ] Example includes sample data files if applicable
 - [ ] Skill listed in top-level `README.md`
 - [ ] Reference docs placed in `references/` (one level deep, no nested chains)
 - [ ] Issue linked or skill proposal referenced
