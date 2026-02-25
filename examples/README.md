@@ -31,6 +31,7 @@ bash examples/simulation-validator/run_preflight.sh
 | `simulation-orchestrator/` | Parameter sweeps, campaign management, result aggregation |
 | `post-processing/` | Field extraction, time series analysis, statistics, derived quantities |
 | `performance-profiling/` | Timing analysis, scaling studies, memory profiling, bottleneck detection |
+| `slurm-job-script-generator/` | Generate SLURM `sbatch` scripts and sanity-check resource requests |
 | `convergence-study/` | Spatial/temporal convergence, Richardson extrapolation, GCI |
 | `end-to-end-workflow/` | Full 8-step pipeline chaining multiple skills together |
 

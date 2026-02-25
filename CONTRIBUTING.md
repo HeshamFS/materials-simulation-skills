@@ -499,7 +499,7 @@ python3 "$ROOT_DIR/skills/{category}/{skill-name}/scripts/your_script.py" \
 
 ## Skill Taxonomy & Roadmap
 
-The project is organized into categories. The first two categories are established with 13 skills; the remaining six are open directions where the community can propose and build new skills over time.
+The project is organized into categories. The first three categories are established with 14 skills; the remaining five are open directions where the community can propose and build new skills over time.
 
 ### Overview
 
@@ -510,7 +510,7 @@ The project is organized into categories. The first two categories are establish
 | materials-physics | Open | Material behavior, constitutive models, physical properties |
 | verification-validation | Open | Code verification, benchmarking, uncertainty quantification |
 | data-management | Open | Data formats, visualization, checkpointing |
-| hpc-deployment | Open | Parallel computing, job scheduling, build systems |
+| hpc-deployment | 1 skill | Parallel computing, job scheduling, build systems |
 | simulation-patterns | Open | Multi-physics coupling, transient strategies, inverse methods |
 | robustness | Open | Handling discontinuities, numerical artifacts, difficult physics |
 
@@ -537,6 +537,14 @@ The project is organized into categories. The first two categories are establish
 | post-processing | Field extraction and derived quantity computation |
 | performance-profiling | Timing analysis, memory profiling, scaling studies |
 
+### hpc-deployment/ (1 skill)
+
+| Skill | Description |
+|-------|-------------|
+| slurm-job-script-generator | Generate `sbatch` scripts, sanity-check resource requests, and standardize `#SBATCH` directives |
+
+Contributions welcome: expand this category with scheduler portability (PBS/LSF), MPI decomposition guidance, job arrays, build toolchains, and cluster-friendly profiling workflows.
+
 ### materials-physics/ (open for contributions)
 
 Skills related to the physics of materials -- constitutive models, thermodynamic properties, phase behavior, crystallography, chemical kinetics, and microstructure characterization. Example areas include stress-strain analysis, equation of state selection, phase-field modeling, and grain morphology. The community will shape which specific skills emerge first based on demand and contributor interest.
@@ -548,10 +556,6 @@ Skills for verifying simulation codes and validating results against known solut
 ### data-management/ (open for contributions)
 
 Skills for handling simulation data throughout its lifecycle -- reading and writing common formats (HDF5, VTK, CSV), planning effective visualizations, converting between formats, and managing checkpoint/restart workflows. Contributions that help bridge the gap between simulation output and analysis are welcome.
-
-### hpc-deployment/ (open for contributions)
-
-Skills for running simulations on HPC systems -- MPI domain decomposition, job scheduler script generation (SLURM, PBS), build system configuration, and advanced profiling. If you regularly submit jobs to clusters, consider contributing your workflow knowledge as a skill.
 
 ### simulation-patterns/ (open for contributions)
 

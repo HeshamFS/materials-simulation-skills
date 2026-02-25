@@ -56,7 +56,7 @@ No prompt engineering. No copy-pasting formulas. The agent finds the right skill
 
 ## What's Inside
 
-**13 skills** | **56 scripts** | **738 tests** | **50 examples** | Cross-platform CI on Python 3.10-3.12
+**14 skills** | **57 scripts** | **746 tests** | **51 examples** | Cross-platform CI on Python 3.10-3.12
 
 ### Core Numerical Skills (`skills/core-numerical/`)
 
@@ -84,6 +84,14 @@ End-to-end simulation management and automation.
 | `simulation-orchestrator` | Parameter sweeps, batch campaign management, result aggregation |
 | `post-processing` | Field extraction, time series analysis, derived quantity computation |
 | `performance-profiling` | Timing analysis, scaling studies, memory profiling, bottleneck detection |
+
+### HPC Deployment Skills (`skills/hpc-deployment/`)
+
+Deployment and job submission tooling for running simulations on HPC systems.
+
+| Skill | What it does |
+|-------|-------------|
+| `slurm-job-script-generator` | Generate `sbatch` scripts, sanity-check resource requests, and standardize `#SBATCH` directives |
 
 ---
 
