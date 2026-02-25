@@ -1,0 +1,33 @@
+============================================================
+  Phase-Field Simulation: Precipitate Growth (2D)
+  Started: 2024-12-20 14:32:05
+============================================================
+Timestep     1 | t=1.000e-04 | dt=1.000e-04 | residual=2.34e-01 | Newton iters=5
+Timestep     2 | t=2.000e-04 | dt=1.000e-04 | residual=1.87e-01 | Newton iters=4
+Timestep     3 | t=3.000e-04 | dt=1.000e-04 | residual=1.52e-01 | Newton iters=4
+Timestep     5 | t=5.000e-04 | dt=1.000e-04 | residual=9.83e-02 | Newton iters=3
+Timestep    10 | t=1.000e-03 | dt=1.000e-04 | residual=3.21e-02 | Newton iters=3
+WARNING: CFL number exceeded limit (CFL=1.23 > 1.0) at timestep 12
+Timestep    12 | t=1.200e-03 | dt=5.000e-05 | residual=2.88e-02 | Newton iters=3 | dt reduced
+Timestep    15 | t=1.350e-03 | dt=5.000e-05 | residual=1.45e-02 | Newton iters=2
+Timestep    20 | t=1.600e-03 | dt=5.000e-05 | residual=8.72e-03 | Newton iters=2
+Timestep    25 | t=1.850e-03 | dt=5.000e-05 | residual=5.11e-03 | Newton iters=2
+Timestep    30 | t=2.100e-03 | dt=5.000e-05 | residual=2.93e-03 | Newton iters=2
+Timestep    40 | t=2.600e-03 | dt=5.000e-05 | residual=9.45e-04 | Newton iters=2
+Timestep    50 | t=3.100e-03 | dt=5.000e-05 | residual=3.12e-04 | Newton iters=1
+Steady-state check: delta_phi_max=4.21e-05 < tol=1.00e-04 -- approaching equilibrium
+Timestep    60 | t=3.600e-03 | dt=5.000e-05 | residual=1.05e-04 | Newton iters=1
+Timestep    70 | t=4.100e-03 | dt=5.000e-05 | residual=3.48e-05 | Newton iters=1
+Conservation check: mass_initial=1.0000 mass_current=1.0001 relative_error=1.00e-04
+Timestep    80 | t=4.600e-03 | dt=5.000e-05 | residual=1.15e-05 | Newton iters=1
+Timestep    90 | t=5.100e-03 | dt=5.000e-05 | residual=3.82e-06 | Newton iters=1
+Timestep   100 | t=5.600e-03 | dt=5.000e-05 | residual=1.27e-06 | Newton iters=1
+============================================================
+  Simulation Complete
+  Total wall time: 45.3 s
+  Total timesteps: 100
+  Final time: 5.600e-03
+  Final residual: 1.27e-06
+  Mass conservation error: 1.00e-04
+  Field bounds: phi in [0.000, 1.000], concentration in [0.100, 0.680]
+============================================================

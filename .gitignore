@@ -20,6 +20,7 @@ build/
 
 # Temporary files
 *.log
+!tests/fixtures/**/*.log
 *.tmp
 temp_*.json
 timing_results.json
