@@ -28,7 +28,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 # Characters allowed in file paths used in command interpolation
-_SAFE_PATH_PATTERN = re.compile(r"^[a-zA-Z0-9_./ \\:-]+$")
+_SAFE_PATH_PATTERN = re.compile(r"^[a-zA-Z0-9_./ \\:~-]+$")
 
 
 def generate_campaign_id() -> str:
@@ -110,7 +110,7 @@ def init_campaign(
         if not _SAFE_PATH_PATTERN.match(config_path):
             raise ValueError(
                 f"Config path contains unsafe characters: {config_path!r}. "
-                "Paths must only contain alphanumerics, '.', '_', '/', '\\', ':', '-', and spaces."
+                "Paths must only contain alphanumerics, '.', '_', '/', '\\', ':', '~', '-', and spaces."
             )
 
         # Use shlex.quote to prevent shell metacharacter injection
