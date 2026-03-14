@@ -153,7 +153,7 @@ class TestCliEdgeCases(unittest.TestCase):
         ]
         result = self.run_cmd(cmd)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("dt must be positive", result.stderr)
+        self.assertIn("dt must be a positive finite number", result.stderr)
 
     def test_integrator_selector_invalid_dimension(self):
         cmd = [
@@ -205,7 +205,7 @@ class TestCliEdgeCases(unittest.TestCase):
         ]
         result = self.run_cmd(cmd)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("dt must be positive", result.stderr)
+        self.assertIn("dt must be a positive finite number", result.stderr)
 
     def test_timestep_planner_invalid_dt(self):
         cmd = [
