@@ -5,11 +5,19 @@ import sys
 from typing import Dict, List
 
 
+MAX_DIM = 100_000
+MAX_BUDGET = 10_000_000
+
+
 def select_optimizer(dim: int, budget: int, noise: str, constraints: bool) -> Dict[str, object]:
     if dim <= 0:
         raise ValueError("dim must be positive")
+    if dim > MAX_DIM:
+        raise ValueError(f"dim ({dim}) exceeds maximum ({MAX_DIM})")
     if budget <= 0:
         raise ValueError("budget must be positive")
+    if budget > MAX_BUDGET:
+        raise ValueError(f"budget ({budget}) exceeds maximum ({MAX_BUDGET})")
     if noise not in {"low", "medium", "high"}:
         raise ValueError("noise must be low, medium, or high")
 

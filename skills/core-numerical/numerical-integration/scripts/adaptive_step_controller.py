@@ -10,6 +10,9 @@ def clamp(value: float, min_value: float, max_value: float) -> float:
     return max(min_value, min(max_value, value))
 
 
+MAX_ORDER = 20
+
+
 def compute_step(
     dt: float,
     error_norm: float,
@@ -21,16 +24,18 @@ def compute_step(
     controller: str,
     prev_error: Optional[float],
 ) -> Dict[str, object]:
-    if dt <= 0:
-        raise ValueError("dt must be positive")
-    if order < 1:
-        raise ValueError("order must be >= 1")
-    if accept_threshold <= 0:
-        raise ValueError("accept_threshold must be positive")
-    if safety <= 0:
-        raise ValueError("safety must be positive")
-    if min_factor <= 0 or max_factor <= 0:
-        raise ValueError("min_factor and max_factor must be positive")
+    if not math.isfinite(dt) or dt <= 0:
+        raise ValueError("dt must be a positive finite number")
+    if order < 1 or order > MAX_ORDER:
+        raise ValueError(f"order must be between 1 and {MAX_ORDER}")
+    if not math.isfinite(accept_threshold) or accept_threshold <= 0:
+        raise ValueError("accept_threshold must be a positive finite number")
+    if not math.isfinite(safety) or safety <= 0:
+        raise ValueError("safety must be a positive finite number")
+    if not math.isfinite(min_factor) or min_factor <= 0:
+        raise ValueError("min_factor must be a positive finite number")
+    if not math.isfinite(max_factor) or max_factor <= 0:
+        raise ValueError("max_factor must be a positive finite number")
     if min_factor > max_factor:
         raise ValueError("min_factor must be <= max_factor")
     if error_norm < 0 or not math.isfinite(error_norm):

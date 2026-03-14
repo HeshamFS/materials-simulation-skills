@@ -1,15 +1,39 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import math
+import re
 import sys
 from typing import Dict, List
+
+# Validation constraints
+MAX_TERMS = 50
+MAX_TERM_LENGTH = 100
+TERM_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_ -]*$")
+MAX_STIFFNESS_RATIO = 1e30
+
+
+def _validate_term(term: str) -> str:
+    """Validate that a term name contains only safe characters."""
+    if len(term) > MAX_TERM_LENGTH:
+        raise ValueError(
+            f"Term name exceeds maximum length ({MAX_TERM_LENGTH}): {term[:50]}..."
+        )
+    if not TERM_NAME_PATTERN.match(term):
+        raise ValueError(
+            f"Term name contains invalid characters: {term!r}. "
+            "Must match [a-zA-Z_][a-zA-Z0-9_ -]*"
+        )
+    return term
 
 
 def parse_terms(raw: str) -> List[str]:
     if raw is None:
         return []
     parts = [p.strip() for p in raw.split(",") if p.strip()]
-    return parts
+    if len(parts) > MAX_TERMS:
+        raise ValueError(f"Too many terms ({len(parts)} > {MAX_TERMS})")
+    return [_validate_term(p) for p in parts]
 
 
 def plan_imex(
@@ -24,8 +48,10 @@ def plan_imex(
         raise ValueError("coupling must be weak, moderate, or strong")
     if accuracy not in {"low", "medium", "high"}:
         raise ValueError("accuracy must be low, medium, or high")
-    if stiffness_ratio <= 0:
-        raise ValueError("stiffness_ratio must be positive")
+    if not math.isfinite(stiffness_ratio) or stiffness_ratio <= 0:
+        raise ValueError("stiffness_ratio must be a positive finite number")
+    if stiffness_ratio > MAX_STIFFNESS_RATIO:
+        raise ValueError(f"stiffness_ratio ({stiffness_ratio}) exceeds maximum ({MAX_STIFFNESS_RATIO})")
     if not stiff_terms and not nonstiff_terms:
         raise ValueError("Provide at least one stiff or non-stiff term")
 

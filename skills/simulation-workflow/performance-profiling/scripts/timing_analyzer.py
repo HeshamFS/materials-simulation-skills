@@ -4,22 +4,62 @@ Timing Analyzer - Extract and analyze timing information from simulation logs.
 """
 import argparse
 import json
+import os
 import re
 import sys
 from typing import Dict, List, Optional, Tuple
+
+# Security limits
+MAX_LOG_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+MAX_PATTERN_LENGTH = 500
+MAX_PHASE_NAME_LENGTH = 200
+
+
+def _validate_regex_pattern(pattern: str) -> None:
+    """Validate a user-supplied regex pattern for safety."""
+    if len(pattern) > MAX_PATTERN_LENGTH:
+        raise ValueError(f"Pattern too long ({len(pattern)} > {MAX_PATTERN_LENGTH})")
+    # Reject patterns with excessive backtracking potential
+    dangerous = re.compile(r'(\.\*){3,}|(\.\+){3,}|(\([^)]*\+\)){2,}\+')
+    if dangerous.search(pattern):
+        raise ValueError("Pattern contains constructs prone to catastrophic backtracking")
+    # Verify it compiles
+    try:
+        re.compile(pattern)
+    except re.error as e:
+        raise ValueError(f"Invalid regex pattern: {e}")
+
+
+def _sanitize_phase_name(name: str) -> str:
+    """Sanitize a phase name extracted from an external log file."""
+    # Truncate and strip control characters
+    clean = name[:MAX_PHASE_NAME_LENGTH]
+    clean = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', clean)
+    return clean.strip()
 
 
 def parse_timing_log(log_path: str, pattern: Optional[str] = None) -> List[Tuple[str, float]]:
     """
     Parse simulation log file and extract timing entries.
-    
+
     Args:
         log_path: Path to log file
         pattern: Custom regex pattern (optional)
-    
+
     Returns:
         List of (phase_name, time_seconds) tuples
     """
+    # Validate file size before reading
+    file_size = os.path.getsize(log_path)
+    if file_size > MAX_LOG_FILE_SIZE:
+        raise ValueError(
+            f"Log file exceeds size limit ({file_size} > {MAX_LOG_FILE_SIZE}): {log_path}"
+        )
+
+    # Validate custom pattern if provided
+    if pattern:
+        _validate_regex_pattern(pattern)
+
     # Default patterns for common log formats
     default_patterns = [
         r'Phase:\s*([^,]+),\s*Time:\s*([\d.]+)s',
@@ -27,12 +67,12 @@ def parse_timing_log(log_path: str, pattern: Optional[str] = None) -> List[Tuple
         r'\[([^\]]+)\]\s*:\s*([\d.]+)\s*s',
         r'Time\s+for\s+([^:]+):\s*([\d.]+)',
     ]
-    
+
     patterns_to_try = [pattern] if pattern else default_patterns
-    
+
     entries = []
     malformed_count = 0
-    
+
     try:
         with open(log_path, 'r', encoding='utf-8') as f:
             for line in f:
@@ -45,9 +85,9 @@ def parse_timing_log(log_path: str, pattern: Optional[str] = None) -> List[Tuple
                     match = re.search(pat, line)
                     if match:
                         try:
-                            phase = match.group(1).strip()
+                            phase = _sanitize_phase_name(match.group(1))
                             time_val = float(match.group(2))
-                            if time_val >= 0:
+                            if time_val >= 0 and phase:
                                 entries.append((phase, time_val))
                                 matched = True
                                 break

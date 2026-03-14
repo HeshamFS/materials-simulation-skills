@@ -5,12 +5,22 @@ import math
 import sys
 from typing import List, Optional, Tuple
 
+# Input length limit to prevent resource exhaustion
+MAX_LIST_LENGTH = 100_000
+
 
 def parse_list(raw: str) -> List[float]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("value list must be a comma-separated list")
-    return [float(p) for p in parts]
+    if len(parts) > MAX_LIST_LENGTH:
+        raise ValueError(
+            f"value list length ({len(parts)}) exceeds limit ({MAX_LIST_LENGTH})"
+        )
+    values = [float(p) for p in parts]
+    if any(not math.isfinite(v) for v in values):
+        raise ValueError("value list contains non-finite values")
+    return values
 
 
 def compute_error_norm(
@@ -24,10 +34,12 @@ def compute_error_norm(
 ) -> Tuple[float, float, float, float]:
     if not error:
         raise ValueError("error list must be non-empty")
-    if rtol < 0 or atol < 0:
-        raise ValueError("rtol and atol must be non-negative")
-    if min_scale < 0:
-        raise ValueError("min_scale must be non-negative")
+    if not math.isfinite(rtol) or rtol < 0:
+        raise ValueError("rtol must be a non-negative finite number")
+    if not math.isfinite(atol) or atol < 0:
+        raise ValueError("atol must be a non-negative finite number")
+    if not math.isfinite(min_scale) or min_scale < 0:
+        raise ValueError("min_scale must be a non-negative finite number")
     if norm not in {"rms", "inf"}:
         raise ValueError("norm must be 'rms' or 'inf'")
 

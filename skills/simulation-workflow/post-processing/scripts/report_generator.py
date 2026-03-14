@@ -18,11 +18,25 @@ import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+# Security limits
+MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+MAX_DIR_FILES = 10_000
+
+
+def _validate_file_size(filepath: str) -> None:
+    size = os.path.getsize(filepath)
+    if size > MAX_FILE_SIZE:
+        raise ValueError(f"File exceeds size limit ({size} > {MAX_FILE_SIZE}): {filepath}")
+
 
 def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
+    """Load JSON file with size validation."""
+    _validate_file_size(filepath)
     with open(filepath, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"JSON root must be an object: {filepath}")
+    return data
 
 
 def find_data_files(directory: str) -> Dict[str, List[str]]:
@@ -38,7 +52,13 @@ def find_data_files(directory: str) -> Dict[str, List[str]]:
     if not os.path.isdir(directory):
         return files
 
-    for filename in os.listdir(directory):
+    entries = os.listdir(directory)
+    if len(entries) > MAX_DIR_FILES:
+        raise ValueError(
+            f"Directory contains too many entries ({len(entries)} > {MAX_DIR_FILES})"
+        )
+
+    for filename in entries:
         filepath = os.path.join(directory, filename)
         if not os.path.isfile(filepath):
             continue

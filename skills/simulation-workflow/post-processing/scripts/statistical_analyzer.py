@@ -14,14 +14,42 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
+# Security limits
+MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+FIELD_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.-]*$")
+MAX_FIELD_NAME_LENGTH = 200
+
+
+def _validate_file_size(filepath: str) -> None:
+    """Reject files exceeding the size limit."""
+    size = os.path.getsize(filepath)
+    if size > MAX_FILE_SIZE:
+        raise ValueError(f"File exceeds size limit ({size} > {MAX_FILE_SIZE}): {filepath}")
+
+
+def _validate_field_name(name: str) -> None:
+    """Validate that a field name contains only safe characters."""
+    if len(name) > MAX_FIELD_NAME_LENGTH:
+        raise ValueError(f"Field name too long ({len(name)} > {MAX_FIELD_NAME_LENGTH})")
+    if not FIELD_NAME_PATTERN.match(name):
+        raise ValueError(
+            f"Field name contains invalid characters: {name!r}. "
+            "Must match [a-zA-Z_][a-zA-Z0-9_.-]*"
+        )
+
 
 def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
+    """Load JSON file with size validation."""
+    _validate_file_size(filepath)
     with open(filepath, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"JSON root must be an object: {filepath}")
+    return data
 
 
 def get_field_data(data: Dict[str, Any], field_name: str) -> Optional[List]:
@@ -278,11 +306,28 @@ def detect_distribution_type(
         return {"type": "multimodal", "confidence": 0.5, "peaks": len(peaks)}
 
 
-def parse_region_condition(condition: str) -> callable:
-    """Parse simple region condition string like 'x>0.3 and x<0.7'."""
-    # For simplicity, return a function that always returns True
-    # In a full implementation, this would parse and evaluate conditions
+# Safe pattern for region conditions: only allows variable names, comparisons, numbers, and/or
+_SAFE_REGION_PATTERN = re.compile(
+    r"^[a-zA-Z_][a-zA-Z0-9_]*\s*[<>=!]+\s*[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?"
+    r"(\s+(and|or)\s+[a-zA-Z_][a-zA-Z0-9_]*\s*[<>=!]+\s*[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)*$"
+)
 
+
+def parse_region_condition(condition: str) -> callable:
+    """Parse simple region condition string like 'x>0.3 and x<0.7'.
+
+    Only allows safe patterns: variable comparisons with numbers joined by and/or.
+    Never uses eval() or exec().
+    """
+    if len(condition) > 500:
+        raise ValueError("Region condition too long (max 500 characters)")
+    if not _SAFE_REGION_PATTERN.match(condition.strip()):
+        raise ValueError(
+            f"Region condition contains disallowed syntax: {condition!r}. "
+            "Only patterns like 'x>0.3 and x<0.7' are allowed."
+        )
+
+    # Stub: full region filtering requires coordinate data
     def always_true(*args):
         return True
 
@@ -404,7 +449,8 @@ def main():
 
         data = load_json_file(args.input)
 
-        # Get field data
+        # Validate and get field data
+        _validate_field_name(args.field)
         field = get_field_data(data, args.field)
         if field is None:
             print(f"Error: Field '{args.field}' not found", file=sys.stderr)

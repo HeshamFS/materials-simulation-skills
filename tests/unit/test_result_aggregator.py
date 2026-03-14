@@ -214,5 +214,75 @@ class TestResultAggregator(unittest.TestCase):
         self.assertIn("job_0002", job_ids)
 
 
+    def test_extract_metric_rejects_invalid_name(self):
+        """Test that metric names with unsafe characters are rejected."""
+        result = {"objective": 0.5}
+        with self.assertRaises(ValueError):
+            self.mod.extract_metric(result, "../../../etc/passwd")
+        with self.assertRaises(ValueError):
+            self.mod.extract_metric(result, "key;drop table")
+        with self.assertRaises(ValueError):
+            self.mod.extract_metric(result, "")
+
+    def test_extract_metric_rejects_bool(self):
+        """Test that boolean values are not treated as numeric."""
+        result = {"flag": True}
+        value = self.mod.extract_metric(result, "flag")
+        self.assertIsNone(value)
+
+    def test_extract_metric_rejects_nan_inf(self):
+        """Test that NaN and Inf are rejected."""
+        result = {"val": float("nan")}
+        value = self.mod.extract_metric(result, "val")
+        self.assertIsNone(value)
+
+        result = {"val": float("inf")}
+        value = self.mod.extract_metric(result, "val")
+        self.assertIsNone(value)
+
+    def test_load_result_rejects_oversized_file(self):
+        """Test that oversized result files are rejected."""
+        big_path = os.path.join(self.temp_dir, "big.json")
+        # Create a file exceeding the limit (write minimal content, mock size)
+        with open(big_path, "w") as f:
+            json.dump({"x": 1}, f)
+        # Patch the size limit to test the check
+        original = self.mod.MAX_RESULT_FILE_SIZE
+        try:
+            self.mod.MAX_RESULT_FILE_SIZE = 1  # 1 byte limit
+            with self.assertRaises(ValueError) as ctx:
+                self.mod.load_result(big_path)
+            self.assertIn("size limit", str(ctx.exception))
+        finally:
+            self.mod.MAX_RESULT_FILE_SIZE = original
+
+    def test_load_result_rejects_non_dict(self):
+        """Test that result files with non-object root are rejected."""
+        path = os.path.join(self.temp_dir, "list.json")
+        with open(path, "w") as f:
+            json.dump([1, 2, 3], f)
+        with self.assertRaises(ValueError) as ctx:
+            self.mod.load_result(path)
+        self.assertIn("JSON object", str(ctx.exception))
+
+    def test_sanitize_value_truncates_strings(self):
+        """Test that long strings in results are truncated."""
+        result_path = os.path.join(self.sweep_dir, "result_job_0000.json")
+        long_string = "A" * 1000
+        with open(result_path, "w") as f:
+            json.dump({"objective": 0.5, "note": long_string}, f)
+        loaded = self.mod.load_result(result_path)
+        self.assertLessEqual(len(loaded["note"]), 500)
+
+    def test_sanitize_value_strips_control_chars(self):
+        """Test that control characters are stripped from string values."""
+        result_path = os.path.join(self.temp_dir, "ctrl.json")
+        with open(result_path, "w") as f:
+            json.dump({"note": "hello\x00world\x1b[31m"}, f)
+        loaded = self.mod.load_result(result_path)
+        self.assertNotIn("\x00", loaded["note"])
+        self.assertNotIn("\x1b", loaded["note"])
+
+
 if __name__ == "__main__":
     unittest.main()

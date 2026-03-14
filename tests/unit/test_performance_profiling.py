@@ -542,5 +542,145 @@ class TestScalingAnalyzerProperties(unittest.TestCase):
         self.assertEqual(analysis['baseline']['processors'], min_procs)
 
 
+class TestTimingAnalyzerSecurity(unittest.TestCase):
+    """Security tests for timing_analyzer.py"""
+
+    def setUp(self):
+        import timing_analyzer
+        self.module = timing_analyzer
+
+    def test_rejects_oversized_log(self):
+        """Log files exceeding size limit must be rejected."""
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
+            f.write("Phase: Test, Time: 1.0s\n")
+            log_path = f.name
+        try:
+            original = self.module.MAX_LOG_FILE_SIZE
+            self.module.MAX_LOG_FILE_SIZE = 1  # 1 byte
+            with self.assertRaises(ValueError):
+                self.module.parse_timing_log(log_path)
+            self.module.MAX_LOG_FILE_SIZE = original
+        finally:
+            os.unlink(log_path)
+
+    def test_rejects_long_pattern(self):
+        """Excessively long regex patterns must be rejected."""
+        with self.assertRaises(ValueError):
+            self.module._validate_regex_pattern("a" * 1000)
+
+    def test_rejects_invalid_regex(self):
+        """Invalid regex must be rejected."""
+        with self.assertRaises(ValueError):
+            self.module._validate_regex_pattern("[unclosed")
+
+    def test_sanitizes_phase_names(self):
+        """Phase names must have control characters stripped."""
+        result = self.module._sanitize_phase_name("Phase\x00Name\x07Test")
+        self.assertNotIn("\x00", result)
+        self.assertNotIn("\x07", result)
+        self.assertEqual(result, "PhaseNameTest")
+
+    def test_truncates_long_phase_names(self):
+        """Phase names exceeding limit must be truncated."""
+        result = self.module._sanitize_phase_name("A" * 500)
+        self.assertLessEqual(len(result), self.module.MAX_PHASE_NAME_LENGTH)
+
+
+class TestScalingAnalyzerSecurity(unittest.TestCase):
+    """Security tests for scaling_analyzer.py"""
+
+    def setUp(self):
+        import scaling_analyzer
+        self.module = scaling_analyzer
+
+    def test_rejects_nonfinite_time(self):
+        """Non-finite time values must be rejected."""
+        data = {
+            'runs': [
+                {'processors': 1, 'time': float('inf')},
+                {'processors': 2, 'time': 50.0}
+            ]
+        }
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+            json.dump(data, f)
+            path = f.name
+        try:
+            with self.assertRaises(ValueError):
+                self.module.load_scaling_data(path)
+        finally:
+            os.unlink(path)
+
+    def test_rejects_non_integer_processors(self):
+        """Non-integer processor counts must be rejected."""
+        data = {
+            'runs': [
+                {'processors': 1.5, 'time': 100.0},
+                {'processors': 2, 'time': 50.0}
+            ]
+        }
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+            json.dump(data, f)
+            path = f.name
+        try:
+            with self.assertRaises(ValueError):
+                self.module.load_scaling_data(path)
+        finally:
+            os.unlink(path)
+
+
+class TestMemoryProfilerSecurity(unittest.TestCase):
+    """Security tests for memory_profiler.py"""
+
+    def setUp(self):
+        import memory_profiler
+        self.module = memory_profiler
+
+    def test_rejects_nonfinite_available_gb(self):
+        """Non-finite available_gb must be rejected."""
+        params = {
+            'mesh': {'nx': 10, 'ny': 10, 'nz': 1},
+            'fields': {'phi': {'components': 1, 'bytes_per_value': 8}},
+        }
+        with self.assertRaises(ValueError):
+            self.module.compute_total_memory(params, available_gb=float('inf'))
+        with self.assertRaises(ValueError):
+            self.module.compute_total_memory(params, available_gb=float('nan'))
+        with self.assertRaises(ValueError):
+            self.module.compute_total_memory(params, available_gb=-1.0)
+
+
+class TestBottleneckDetectorSecurity(unittest.TestCase):
+    """Security tests for bottleneck_detector.py"""
+
+    def setUp(self):
+        import bottleneck_detector
+        self.module = bottleneck_detector
+
+    def test_rejects_non_dict_json(self):
+        """JSON files with non-object root must be rejected."""
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+            json.dump([1, 2, 3], f)
+            path = f.name
+        try:
+            with self.assertRaises(ValueError):
+                self.module._load_json_safe(path, "Test")
+        finally:
+            os.unlink(path)
+
+    def test_rejects_oversized_json(self):
+        """JSON files exceeding size limit must be rejected."""
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as f:
+            json.dump({"x": 1}, f)
+            path = f.name
+        try:
+            original = self.module.MAX_FILE_SIZE
+            self.module.MAX_FILE_SIZE = 1
+            with self.assertRaises(ValueError):
+                self.module._load_json_safe(path, "Test")
+            self.module.MAX_FILE_SIZE = original
+        finally:
+            os.unlink(path)
+
+
 if __name__ == '__main__':
     unittest.main()

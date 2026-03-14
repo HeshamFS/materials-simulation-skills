@@ -5,6 +5,24 @@ import math
 import sys
 from typing import Dict, Optional
 
+# Numeric bounds to prevent resource exhaustion
+MAX_LENGTH = 1e12
+MAX_RESOLUTION = 10_000_000
+MAX_DX = 1e12
+VALID_DIMS = (1, 2, 3)
+
+
+def _validate_positive_finite(name: str, value: float, upper: float) -> None:
+    """Validate that a numeric parameter is finite, positive, and within bounds."""
+    if not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a number, got {type(value).__name__}")
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be finite, got {value}")
+    if value <= 0:
+        raise ValueError(f"{name} must be positive, got {value}")
+    if value > upper:
+        raise ValueError(f"{name} exceeds maximum ({upper}), got {value}")
+
 
 def compute_grid(
     length: float,
@@ -12,17 +30,14 @@ def compute_grid(
     dims: int,
     dx: Optional[float],
 ) -> Dict[str, object]:
-    if length <= 0:
-        raise ValueError("length must be positive")
-    if resolution <= 0:
-        raise ValueError("resolution must be positive")
-    if dims <= 0:
-        raise ValueError("dims must be positive")
+    _validate_positive_finite("length", length, MAX_LENGTH)
+    _validate_positive_finite("resolution", resolution, MAX_RESOLUTION)
+    if dims not in VALID_DIMS:
+        raise ValueError(f"dims must be one of {VALID_DIMS}, got {dims}")
 
     if dx is None:
         dx = length / resolution
-    if dx <= 0:
-        raise ValueError("dx must be positive")
+    _validate_positive_finite("dx", dx, MAX_DX)
 
     counts = [int(math.ceil(length / dx)) for _ in range(dims)]
     notes = []

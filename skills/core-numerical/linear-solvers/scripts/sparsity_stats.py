@@ -1,25 +1,48 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import math
 import os
 import sys
 from typing import Optional
 
 import numpy as np
 
+# Security limits
+MAX_MATRIX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+MAX_MATRIX_DIM = 100_000
+
+
+def _validate_matrix_file(path: str) -> None:
+    """Validate matrix file before loading."""
+    file_size = os.path.getsize(path)
+    if file_size > MAX_MATRIX_FILE_SIZE:
+        raise ValueError(
+            f"Matrix file exceeds size limit "
+            f"({file_size} > {MAX_MATRIX_FILE_SIZE}): {path}"
+        )
+
 
 def load_matrix(path: str, delimiter: Optional[str]) -> np.ndarray:
+    _validate_matrix_file(path)
     _, ext = os.path.splitext(path)
     if ext == ".npy":
-        return np.load(path)
+        return np.load(path, allow_pickle=False)
     return np.loadtxt(path, delimiter=delimiter)
 
 
 def compute_stats(matrix: np.ndarray, symmetry_tol: float) -> dict:
     if matrix.ndim != 2:
         raise ValueError("matrix must be 2D")
+    m, n = matrix.shape
+    if m > MAX_MATRIX_DIM or n > MAX_MATRIX_DIM:
+        raise ValueError(
+            f"Matrix dimensions ({m}x{n}) exceed limit ({MAX_MATRIX_DIM})"
+        )
     if not np.all(np.isfinite(matrix)):
         raise ValueError("matrix contains non-finite values")
+    if not math.isfinite(symmetry_tol) or symmetry_tol < 0:
+        raise ValueError("symmetry_tol must be a non-negative finite number")
 
     m, n = matrix.shape
     nnz = int(np.count_nonzero(matrix))

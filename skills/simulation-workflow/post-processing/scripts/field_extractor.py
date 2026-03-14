@@ -13,18 +13,34 @@ Usage:
 import argparse
 import json
 import os
+import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+# Security limits
+MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+FIELD_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.-]*$")
+
+
+def _validate_file_size(filepath: str) -> None:
+    size = os.path.getsize(filepath)
+    if size > MAX_FILE_SIZE:
+        raise ValueError(f"File exceeds size limit ({size} > {MAX_FILE_SIZE}): {filepath}")
+
 
 def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
+    """Load JSON file with size validation."""
+    _validate_file_size(filepath)
     with open(filepath, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"JSON root must be an object: {filepath}")
+    return data
 
 
 def load_csv_file(filepath: str) -> Dict[str, Any]:
-    """Load CSV file and convert to dict format."""
+    """Load CSV file with size validation."""
+    _validate_file_size(filepath)
     data = {"_format": "csv", "_fields": [], "_data": {}}
 
     with open(filepath, "r") as f:
@@ -314,8 +330,12 @@ def main():
             print("Error: --field required when not using --list", file=sys.stderr)
             sys.exit(1)
 
-        # Extract requested fields
+        # Validate and extract requested fields
         field_names = [f.strip() for f in args.field.split(",")]
+        for fn in field_names:
+            if not FIELD_NAME_PATTERN.match(fn):
+                print(f"Error: Invalid field name: {fn!r}", file=sys.stderr)
+                sys.exit(1)
 
         if len(field_names) == 1:
             result = extract_field(data, field_names[0])

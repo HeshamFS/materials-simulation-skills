@@ -4,23 +4,33 @@ Memory Profiler - Estimate memory requirements from simulation parameters.
 """
 import argparse
 import json
+import math
+import os
 import sys
 from typing import Dict, List, Optional
+
+# Security limits
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
 
 
 def load_parameters(path: str) -> Dict:
     """
-    Load simulation parameters from JSON file.
-    
+    Load simulation parameters from JSON file with validation.
+
     Args:
         path: Path to JSON file with parameters
-    
+
     Returns:
         Parameter dictionary
     """
     try:
+        file_size = os.path.getsize(path)
+        if file_size > MAX_FILE_SIZE:
+            raise ValueError(f"File exceeds size limit ({file_size} > {MAX_FILE_SIZE}): {path}")
         with open(path, 'r', encoding='utf-8') as f:
             params = json.load(f)
+        if not isinstance(params, dict):
+            raise ValueError(f"JSON root must be an object: {path}")
         
         # Validate required fields
         missing = []
@@ -122,6 +132,9 @@ def compute_total_memory(params: Dict, available_gb: Optional[float] = None) -> 
     processors = params.get('processors', 1)
     if not isinstance(processors, int) or processors <= 0:
         raise ValueError(f"processors must be a positive integer, got {processors}")
+    if available_gb is not None:
+        if not isinstance(available_gb, (int, float)) or not math.isfinite(available_gb) or available_gb <= 0:
+            raise ValueError(f"available_gb must be a positive finite number, got {available_gb}")
     
     # Calculate mesh points
     nx = mesh.get('nx', 1)

@@ -20,8 +20,14 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple
+
+# Security limits
+MAX_RESULT_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_JSON_DEPTH = 10
+METRIC_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.]*$")
 
 
 def load_campaign(config_dir: str) -> Dict[str, Any]:
@@ -72,10 +78,60 @@ def find_result_file(job: Dict[str, Any], config_dir: str) -> Optional[str]:
     return None
 
 
+def _validate_json_depth(obj: Any, max_depth: int = MAX_JSON_DEPTH, _current: int = 0) -> bool:
+    """Check that a parsed JSON object does not exceed maximum nesting depth."""
+    if _current > max_depth:
+        return False
+    if isinstance(obj, dict):
+        return all(_validate_json_depth(v, max_depth, _current + 1) for v in obj.values())
+    if isinstance(obj, list):
+        return all(_validate_json_depth(v, max_depth, _current + 1) for v in obj)
+    return True
+
+
+def _sanitize_value(value: Any) -> Any:
+    """Sanitize a value loaded from an external result file.
+
+    Strings are truncated and stripped of control characters to prevent
+    prompt-injection payloads from propagating into agent context.
+    """
+    if isinstance(value, (int, float, bool)) or value is None:
+        return value
+    if isinstance(value, str):
+        # Truncate long strings and strip control characters
+        clean = value[:500]
+        clean = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", clean)
+        return clean
+    if isinstance(value, list):
+        return [_sanitize_value(v) for v in value[:1000]]
+    if isinstance(value, dict):
+        return {str(k)[:200]: _sanitize_value(v) for k, v in list(value.items())[:500]}
+    return None
+
+
 def load_result(result_path: str) -> Dict[str, Any]:
-    """Load a result file."""
+    """Load a result file with size and structure validation."""
+    file_size = os.path.getsize(result_path)
+    if file_size > MAX_RESULT_FILE_SIZE:
+        raise ValueError(
+            f"Result file exceeds size limit ({file_size} > {MAX_RESULT_FILE_SIZE}): {result_path}"
+        )
     with open(result_path, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"Result file root must be a JSON object: {result_path}")
+    if not _validate_json_depth(data):
+        raise ValueError(f"Result file exceeds maximum nesting depth: {result_path}")
+    return _sanitize_value(data)
+
+
+def _validate_metric_name(metric: str) -> None:
+    """Validate that a metric name contains only safe characters."""
+    if not METRIC_NAME_PATTERN.match(metric):
+        raise ValueError(
+            f"Invalid metric name '{metric}'. "
+            "Must match [a-zA-Z_][a-zA-Z0-9_.]*"
+        )
 
 
 def extract_metric(result: Dict[str, Any], metric: str) -> Optional[float]:
@@ -89,8 +145,16 @@ def extract_metric(result: Dict[str, Any], metric: str) -> Optional[float]:
 
     Returns:
         Metric value if found, None otherwise
+
+    Raises:
+        ValueError: If metric name contains invalid characters
     """
+    _validate_metric_name(metric)
+
     keys = metric.split(".")
+    if len(keys) > MAX_JSON_DEPTH:
+        return None
+
     value = result
 
     for key in keys:
@@ -99,8 +163,10 @@ def extract_metric(result: Dict[str, Any], metric: str) -> Optional[float]:
         else:
             return None
 
-    if isinstance(value, (int, float)):
-        return float(value)
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        result_float = float(value)
+        if math.isfinite(result_float):
+            return result_float
     return None
 
 

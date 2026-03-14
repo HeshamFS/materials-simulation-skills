@@ -14,14 +14,29 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
+# Security limits
+MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+FIELD_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.-]*$")
+
+
+def _validate_file_size(filepath: str) -> None:
+    size = os.path.getsize(filepath)
+    if size > MAX_FILE_SIZE:
+        raise ValueError(f"File exceeds size limit ({size} > {MAX_FILE_SIZE}): {filepath}")
+
 
 def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
+    """Load JSON file with size validation."""
+    _validate_file_size(filepath)
     with open(filepath, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"JSON root must be an object: {filepath}")
+    return data
 
 
 def get_field_data(data: Dict[str, Any], field_name: str) -> Optional[List]:
@@ -292,7 +307,13 @@ def extract_line_profile(
 def parse_point(s: str) -> Tuple[float, ...]:
     """Parse point string like '0.5,0.5' or '0,0.5,0'."""
     parts = s.strip().split(",")
-    return tuple(float(p.strip()) for p in parts)
+    if len(parts) > 3:
+        raise ValueError(f"Point has too many dimensions ({len(parts)}, max 3)")
+    values = tuple(float(p.strip()) for p in parts)
+    for v in values:
+        if not math.isfinite(v):
+            raise ValueError(f"Point coordinate must be finite, got {v}")
+    return values
 
 
 def compute_profile_statistics(values: List[float]) -> Dict[str, Any]:

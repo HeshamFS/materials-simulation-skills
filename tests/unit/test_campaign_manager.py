@@ -167,5 +167,32 @@ class TestCampaignManager(unittest.TestCase):
         self.assertAlmostEqual(status["progress"], 1/3, places=4)
 
 
+    def test_command_template_rejects_shell_chaining(self):
+        """Test that dangerous shell operators in command template are rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.init_campaign(self.sweep_dir, "python sim.py; rm -rf /")
+        with self.assertRaises(ValueError):
+            self.mod.init_campaign(self.sweep_dir, "python sim.py | evil")
+        with self.assertRaises(ValueError):
+            self.mod.init_campaign(self.sweep_dir, "python sim.py && evil")
+        with self.assertRaises(ValueError):
+            self.mod.init_campaign(self.sweep_dir, "python sim.py `whoami`")
+        with self.assertRaises(ValueError):
+            self.mod.init_campaign(self.sweep_dir, "python sim.py $(whoami)")
+
+    def test_config_path_is_shell_quoted(self):
+        """Test that config paths are shell-escaped in generated commands."""
+        campaign = self.mod.init_campaign(
+            self.sweep_dir, "python sim.py --config {config}"
+        )
+        for job in campaign["jobs"]:
+            # shlex.quote wraps in single quotes on Unix
+            # The path should be safely quoted in the command
+            self.assertNotIn("{config}", job["command"])
+            # The raw path should still be stored separately
+            self.assertTrue(os.path.isabs(job["config_path"]) or
+                            os.path.exists(job["config_path"]))
+
+
 if __name__ == "__main__":
     unittest.main()

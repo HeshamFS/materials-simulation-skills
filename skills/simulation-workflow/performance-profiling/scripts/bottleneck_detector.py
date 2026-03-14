@@ -4,54 +4,67 @@ Bottleneck Detector - Identify performance bottlenecks and recommend optimizatio
 """
 import argparse
 import json
+import os
 import sys
 from typing import Dict, List, Optional
+
+# Security limits
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+
+
+def _load_json_safe(path: str, label: str) -> Dict:
+    """Load a JSON file with size and structure validation."""
+    file_size = os.path.getsize(path)
+    if file_size > MAX_FILE_SIZE:
+        raise ValueError(f"{label} file exceeds size limit ({file_size} > {MAX_FILE_SIZE}): {path}")
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"{label} JSON root must be an object: {path}")
+    return data
 
 
 def load_analysis_results(timing_path: str, scaling_path: Optional[str] = None,
                           memory_path: Optional[str] = None) -> Dict:
     """
-    Load analysis results from JSON files.
-    
+    Load analysis results from JSON files with validation.
+
     Args:
         timing_path: Path to timing analysis JSON
         scaling_path: Path to scaling analysis JSON (optional)
         memory_path: Path to memory profile JSON (optional)
-    
+
     Returns:
         Combined analysis data
     """
     results = {}
-    
+
     # Load timing data (required)
     try:
-        with open(timing_path, 'r', encoding='utf-8') as f:
-            results['timing'] = json.load(f)
+        results['timing'] = _load_json_safe(timing_path, "Timing")
     except FileNotFoundError:
         raise FileNotFoundError(f"Timing analysis file not found: {timing_path}")
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid timing JSON: {e}")
-    
+
     # Load scaling data (optional)
     if scaling_path:
         try:
-            with open(scaling_path, 'r', encoding='utf-8') as f:
-                results['scaling'] = json.load(f)
+            results['scaling'] = _load_json_safe(scaling_path, "Scaling")
         except FileNotFoundError:
             print(f"Warning: Scaling file not found: {scaling_path}", file=sys.stderr)
-        except json.JSONDecodeError as e:
-            print(f"Warning: Invalid scaling JSON: {e}", file=sys.stderr)
-    
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"Warning: Invalid scaling file: {e}", file=sys.stderr)
+
     # Load memory data (optional)
     if memory_path:
         try:
-            with open(memory_path, 'r', encoding='utf-8') as f:
-                results['memory'] = json.load(f)
+            results['memory'] = _load_json_safe(memory_path, "Memory")
         except FileNotFoundError:
             print(f"Warning: Memory file not found: {memory_path}", file=sys.stderr)
-        except json.JSONDecodeError as e:
-            print(f"Warning: Invalid memory JSON: {e}", file=sys.stderr)
-    
+        except (json.JSONDecodeError, ValueError) as e:
+            print(f"Warning: Invalid memory file: {e}", file=sys.stderr)
+
     return results
 
 

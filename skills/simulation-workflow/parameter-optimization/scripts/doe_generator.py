@@ -49,11 +49,19 @@ def factorial_samples(dim: int, budget: int) -> List[List[float]]:
     return samples[:budget]
 
 
+MAX_DIM = 1000
+MAX_BUDGET = 1_000_000
+
+
 def generate_doe(dim: int, budget: int, method: str, seed: int) -> Dict[str, object]:
     if dim <= 0:
         raise ValueError("params must be positive")
+    if dim > MAX_DIM:
+        raise ValueError(f"params ({dim}) exceeds maximum ({MAX_DIM})")
     if budget <= 0:
         raise ValueError("budget must be positive")
+    if budget > MAX_BUDGET:
+        raise ValueError(f"budget ({budget}) exceeds maximum ({MAX_BUDGET})")
     valid_methods = {"lhs", "sobol", "quasi-random", "factorial"}
     if method not in valid_methods:
         raise ValueError(f"method must be one of: {', '.join(sorted(valid_methods))}")

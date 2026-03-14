@@ -4,23 +4,34 @@ Scaling Analyzer - Analyze strong and weak scaling from multi-run data.
 """
 import argparse
 import json
+import math
+import os
 import sys
 from typing import Dict, List, Optional
+
+# Security limits
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+MAX_RUNS = 10_000
 
 
 def load_scaling_data(path: str) -> List[Dict]:
     """
-    Load scaling data from JSON file.
-    
+    Load scaling data from JSON file with validation.
+
     Args:
         path: Path to JSON file with scaling data
-    
+
     Returns:
         List of run configurations
     """
     try:
+        file_size = os.path.getsize(path)
+        if file_size > MAX_FILE_SIZE:
+            raise ValueError(f"File exceeds size limit ({file_size} > {MAX_FILE_SIZE}): {path}")
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
+        if not isinstance(data, dict):
+            raise ValueError("JSON root must be an object")
         
         if 'runs' not in data:
             raise ValueError("JSON must contain 'runs' array")
@@ -29,15 +40,21 @@ def load_scaling_data(path: str) -> List[Dict]:
         
         if len(runs) < 2:
             raise ValueError("At least 2 runs required for scaling analysis")
-        
+        if len(runs) > MAX_RUNS:
+            raise ValueError(f"Too many runs ({len(runs)} > {MAX_RUNS})")
+
         # Validate required fields
         for i, run in enumerate(runs):
             if 'processors' not in run:
                 raise ValueError(f"Run {i} missing 'processors' field")
             if 'time' not in run:
                 raise ValueError(f"Run {i} missing 'time' field")
+            if not isinstance(run['time'], (int, float)) or not math.isfinite(run['time']):
+                raise ValueError(f"Run {i} has non-finite time: {run['time']}")
             if run['time'] <= 0:
                 raise ValueError(f"Run {i} has invalid time: {run['time']}")
+            if not isinstance(run['processors'], int):
+                raise ValueError(f"Run {i} processors must be an integer: {run['processors']}")
             if run['processors'] <= 0:
                 raise ValueError(f"Run {i} has invalid processor count: {run['processors']}")
         

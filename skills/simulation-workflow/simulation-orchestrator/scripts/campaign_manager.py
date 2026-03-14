@@ -20,10 +20,15 @@ Output (JSON):
 import argparse
 import json
 import os
+import re
+import shlex
 import sys
 import time
 import uuid
 from typing import Any, Dict, List, Optional
+
+# Characters allowed in file paths used in command interpolation
+_SAFE_PATH_PATTERN = re.compile(r"^[a-zA-Z0-9_./ \\:-]+$")
 
 
 def generate_campaign_id() -> str:
@@ -56,6 +61,26 @@ def save_campaign(config_dir: str, campaign: Dict[str, Any]) -> None:
         json.dump(campaign, f, indent=2)
 
 
+def _validate_command_template(template: str) -> None:
+    """Validate that a command template is safe for shell interpolation.
+
+    Rejects templates that contain dangerous shell operators outside the
+    {config} placeholder.
+
+    Raises:
+        ValueError: If the template contains suspicious patterns
+    """
+    # Remove the {config} placeholder for analysis
+    remainder = template.replace("{config}", "PLACEHOLDER")
+    # Reject shell chaining/redirection operators in the template itself
+    dangerous = re.compile(r"[;|&`$]|>\s*>|<<")
+    if dangerous.search(remainder):
+        raise ValueError(
+            f"Command template contains potentially dangerous shell operators: {template!r}. "
+            "Use a wrapper script if complex shell logic is needed."
+        )
+
+
 def init_campaign(
     config_dir: str, command_template: str, output_pattern: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -68,7 +93,11 @@ def init_campaign(
 
     Returns:
         Campaign state dictionary
+
+    Raises:
+        ValueError: If command template contains dangerous shell operators
     """
+    _validate_command_template(command_template)
     manifest = load_manifest(config_dir)
 
     campaign_id = generate_campaign_id()
@@ -76,11 +105,21 @@ def init_campaign(
     jobs = []
     for i, config_file in enumerate(manifest["configs"]):
         config_path = os.path.join(config_dir, config_file)
+
+        # Validate config path before interpolating into shell command
+        if not _SAFE_PATH_PATTERN.match(config_path):
+            raise ValueError(
+                f"Config path contains unsafe characters: {config_path!r}. "
+                "Paths must only contain alphanumerics, '.', '_', '/', '\\', ':', '-', and spaces."
+            )
+
+        # Use shlex.quote to prevent shell metacharacter injection
+        safe_path = shlex.quote(config_path)
         job = {
             "job_id": f"job_{i:04d}",
             "config_file": config_file,
             "config_path": config_path,
-            "command": command_template.replace("{config}", config_path),
+            "command": command_template.replace("{config}", safe_path),
             "status": "pending",
             "start_time": None,
             "end_time": None,

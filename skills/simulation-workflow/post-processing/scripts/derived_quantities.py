@@ -14,14 +14,29 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
+# Security limits
+MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+FIELD_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.-]*$")
+
+
+def _validate_file_size(filepath: str) -> None:
+    size = os.path.getsize(filepath)
+    if size > MAX_FILE_SIZE:
+        raise ValueError(f"File exceeds size limit ({size} > {MAX_FILE_SIZE}): {filepath}")
+
 
 def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
+    """Load JSON file with size validation."""
+    _validate_file_size(filepath)
     with open(filepath, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"JSON root must be an object: {filepath}")
+    return data
 
 
 def get_field_data(data: Dict[str, Any], field_name: str) -> Optional[List]:
@@ -489,7 +504,10 @@ def main():
 
         data = load_json_file(args.input)
 
-        # Get field data
+        # Validate and get field data
+        if not FIELD_NAME_PATTERN.match(args.field):
+            print(f"Error: Invalid field name: {args.field!r}", file=sys.stderr)
+            sys.exit(1)
         field = get_field_data(data, args.field)
         if field is None:
             print(f"Error: Field '{args.field}' not found", file=sys.stderr)

@@ -5,12 +5,22 @@ import math
 import sys
 from typing import List, Tuple
 
+# Maximum number of residual entries to prevent resource exhaustion
+MAX_LIST_LENGTH = 100_000
+
 
 def parse_list(raw: str) -> List[float]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("residual list must be a comma-separated list")
-    return [float(p) for p in parts]
+    if len(parts) > MAX_LIST_LENGTH:
+        raise ValueError(
+            f"residual list length ({len(parts)}) exceeds limit ({MAX_LIST_LENGTH})"
+        )
+    values = [float(p) for p in parts]
+    if any(not math.isfinite(v) for v in values):
+        raise ValueError("residual list contains non-finite values")
+    return values
 
 
 def compute_diagnostics(residuals: List[float]) -> Tuple[float, bool, str]:

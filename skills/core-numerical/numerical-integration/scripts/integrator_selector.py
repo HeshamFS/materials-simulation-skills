@@ -5,6 +5,9 @@ import sys
 from typing import Dict, List
 
 
+MAX_DIMENSION = 10_000_000_000  # 10 billion
+
+
 def select_integrator(
     stiff: bool,
     oscillatory: bool,
@@ -15,8 +18,12 @@ def select_integrator(
     dimension: int,
     low_memory: bool,
 ) -> Dict[str, List[str] | str]:
+    if not isinstance(dimension, int):
+        raise ValueError(f"dimension must be an integer, got {type(dimension).__name__}")
     if dimension <= 0:
         raise ValueError("dimension must be positive")
+    if dimension > MAX_DIMENSION:
+        raise ValueError(f"dimension ({dimension}) exceeds maximum ({MAX_DIMENSION})")
     if accuracy not in {"low", "medium", "high"}:
         raise ValueError("accuracy must be low, medium, or high")
 

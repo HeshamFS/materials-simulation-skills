@@ -5,11 +5,23 @@ import math
 import sys
 from typing import Dict
 
+# Upper bound to reject unreasonable cell sizes
+MAX_CELL_SIZE = 1e12
+
+
+def _validate_cell_size(name: str, value: float) -> None:
+    """Validate that a cell size is a finite positive number within bounds."""
+    if not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a number, got {type(value).__name__}")
+    if not math.isfinite(value) or value <= 0:
+        raise ValueError(f"{name} must be a finite positive number, got {value}")
+    if value > MAX_CELL_SIZE:
+        raise ValueError(f"{name} exceeds maximum ({MAX_CELL_SIZE}), got {value}")
+
 
 def compute_quality(dx: float, dy: float, dz: float) -> Dict[str, object]:
     for name, val in [("dx", dx), ("dy", dy), ("dz", dz)]:
-        if not math.isfinite(val) or val <= 0:
-            raise ValueError(f"{name} must be a finite positive number, got {val}")
+        _validate_cell_size(name, val)
 
     sizes = [dx, dy, dz]
     aspect_ratio = max(sizes) / min(sizes)

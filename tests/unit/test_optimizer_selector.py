@@ -107,5 +107,86 @@ class TestOptimizerSelector(unittest.TestCase):
         self.assertIn("noise must be", str(ctx.exception))
 
 
+
+class TestSensitivitySummarySecurity(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "sensitivity_summary",
+            "skills/simulation-workflow/parameter-optimization/scripts/sensitivity_summary.py",
+        )
+
+    def test_name_rejects_shell_metacharacters(self):
+        with self.assertRaises(ValueError):
+            self.mod.parse_names("kappa;rm -rf /,mobility", 2)
+        with self.assertRaises(ValueError):
+            self.mod.parse_names("$(whoami),test", 2)
+
+    def test_name_accepts_valid(self):
+        result = self.mod.parse_names("kappa,mobility,W_interface", 3)
+        self.assertEqual(result, ["kappa", "mobility", "W_interface"])
+
+    def test_scores_reject_nonfinite(self):
+        with self.assertRaises(ValueError):
+            self.mod.parse_list("0.5,inf,0.3")
+
+    def test_scores_reject_oversized(self):
+        huge = ",".join(["0.1"] * (self.mod.MAX_LIST_LENGTH + 1))
+        with self.assertRaises(ValueError):
+            self.mod.parse_list(huge)
+
+
+class TestDoeGeneratorSecurity(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "doe_generator",
+            "skills/simulation-workflow/parameter-optimization/scripts/doe_generator.py",
+        )
+
+    def test_dim_exceeds_max(self):
+        with self.assertRaises(ValueError):
+            self.mod.generate_doe(2000, 10, "lhs", 0)
+
+    def test_budget_exceeds_max(self):
+        with self.assertRaises(ValueError):
+            self.mod.generate_doe(3, 2_000_000, "lhs", 0)
+
+
+class TestOptimizerSelectorBounds(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "optimizer_selector",
+            "skills/simulation-workflow/parameter-optimization/scripts/optimizer_selector.py",
+        )
+
+    def test_dim_exceeds_max(self):
+        with self.assertRaises(ValueError):
+            self.mod.select_optimizer(200_000, 100, "low", False)
+
+    def test_budget_exceeds_max(self):
+        with self.assertRaises(ValueError):
+            self.mod.select_optimizer(3, 20_000_000, "low", False)
+
+
+class TestSurrogateBuilderSecurity(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "surrogate_builder",
+            "skills/simulation-workflow/parameter-optimization/scripts/surrogate_builder.py",
+        )
+
+    def test_rejects_nonfinite(self):
+        with self.assertRaises(ValueError):
+            self.mod.parse_list("1.0,nan,3.0")
+
+    def test_rejects_oversized(self):
+        huge = ",".join(["1.0"] * (self.mod.MAX_LIST_LENGTH + 1))
+        with self.assertRaises(ValueError):
+            self.mod.parse_list(huge)
+
+
 if __name__ == "__main__":
     unittest.main()

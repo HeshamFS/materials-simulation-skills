@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import math
 import sys
 from typing import Dict, List
+
+# Security limits
+MAX_LIST_LENGTH = 100_000
 
 
 def parse_list(raw: str) -> List[float]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("value list must be a comma-separated list")
-    return [float(p) for p in parts]
+    if len(parts) > MAX_LIST_LENGTH:
+        raise ValueError(f"list length ({len(parts)}) exceeds limit ({MAX_LIST_LENGTH})")
+    values = [float(p) for p in parts]
+    if any(not math.isfinite(v) for v in values):
+        raise ValueError("list contains non-finite values")
+    return values
 
 
 def build_surrogate(x: List[float], y: List[float], model: str) -> Dict[str, object]:

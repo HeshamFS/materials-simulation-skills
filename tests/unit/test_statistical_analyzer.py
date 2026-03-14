@@ -195,5 +195,73 @@ class TestStatisticalAnalyzerIO(unittest.TestCase):
         self.assertEqual(shape, [2, 2, 2])
 
 
+class TestStatisticalAnalyzerSecurity(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "statistical_analyzer",
+            "skills/simulation-workflow/post-processing/scripts/statistical_analyzer.py",
+        )
+
+    def test_region_condition_rejects_eval_attempt(self):
+        """Region conditions with code injection must be rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_region_condition("__import__('os').system('rm -rf /')")
+        with self.assertRaises(ValueError):
+            self.mod.parse_region_condition("exec('print(1)')")
+        with self.assertRaises(ValueError):
+            self.mod.parse_region_condition("x>0; import os")
+
+    def test_region_condition_accepts_valid(self):
+        """Valid region conditions must be accepted."""
+        fn = self.mod.parse_region_condition("x>0.3 and x<0.7")
+        self.assertTrue(callable(fn))
+        fn = self.mod.parse_region_condition("y>=1e-3")
+        self.assertTrue(callable(fn))
+
+    def test_region_condition_rejects_long_input(self):
+        """Excessively long region conditions must be rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_region_condition("x>0 and " * 100)
+
+    def test_field_name_validation_rejects_injection(self):
+        with self.assertRaises(ValueError):
+            self.mod._validate_field_name("../../etc/passwd")
+        with self.assertRaises(ValueError):
+            self.mod._validate_field_name("field;rm -rf /")
+
+    def test_field_name_validation_accepts_valid(self):
+        self.mod._validate_field_name("phi")
+        self.mod._validate_field_name("concentration_field")
+        self.mod._validate_field_name("results.energy")
+
+    def test_load_json_rejects_oversized(self):
+        """Files exceeding size limit must be rejected."""
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as f:
+            json.dump({"x": 1}, f)
+            path = f.name
+        try:
+            original = self.mod.MAX_FILE_SIZE
+            self.mod.MAX_FILE_SIZE = 1
+            with self.assertRaises(ValueError):
+                self.mod.load_json_file(path)
+            self.mod.MAX_FILE_SIZE = original
+        finally:
+            os.unlink(path)
+
+    def test_load_json_rejects_non_dict_root(self):
+        """JSON files with non-object root must be rejected."""
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w") as f:
+            json.dump([1, 2, 3], f)
+            path = f.name
+        try:
+            with self.assertRaises(ValueError):
+                self.mod.load_json_file(path)
+        finally:
+            os.unlink(path)
+
+
 if __name__ == "__main__":
     unittest.main()

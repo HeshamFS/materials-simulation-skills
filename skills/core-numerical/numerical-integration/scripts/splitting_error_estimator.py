@@ -12,14 +12,14 @@ def estimate_error(
     commutator_norm: float,
     target_error: float,
 ) -> Dict[str, object]:
-    if dt <= 0:
-        raise ValueError("dt must be positive")
-    if commutator_norm < 0:
-        raise ValueError("commutator_norm must be non-negative")
+    if not math.isfinite(dt) or dt <= 0:
+        raise ValueError("dt must be a positive finite number")
+    if not math.isfinite(commutator_norm) or commutator_norm < 0:
+        raise ValueError("commutator_norm must be a non-negative finite number")
     if scheme not in {"lie", "strang"}:
         raise ValueError("scheme must be lie or strang")
-    if target_error < 0:
-        raise ValueError("target_error must be non-negative")
+    if not math.isfinite(target_error) or target_error < 0:
+        raise ValueError("target_error must be a non-negative finite number")
 
     order = 1 if scheme == "lie" else 2
     error_est = commutator_norm * (dt ** (order + 1))

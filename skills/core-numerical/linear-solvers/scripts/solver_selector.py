@@ -5,6 +5,9 @@ import sys
 from typing import Dict, List
 
 
+MAX_SIZE = 10_000_000_000  # 10 billion
+
+
 def select_solver(
     symmetric: bool,
     positive_definite: bool,
@@ -15,8 +18,12 @@ def select_solver(
     complex_valued: bool,
     memory_limited: bool,
 ) -> Dict[str, List[str] | str]:
+    if not isinstance(size, int):
+        raise ValueError(f"size must be an integer, got {type(size).__name__}")
     if size <= 0:
         raise ValueError("size must be positive")
+    if size > MAX_SIZE:
+        raise ValueError(f"size ({size}) exceeds maximum ({MAX_SIZE})")
 
     recommended: List[str] = []
     alternatives: List[str] = []

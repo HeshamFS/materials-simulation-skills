@@ -17,15 +17,29 @@ import os
 import sys
 from typing import Any, Dict, List, Optional, Tuple
 
+# Security limits
+MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+
+
+def _validate_file_size(filepath: str) -> None:
+    size = os.path.getsize(filepath)
+    if size > MAX_FILE_SIZE:
+        raise ValueError(f"File exceeds size limit ({size} > {MAX_FILE_SIZE}): {filepath}")
+
 
 def load_json_file(filepath: str) -> Dict[str, Any]:
-    """Load JSON file and return contents."""
+    """Load JSON file with size validation."""
+    _validate_file_size(filepath)
     with open(filepath, "r") as f:
-        return json.load(f)
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError(f"JSON root must be an object: {filepath}")
+    return data
 
 
 def load_csv_file(filepath: str) -> Dict[str, List[Any]]:
-    """Load CSV file as column-based dict."""
+    """Load CSV file with size validation."""
+    _validate_file_size(filepath)
     data = {}
 
     with open(filepath, "r") as f:
