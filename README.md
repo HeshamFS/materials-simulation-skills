@@ -21,6 +21,7 @@ Give your AI coding agent domain expertise in numerical methods, simulation best
   - [HPC Deployment Skills](#hpc-deployment-skills-skillshpc-deployment)
   - [Ontology Skills](#ontology-skills-skillsontology)
 - [How Skills Work](#how-skills-work)
+- [Security](#security)
 - [Quick Start](#quick-start)
 - [Adding Skills to Your Agent](#adding-skills-to-your-agent)
   - [Claude Code](#claude-code)
@@ -60,7 +61,7 @@ No prompt engineering. No copy-pasting formulas. The agent finds the right skill
 
 ## What's Inside
 
-**17 skills** | **67 scripts** | **857 tests** | Cross-platform CI on Python 3.10-3.12
+**17 skills** | **67 scripts** | **932 tests** | Cross-platform CI on Python 3.10-3.12
 
 ### Core Numerical Skills (`skills/core-numerical/`)
 
@@ -133,6 +134,22 @@ All scripts are standalone CLI tools with `--help`, a pure-function core for tes
 
 ---
 
+## Security
+
+All skills are hardened against the [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/), with 75 dedicated security tests. Key safeguards:
+
+- **No shell access by default** -- Skills use `allowed-tools: Read, Write, Grep, Glob` (no `Bash`), preventing the agent from executing arbitrary commands when processing untrusted data
+- **Input validation at every boundary** -- Numeric parameters are bounds-checked and validated as finite; string inputs (parameter names, field names, term names) are validated against regex allowlists
+- **Safe file loading** -- All JSON/CSV/NPY loaders enforce file size limits (100-500 MB) and structure validation (dict root required); `np.load()` uses `allow_pickle=False`
+- **No `eval()`/`exec()`** -- Region condition parsing uses strict regex matching, never dynamic code execution
+- **Prompt injection resistance** -- String values extracted from external files are truncated and stripped of control characters before surfacing to the agent; phase names from logs are sanitized
+- **Command construction safety** -- `shlex.quote()` escapes paths interpolated into shell commands; command templates are validated against a shell-operator denylist
+- **ReDoS prevention** -- User-supplied regex patterns are length-capped and checked for catastrophic backtracking constructs
+
+Each skill documents its specific safeguards in a **Security** section within its `SKILL.md`.
+
+---
+
 ## Quick Start
 
 ### Install
@@ -146,7 +163,7 @@ pip install -r requirements-dev.txt
 ### Run the test suite
 
 ```bash
-python -m pytest tests/ -v --tb=short          # All 857 tests
+python -m pytest tests/ -v --tb=short          # All 932 tests
 python -m pytest tests/unit -v --tb=short       # Unit tests only
 python -m pytest tests/integration -v           # Integration tests only
 ```
