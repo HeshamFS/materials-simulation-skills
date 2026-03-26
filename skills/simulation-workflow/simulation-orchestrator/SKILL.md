@@ -1,7 +1,28 @@
 ---
 name: simulation-orchestrator
-description: Orchestrate multi-simulation campaigns including parameter sweeps, batch jobs, and result aggregation. Use for running parameter studies, managing simulation batches, tracking job status, combining results from multiple runs, or automating simulation workflows.
+description: >
+  Orchestrate multi-simulation campaigns — generate parameter sweep
+  configurations (grid, linspace, or Latin Hypercube sampling), initialize
+  and track batch job campaigns, monitor job completion status, and aggregate
+  results with summary statistics across all runs. Use when running a
+  parameter study across dt, kappa, or other simulation inputs, managing
+  dozens or hundreds of simulation configurations, combining outputs from
+  completed batch runs to find the best result, or automating the
+  generate-run-collect workflow for systematic studies, even if the user
+  only says "I need to try many parameter combinations" or "how do I
+  organize a sweep."
 allowed-tools: Read, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: medium
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Simulation Orchestrator
@@ -214,13 +235,31 @@ parameter-optimization          simulation-orchestrator
 
 ## Security
 
-The orchestrator applies the following safeguards when processing external data:
+### Input Validation
+- Metric names are validated against `[a-zA-Z_][a-zA-Z0-9_.]*` to prevent traversal or injection via crafted keys
+- `campaign_manager.py` validates command templates to reject shell chaining operators (`;`, `|`, `&`, backticks, `$`)
+- `--params` format strings are parsed and validated (`name:min:max:count` with finite numeric bounds and positive integer counts)
+- `--method` is validated against a fixed allowlist (`grid`, `linspace`, `lhs`)
+- `--samples` is validated as a positive integer with an upper bound
+- `--action` is validated against a fixed allowlist (`init`, `status`)
 
-- **Result file validation**: `result_aggregator.py` enforces a 10 MB file-size limit, maximum JSON nesting depth, strict numeric type checking (rejects `bool`, `NaN`, `Inf`), and sanitizes all string values (truncation, control-character stripping) before surfacing them.
-- **Metric name validation**: Metric names are validated against `[a-zA-Z_][a-zA-Z0-9_.]*` to prevent traversal or injection via crafted keys.
-- **Command template safety**: `campaign_manager.py` validates command templates to reject shell chaining operators (`;`, `|`, `&`, backticks, `$`).
-- **Path sanitization**: Config paths interpolated into shell commands are validated against a safe-character allowlist and escaped with `shlex.quote()`.
-- **Reduced tool surface**: The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing untrusted simulation outputs.
+### File Access
+- `sweep_generator.py` reads a single base config file (JSON) specified by `--base-config` and writes generated configs to `--output-dir`
+- `result_aggregator.py` enforces a 10 MB file-size limit per result file, maximum JSON nesting depth, and strict numeric type checking (rejects `bool`, `NaN`, `Inf`)
+- All string values from result files are sanitized (truncated, control characters stripped) before surfacing them
+- Config paths interpolated into shell commands are validated against a safe-character allowlist and escaped with `shlex.quote()`
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, base configs, and campaign status files
+- **Write**: Used to save generated sweep configs, campaign manifests, and aggregated results; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate campaign files, result files, and search references
+- The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing untrusted simulation outputs
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Reduced tool surface (no Bash) limits the agent to read/write operations only
+- Command templates are validated but never executed by the skill itself; execution is the user's responsibility
 
 ## Limitations
 

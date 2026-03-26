@@ -1,0 +1,60 @@
+{
+  "skill_name": "simulation-validator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm about to launch a phase-field simulation. My config is at simulation.json. Required parameters are dt, dx, and kappa. Valid ranges are dt between 1e-6 and 1e-2, and dx between 1e-4 and 1e-1. Make sure I have at least 2GB of free disk space.",
+      "expected_output": "Agent runs preflight_checker.py to validate the configuration, checking required parameters, ranges, and disk space before the simulation starts.",
+      "assertions": [
+        "Invokes scripts/preflight_checker.py with --config simulation.json --required dt,dx,kappa --ranges 'dt:1e-6:1e-2,dx:1e-4:1e-1' --min-free-gb 2.0 --json",
+        "Output includes report.status (PASS, WARN, or BLOCK)",
+        "Reports any blockers that would prevent simulation launch",
+        "Reports any warnings about non-critical issues"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My simulation has been running for a while. Can you check simulation.log for any signs of trouble? Watch for residual growth above 10x and time step drops of more than 100x.",
+      "expected_output": "Agent runs runtime_monitor.py on the log file with the specified alert thresholds, reporting any concerning patterns.",
+      "assertions": [
+        "Invokes scripts/runtime_monitor.py with --log simulation.log --residual-growth 10.0 --dt-drop 100.0 --json",
+        "Output includes alerts, residual_stats, and dt_stats fields",
+        "Checks for NaN/Inf values, residual growth, and adaptive dt collapse",
+        "Reports whether the simulation appears healthy or shows warning signs"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "My simulation finished. Results are in results.json. The order parameter phi should stay between 0 and 1, and mass conservation should hold to within 1e-3. Validate the results.",
+      "expected_output": "Agent runs result_validator.py to check physical bounds and mass conservation on the finished simulation results.",
+      "assertions": [
+        "Invokes scripts/result_validator.py with --metrics results.json --bound-min 0.0 --bound-max 1.0 --mass-tol 1e-3 --json",
+        "Output includes checks, confidence_score, and failed_checks fields",
+        "Validates that phi values remain within [0, 1] bounds",
+        "Checks mass conservation against the 1e-3 tolerance"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "my simulation crashed after 1000 steps. The log is at output/crash.log. What went wrong?",
+      "expected_output": "Agent runs failure_diagnoser.py to analyze the crash log, identifying probable causes and recommending fixes.",
+      "assertions": [
+        "Invokes scripts/failure_diagnoser.py with --log output/crash.log --json",
+        "Output includes probable_causes and recommended_fixes fields",
+        "Identifies likely failure pattern (NaN/Inf, convergence failure, memory, dt collapse)",
+        "Provides specific actionable fixes (e.g., reduce dt, tune preconditioner, check initial conditions)"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Run a full validation pipeline: preflight check on config.json (require dt, dx, kappa, M with dt range 1e-6 to 1e-2), then diagnose the crash log at run.log to figure out why it blew up.",
+      "expected_output": "Agent runs both preflight_checker.py and failure_diagnoser.py to combine pre-launch validation with post-crash diagnosis, revealing whether the config had issues that caused the failure.",
+      "assertions": [
+        "Invokes scripts/preflight_checker.py with --config config.json --required dt,dx,kappa,M --ranges 'dt:1e-6:1e-2' --json",
+        "Invokes scripts/failure_diagnoser.py with --log run.log --json",
+        "Correlates preflight warnings with crash diagnosis (e.g., out-of-range dt causing blow-up)",
+        "Provides a unified analysis connecting configuration issues to the observed failure"
+      ]
+    }
+  ]
+}

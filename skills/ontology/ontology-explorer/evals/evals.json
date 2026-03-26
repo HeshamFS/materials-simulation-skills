@@ -1,0 +1,60 @@
+{
+  "skill_name": "ontology-explorer",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Show me the top-level classes in the CMSO ontology. I want to understand the overall hierarchy before I dive into specifics.",
+      "expected_output": "Agent runs class_browser.py with --list-roots to display all root-level CMSO classes, giving the user an overview of the ontology structure.",
+      "assertions": [
+        "Invokes scripts/class_browser.py with --ontology cmso --list-roots --json",
+        "Output includes results.roots listing the top-level CMSO classes",
+        "Shows classes like Material, Sample, Crystal Structure, Unit Cell, etc.",
+        "Explains the hierarchy: root classes are broadest concepts, children are more specific"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I'm working with crystal structures. What does the CMSO ontology say about the UnitCell class? Show me its children, parent classes, and any properties it has.",
+      "expected_output": "Agent inspects the UnitCell class and also looks up its properties, showing the class hierarchy path and applicable properties.",
+      "assertions": [
+        "Invokes scripts/class_browser.py with --ontology cmso --class UnitCell --json",
+        "Invokes scripts/property_lookup.py with --ontology cmso --class UnitCell --json",
+        "Output includes class hierarchy (parent classes, children/subclasses)",
+        "Shows properties applicable to UnitCell (e.g., has Bravais lattice, lattice parameters)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "search for anything related to 'lattice' in CMSO - both classes and properties",
+      "expected_output": "Agent searches for lattice-related classes and properties across the CMSO ontology using the search functionality of both scripts.",
+      "assertions": [
+        "Invokes scripts/class_browser.py with --ontology cmso --search lattice --json",
+        "Invokes scripts/property_lookup.py with --ontology cmso --search lattice --json",
+        "Returns matching classes (e.g., Bravais Lattice) with relevance scores",
+        "Returns matching properties (e.g., has Bravais lattice, lattice parameters) with domain/range info"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Look up the property 'has space group' in CMSO. I want to know its domain, range, and what type of property it is.",
+      "expected_output": "Agent runs property_lookup.py to get the full definition of the 'has space group' property including domain, range, and property type.",
+      "assertions": [
+        "Invokes scripts/property_lookup.py with --ontology cmso --property 'has space group' --json",
+        "Output includes results.property_info with domain and range definitions",
+        "Identifies whether it is an object property or data property",
+        "Shows which class(es) the property applies to (domain) and what values it takes (range)"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I have an OWL file at https://raw.githubusercontent.com/OCDO/cmso/main/cmso.owl that I want to parse and generate a fresh summary JSON from. Can you do that?",
+      "expected_output": "Agent runs owl_parser.py to parse the remote OWL file, then ontology_summarizer.py to generate a summary JSON, noting this requires internet access.",
+      "assertions": [
+        "Invokes scripts/owl_parser.py with --source https://raw.githubusercontent.com/OCDO/cmso/main/cmso.owl --json",
+        "Invokes scripts/ontology_summarizer.py with --source https://raw.githubusercontent.com/OCDO/cmso/main/cmso.owl --output summary.json --json",
+        "Mentions that internet access is required for fetching remote OWL files",
+        "Output from owl_parser includes results.metadata, results.classes, results.class_hierarchy"
+      ]
+    }
+  ]
+}

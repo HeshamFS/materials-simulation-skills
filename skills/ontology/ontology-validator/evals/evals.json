@@ -1,0 +1,60 @@
+{
+  "skill_name": "ontology-validator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Validate this CMSO annotation: {\"class\": \"Unit Cell\", \"properties\": {\"has Bravais lattice\": \"cF\", \"has lattice parameter a\": 3.615}}. Is the class valid and are the properties correct?",
+      "expected_output": "Agent runs schema_checker.py to validate the annotation against CMSO, checking that the class exists and property names are recognized.",
+      "assertions": [
+        "Invokes scripts/schema_checker.py with --ontology cmso --annotation '{\"class\":\"Unit Cell\",\"properties\":{\"has Bravais lattice\":\"cF\",\"has lattice parameter a\":3.615}}' --json",
+        "Output includes results.valid boolean, results.class_valid, and results.properties_valid",
+        "Validates that 'Unit Cell' is a recognized CMSO class",
+        "Validates that 'has Bravais lattice' and 'has lattice parameter a' are valid properties for Unit Cell"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Check if my Crystal Structure annotation is complete. I've provided 'has unit cell' and 'has space group' properties. What am I missing?",
+      "expected_output": "Agent runs completeness_checker.py to assess what required, recommended, and optional properties are present or missing for Crystal Structure.",
+      "assertions": [
+        "Invokes scripts/completeness_checker.py with --ontology cmso --class 'Crystal Structure' --provided 'has unit cell,has space group' --json",
+        "Output includes results.completeness_score as a ratio between 0 and 1",
+        "Reports results.required_missing, results.recommended_missing, and results.optional_missing",
+        "Identifies any additional properties needed for a complete Crystal Structure annotation"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Validate these relationships: Computational Sample has material Material, Material has structure Crystal Structure, Crystal Structure has unit cell Unit Cell. Are the domain/range constraints satisfied?",
+      "expected_output": "Agent runs relationship_checker.py to verify that all three subject-property-object triples have correct domain and range in CMSO.",
+      "assertions": [
+        "Invokes scripts/relationship_checker.py with --ontology cmso --relationships '[{\"subject_class\":\"Computational Sample\",\"property\":\"has material\",\"object_class\":\"Material\"},{\"subject_class\":\"Material\",\"property\":\"has structure\",\"object_class\":\"Crystal Structure\"},{\"subject_class\":\"Crystal Structure\",\"property\":\"has unit cell\",\"object_class\":\"Unit Cell\"}]' --json",
+        "Output includes results.valid boolean and results.results for each triple",
+        "Checks domain and range consistency for each relationship",
+        "Reports any domain/range mismatches as errors or warnings"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I annotated my sample with class 'CrystalStructurr' and property 'has_unit_cell'. Validate this please.",
+      "expected_output": "Agent runs schema_checker.py and detects the misspelled class name and incorrectly formatted property name, flagging both as errors.",
+      "assertions": [
+        "Invokes scripts/schema_checker.py with --ontology cmso --annotation '{\"class\":\"CrystalStructurr\",\"properties\":{\"has_unit_cell\":true}}' --json",
+        "Detects 'CrystalStructurr' as an unknown class (typo for Crystal Structure)",
+        "Detects 'has_unit_cell' as an unrecognized property (should be 'has unit cell')",
+        "Output results.valid is false with specific errors for both the class and property"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Check completeness for my Computational Sample annotation. I only provided 'has material'. What else do I need for a thorough annotation?",
+      "expected_output": "Agent runs completeness_checker.py to show what required and recommended properties are missing for Computational Sample beyond 'has material'.",
+      "assertions": [
+        "Invokes scripts/completeness_checker.py with --ontology cmso --class 'Computational Sample' --provided 'has material' --json",
+        "Reports a low completeness_score since only one property is provided",
+        "Lists required_missing properties that must be added",
+        "Lists recommended_missing properties that would improve annotation quality"
+      ]
+    }
+  ]
+}

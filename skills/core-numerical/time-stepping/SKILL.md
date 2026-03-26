@@ -1,7 +1,26 @@
 ---
 name: time-stepping
-description: Plan and control time-step policies for simulations. Use when coupling CFL/physics limits with adaptive stepping, ramping initial transients, scheduling outputs/checkpoints, or planning restart strategies for long runs.
+description: >
+  Plan and control time-step policies for transient simulations — couple
+  CFL and physics-based stability limits with adaptive stepping, ramp initial
+  transients through sharp gradients or phase changes, schedule output intervals
+  and checkpoint cadence, and plan restart strategies for long-running jobs.
+  Use when choosing dt for a new simulation, diagnosing adaptive time-step
+  oscillations, deciding checkpoint frequency to minimize lost work, or
+  setting up output schedules aligned with physical time scales, even if
+  the user only says "my run is too slow" or "how often should I save."
 allowed-tools: Read, Bash, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: high
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Time Stepping
@@ -122,6 +141,29 @@ python3 scripts/checkpoint_planner.py --run-time 36000 --checkpoint-cost 120 --m
 | 1-5% | Good |
 | 5-10% | Acceptable |
 | > 10% | Too frequent, increase interval |
+
+## Security
+
+### Input Validation
+- All numeric parameters (`dt-target`, `dt-limit`, `safety`, `t-start`, `t-end`, `interval`, `run-time`, `checkpoint-cost`, `max-lost-time`) are validated as finite positive numbers
+- `ramp-steps` is validated as a non-negative integer with an upper bound
+- Time range consistency is enforced (`t-end` must exceed `t-start`; `checkpoint-cost` must be less than `run-time`)
+
+### File Access
+- Scripts read no external files; all inputs are provided via CLI arguments
+- Scripts write only to stdout (JSON output); no files are created unless the agent explicitly uses the Write tool
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, and user configuration files
+- **Bash**: Used to execute the three Python planning scripts (`timestep_planner.py`, `output_schedule.py`, `checkpoint_planner.py`) with explicit argument lists
+- **Write**: Used to save generated time-step plans or checkpoint schedules; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate relevant files and search references
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Scripts use only Python standard library; no pickle loading or deserialization of untrusted data
+- All output is deterministic JSON with no shell-interpretable content
 
 ## Limitations
 

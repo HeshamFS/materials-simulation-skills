@@ -1,12 +1,29 @@
 ---
 name: ontology-mapper
 description: >
-  Map materials science terms, crystal structures, and sample descriptions to ontology classes
-  and properties. Supports any ontology registered in ontology_registry.json. Use when translating
-  natural-language material descriptions to ontology terms, annotating simulation inputs with
-  ontology metadata, or mapping crystal parameters (space group, Bravais lattice, lattice constants)
-  to standardized ontology representations.
+  Map materials science terms, crystal structures, and sample descriptions to
+  standardized ontology classes and properties — resolve natural-language
+  concepts to ontology entries with confidence scores, translate Bravais
+  lattice types, space groups, and lattice constants into ontology-compliant
+  annotations, and produce full sample metadata from structured descriptions.
+  Supports any ontology in ontology_registry.json (CMSO, ASMO, etc.). Use
+  when annotating simulation inputs with FAIR metadata, translating "BCC
+  iron" or "FCC copper" into formal ontology terms, preparing machine-
+  readable sample descriptions, or bridging between lab vocabulary and
+  ontology vocabulary, even if the user only says "what CMSO terms describe
+  my material" or "annotate this sample for me."
 allowed-tools: Read, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: low
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Ontology Mapper
@@ -147,6 +164,33 @@ Then add `"mappings_file": "asmo_mappings.json"` to the ontology's entry in `ont
 - **Validation warnings**: indicate potential mistakes (e.g., specifying a!=b for cubic). These are warnings, not errors — the mapping still proceeds.
 - **Unmapped fields**: input keys that the annotator doesn't recognize. These may need manual mapping.
 - **Suggested properties**: additional ontology properties that would make the annotation more complete.
+
+## Security
+
+### Input Validation
+- `--ontology` is validated against registered ontology names in `ontology_registry.json` (fixed allowlist)
+- `--term` and `--terms` are length-limited and used only for substring matching against pre-processed synonym tables (never interpolated into code)
+- `--bravais` is validated against a fixed set of recognized lattice type symbols
+- `--space-group` is validated as an integer between 1 and 230
+- Lattice parameters (`--a`, `--b`, `--c`, `--alpha`, `--beta`, `--gamma`) are validated as finite positive numbers
+- `--sample` JSON is parsed with `json.loads()` and validated as a non-empty dict; keys and values are type-checked
+
+### File Access
+- Scripts read pre-processed JSON files from the `references/` directory: `ontology_registry.json`, `*_mappings.json`, `*_summary.json`, `crystal_systems.json`, `element_data.json` (all read-only)
+- No scripts write to the filesystem; all output goes to stdout
+- No network access is required
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, reference files, and ontology data
+- **Grep**: Used to search reference files for mapping patterns or ontology terms
+- **Glob**: Used to locate reference files and ontology data
+- Notably, this skill has **no Bash or Write access**, giving it the lowest attack surface of all skills
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- No subprocess calls of any kind; all logic runs within Python scripts invoked by the agent
+- No file writes; the skill is purely read-only and analytical
+- Minimal tool surface (Read, Grep, Glob only) means the agent cannot execute arbitrary commands or modify the filesystem
 
 ## Limitations
 

@@ -1,0 +1,49 @@
+{
+  "skill_name": "time-stepping",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm running a 10-hour phase-field simulation. Each checkpoint takes about 2 minutes to write. How often should I save so I don't lose more than 30 minutes of work if it crashes?",
+      "expected_output": "Checkpoint every 30 minutes with ~0.7% overhead, max 30 min lost work on crash.",
+      "assertions": [
+        "Uses checkpoint_planner.py with --run-time 36000 --checkpoint-cost 120 --max-lost-time 1800",
+        "Recommends checkpoint interval of approximately 30 minutes",
+        "Reports overhead percentage below 1%",
+        "Mentions tradeoff between checkpoint frequency and computational overhead"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "dt_limit from CFL is 2e-4 s but I want dt=1e-4. Should I ramp up from a smaller step? My IC has a sharp gradient.",
+      "expected_output": "Plan with ramping from 1e-5 to 1e-4 over 10 steps due to sharp gradients.",
+      "assertions": [
+        "Uses timestep_planner.py with --dt-target 1e-4 --dt-limit 2e-4 and safety factor",
+        "Recommends ramping for sharp gradient IC (5-10 ramp steps)",
+        "Suggests initial dt of approximately 0.1 * dt_target",
+        "Confirms dt_target is within stability limit after applying safety factor"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Set up output times for a solidification sim from t=0 to t=5s. I want snapshots every 0.05s to capture the dendritic growth front.",
+      "expected_output": "Output schedule with 100 snapshots at 0.05s intervals from 0 to 5s.",
+      "assertions": [
+        "Uses output_schedule.py with --t-start 0 --t-end 5 --interval 0.05",
+        "Reports 100 output frames total",
+        "Lists output times starting at 0 and ending at 5",
+        "Notes interval should be consistent with physical timescale of dendrite growth"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "my sim is too slow. dt is 1e-6 but CFL limit says I can go up to 5e-5. total run time is 1 second. any advice?",
+      "expected_output": "Increase dt to ~4e-5 (with safety factor 0.8), reducing total steps from 1M to 25k.",
+      "assertions": [
+        "Uses timestep_planner.py with --dt-target 5e-5 --dt-limit 5e-5 --safety 0.8",
+        "Recommends increasing dt from 1e-6 toward the stability limit with safety margin",
+        "Quantifies speedup factor (roughly 40x fewer steps)",
+        "Mentions safety factor to stay below the strict CFL limit"
+      ]
+    }
+  ]
+}

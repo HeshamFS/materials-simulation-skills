@@ -1,7 +1,27 @@
 ---
 name: differentiation-schemes
-description: Select and apply numerical differentiation schemes for PDE/ODE discretization. Use when choosing finite difference/volume/spectral schemes, building stencils, handling boundaries, estimating truncation error, or analyzing dispersion and dissipation.
+description: >
+  Select and apply numerical differentiation schemes for PDE and ODE
+  discretization — generate finite-difference stencils at arbitrary order and
+  accuracy, choose between central, upwind, compact (Pade), and spectral
+  methods, handle boundary stencils, and estimate truncation error scaling.
+  Use when discretizing spatial derivatives, picking a scheme for advection-
+  or diffusion-dominated problems, building custom stencils for nonstandard
+  operators, or comparing dispersion and dissipation properties of candidate
+  schemes, even if the user just says "how do I approximate this derivative"
+  or "my solution is too diffusive."
 allowed-tools: Read, Bash, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: high
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Differentiation Schemes
@@ -139,6 +159,31 @@ python3 scripts/truncation_error.py --dx 0.01 --order 2 --accuracy 2 --scale 1.0
 | 1st | 4 | 5 | [1/12, -2/3, 0, 2/3, -1/12] |
 | 2nd | 2 | 3 | [1, -2, 1] |
 | 2nd | 4 | 5 | [-1/12, 4/3, -5/2, 4/3, -1/12] |
+
+## Security
+
+### Input Validation
+- `--order` (derivative order) is validated as a positive integer with an upper bound
+- `--accuracy` is validated as a positive even integer for central schemes
+- `--scheme` is validated against a fixed allowlist (`central`, `upwind`, `compact`)
+- `--dx` and `--scale` are validated as finite positive numbers
+- No user-supplied strings are interpolated into code paths or shell commands
+
+### File Access
+- Scripts read no external files; all inputs are provided via CLI arguments
+- Scripts write only to stdout (JSON output); no files are created unless the agent explicitly uses the Write tool
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, and user configuration files
+- **Bash**: Used to execute the three Python scripts (`stencil_generator.py`, `scheme_selector.py`, `truncation_error.py`) with explicit argument lists
+- **Write**: Used to save generated stencil coefficients or scheme recommendations; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate relevant files and search references
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Stencil computation uses only NumPy linear algebra on small, bounded matrices (stencil width limited by accuracy order)
+- All output is deterministic JSON with no shell-interpretable content
 
 ## Limitations
 

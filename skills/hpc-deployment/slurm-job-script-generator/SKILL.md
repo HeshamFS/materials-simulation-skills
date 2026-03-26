@@ -1,7 +1,27 @@
 ---
 name: slurm-job-script-generator
-description: Generate SLURM `sbatch` job scripts and sanity-check HPC resource requests (nodes, tasks, CPUs, memory, GPUs) for simulation runs. Use when preparing submission scripts, deciding MPI vs MPI+OpenMP layouts, standardizing `#SBATCH` directives, or debugging job launch configuration (`sbatch`/`srun`).
+description: >
+  Generate correct, copy-pasteable SLURM sbatch job scripts and sanity-check
+  HPC resource requests — configure nodes, MPI tasks, OpenMP threads, memory
+  (per-node or per-cpu), GPUs, walltime, partitions, modules, and environment
+  variables, with automatic detection of conflicting directives and
+  oversubscription. Use when preparing a SLURM submission script, deciding
+  between pure MPI and hybrid MPI+OpenMP layouts, standardizing #SBATCH
+  directives across a team, debugging why a job won't launch or gets killed,
+  or setting up GPU-accelerated simulation jobs, even if the user only says
+  "I need to run this on the cluster" or "my job keeps getting killed."
 allowed-tools: Read, Bash, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: high
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # SLURM Job Script Generator
@@ -120,6 +140,34 @@ python3 skills/hpc-deployment/slurm-job-script-generator/scripts/slurm_script_ge
 | `nodes must be positive` | Non-positive nodes | Provide `--nodes >= 1` |
 | `Provide either --mem or --mem-per-cpu, not both` | Conflicting memory directives | Choose one memory style |
 | `Provide a run command after --` | Missing launch command | Add `-- ./simulate ...` |
+
+## Security
+
+### Input Validation
+- `--time` is validated against strict `HH:MM:SS` or `D-HH:MM:SS` format via regex
+- `--nodes`, `--ntasks`, `--ntasks-per-node`, `--cpus-per-task`, `--gpus` are validated as positive integers with upper bounds
+- `--mem` and `--mem-per-cpu` are validated against SLURM's accepted format (`<int>[K|M|G|T]`); providing both simultaneously is rejected
+- `--job-name` is validated against `[a-zA-Z0-9_.-]+` (no shell metacharacters)
+- `--partition` and `--account` are validated against safe-character allowlists
+- `--module` values are validated to prevent shell injection (no `;`, `|`, `&`, backticks, or `$`)
+
+### File Access
+- The script reads no external files; all inputs are provided via CLI arguments
+- `--out` writes the generated sbatch script to a single specified file path
+- The generated script is a plain-text shell script with `#SBATCH` directives; it contains no dynamically generated code
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, and existing job scripts
+- **Bash**: Used to execute `slurm_script_generator.py` with explicit argument lists; the generated script itself is NOT executed by the agent
+- **Write**: Used to save the generated `.sbatch` file; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate existing scripts, configs, and cluster documentation
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- The run command (after `--`) is included verbatim in the generated script but is never executed by the skill itself
+- Module names are sanitized to prevent injection into `module load` directives
+- Generated scripts use `set -euo pipefail` for safe shell execution on the cluster
 
 ## Limitations
 

@@ -1,9 +1,28 @@
 ---
 name: convergence-study
-description: Spatial and temporal convergence analysis with Richardson extrapolation and Grid Convergence Index (GCI) for solution verification
+description: >
+  Perform spatial and temporal convergence analysis for solution verification —
+  compute observed convergence orders from grid or timestep refinement studies,
+  apply Richardson extrapolation to estimate discretization error, and calculate
+  the Grid Convergence Index (GCI) per ASME V&V 20 standards. Use when verifying
+  that a numerical solution converges at the expected rate, estimating the
+  error on the finest mesh, checking whether grids are in the asymptotic range,
+  or preparing formal verification reports, even if the user only asks "is my
+  mesh fine enough" or "how accurate is my solution."
 allowed-tools:
   - Bash
   - Read
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: high
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Convergence Study
@@ -91,6 +110,28 @@ python3 scripts/gci_calculator.py --spacings 0.04,0.02,0.01 --values 1.0128,1.00
 | Negative observed order | Solution diverging | Check implementation |
 | GCI asymptotic ratio near 1.0 | Grids in asymptotic range | Results are reliable |
 | GCI asymptotic ratio far from 1.0 | Not in asymptotic range | Refine further |
+
+## Security
+
+### Input Validation
+- All numeric parameters (`spacings`, `timesteps`, `values`, `expected-order`, `order`) are validated as finite positive numbers
+- Comma-separated value lists are length-matched (spacings and values must have equal length) and capped at 10,000 entries
+- GCI calculator enforces exactly 3 refinement levels; Richardson extrapolation requires at least 2
+- Safety factor is validated as a finite number greater than 1.0
+
+### File Access
+- Scripts read no external files; all inputs are provided via CLI arguments
+- Scripts write only to stdout (JSON output); no files are created unless the agent explicitly uses the Write tool
+
+### Tool Restrictions
+- **Bash**: Used to execute the four Python analysis scripts (`h_refinement.py`, `dt_refinement.py`, `richardson_extrapolation.py`, `gci_calculator.py`) with explicit argument lists
+- **Read**: Used to inspect script source and reference documentation
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Scripts use only Python standard library (`math` module); no pickle loading or deserialization of untrusted data
+- Minimal tool surface (Bash and Read only) limits the agent's ability to modify the filesystem
 
 ## References
 

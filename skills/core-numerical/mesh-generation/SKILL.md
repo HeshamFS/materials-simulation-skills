@@ -1,7 +1,27 @@
 ---
 name: mesh-generation
-description: Plan and evaluate mesh generation for numerical simulations. Use when choosing grid resolution, checking aspect ratios/skewness, estimating mesh quality constraints, or planning adaptive mesh refinement for PDE discretization.
+description: >
+  Plan and evaluate mesh generation for numerical simulations — estimate grid
+  resolution from physics scales (interface width, boundary layers, wavelengths),
+  check aspect ratios and skewness against quality thresholds, choose between
+  structured, unstructured, and adaptive mesh refinement strategies, and compute
+  grid sizing for 1D/2D/3D domains. Use when setting up a new mesh, diagnosing
+  poor solver convergence caused by mesh quality, deciding how many points to
+  place across a phase-field interface or boundary layer, or preparing a mesh
+  convergence study, even if the user only asks "what resolution do I need"
+  or "why is my solver failing."
 allowed-tools: Read, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: medium
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Mesh Generation
@@ -134,12 +154,26 @@ python3 scripts/mesh_quality.py --dx 1.0 --dy 0.1 --json
 
 ## Security
 
-The mesh-generation scripts enforce the following safeguards:
+### Input Validation
+- All inputs (`length`, `resolution`, `dx`, `dy`, `dz`) are validated as finite positive numbers with upper bounds to prevent resource exhaustion
+- `dims` is restricted to `{1, 2, 3}`
+- `argparse` type parameters reject non-numeric input at the CLI boundary before any processing occurs
 
-- **Strict numeric validation**: All inputs (`length`, `resolution`, `dx`, `dy`, `dz`) are validated as finite positive numbers with upper bounds to prevent resource exhaustion.
-- **Dimension constraint**: `dims` is restricted to `{1, 2, 3}`.
-- **Type enforcement**: `argparse` type parameters reject non-numeric input at the CLI boundary before any processing occurs.
-- **Reduced tool surface**: The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing user-provided inputs. The agent should use `Read` and `Write` to prepare inputs and capture outputs rather than constructing shell commands from user text.
+### File Access
+- Scripts read no external files; all inputs are provided via CLI arguments
+- Scripts write only to stdout (JSON output); no files are created unless the agent explicitly uses the Write tool
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, and user configuration files
+- **Write**: Used to save grid sizing results or mesh quality reports; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate relevant files and search references
+- The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing user-provided inputs
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Reduced tool surface (no Bash) means the agent should use `Read` and `Write` to prepare inputs and capture outputs rather than constructing shell commands from user text
+- All output is deterministic JSON with no shell-interpretable content
 
 ## Limitations
 

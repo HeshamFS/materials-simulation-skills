@@ -1,0 +1,49 @@
+{
+  "skill_name": "numerical-integration",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm solving the Allen-Cahn equation with a stiff double-well potential. I have an analytic Jacobian. What integrator should I use?",
+      "expected_output": "Recommends IMEX scheme or Rosenbrock/BDF with diffusion implicit and reaction explicit.",
+      "assertions": [
+        "Uses integrator_selector.py with --stiff --jacobian-available --accuracy high",
+        "Recommends Rosenbrock, BDF, or IMEX-BDF2 as primary choice",
+        "Uses imex_split_planner.py to plan diffusion-implicit / reaction-explicit splitting",
+        "Notes that the double-well potential introduces stiffness requiring implicit treatment"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My adaptive RK45 solver keeps rejecting steps. Error norm is around 1.2 with dt=1e-3 and the method is order 4. What should the next dt be?",
+      "expected_output": "Step should be rejected and dt reduced based on PI or I controller formula.",
+      "assertions": [
+        "Uses adaptive_step_controller.py with --dt 1e-3 --error-norm 1.2 --order 4",
+        "Reports step should be rejected since error norm > 1.0",
+        "Computes reduced dt_next using the controller formula",
+        "Suggests PI controller for smoother step-size adaptation"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I'm using Strang splitting for a reaction-diffusion system with dt=1e-4 and the commutator norm between operators is about 50. Is my splitting error acceptable if I need 1e-6 accuracy?",
+      "expected_output": "Splitting error estimate and whether substeps are needed to meet the target.",
+      "assertions": [
+        "Uses splitting_error_estimator.py with --dt 1e-4 --scheme strang --commutator-norm 50 --target-error 1e-6",
+        "Reports estimated splitting error for Strang splitting (O(dt^2))",
+        "Evaluates whether the error meets the 1e-6 target",
+        "Recommends substeps or smaller dt if error exceeds target"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "compute the scaled error norm for a step where the error vector is [0.01, 0.02] and the solution is [1.0, 2.0]. rtol=1e-3, atol=1e-6.",
+      "expected_output": "Scaled error norm computed using mixed relative/absolute tolerance formula.",
+      "assertions": [
+        "Uses error_norm.py with --error 0.01,0.02 --solution 1.0,2.0 --rtol 1e-3 --atol 1e-6",
+        "Computes error norm using scale = atol + rtol * |solution|",
+        "Reports whether the error norm is above or below 1.0",
+        "Explains that norm > 1.0 means step should be rejected"
+      ]
+    }
+  ]
+}

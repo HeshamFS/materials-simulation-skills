@@ -1,7 +1,28 @@
 ---
 name: parameter-optimization
-description: Explore and optimize simulation parameters via design of experiments (DOE), sensitivity analysis, and optimizer selection. Use for calibration, uncertainty studies, parameter sweeps, LHS sampling, Sobol analysis, surrogate modeling, or Bayesian optimization setup.
+description: >
+  Explore and optimize simulation parameters via design of experiments (DOE),
+  sensitivity analysis, and optimizer selection — generate Latin Hypercube,
+  quasi-random, or factorial sample plans, rank parameter influence with
+  sensitivity scores, recommend Bayesian optimization, CMA-ES, or gradient-
+  based methods based on dimension and budget, and fit surrogate models for
+  expensive evaluations. Use when calibrating material properties against
+  experimental data, planning a parameter sweep, performing uncertainty
+  quantification, or choosing an optimization strategy for a simulation
+  with a limited evaluation budget, even if the user only says "which
+  parameters matter most" or "how do I calibrate my model."
 allowed-tools: Read, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: medium
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Parameter Optimization
@@ -124,13 +145,30 @@ python3 scripts/surrogate_builder.py --x 0,1,2 --y 10,12,15 --model rbf --json
 
 ## Security
 
-The parameter-optimization scripts enforce the following safeguards:
+### Input Validation
+- `sensitivity_summary.py` validates `--names` against `[a-zA-Z_][a-zA-Z0-9_ .-]*` with a 200-char limit, preventing shell metacharacter injection via crafted parameter names
+- All numeric list inputs are validated as finite numbers (`NaN`/`Inf` rejected)
+- Comma-separated value lists are capped (10,000 for scores, 100,000 for surrogate data) to prevent resource exhaustion
+- `doe_generator.py` caps dimension at 1,000 and budget at 1,000,000; `optimizer_selector.py` caps dimension at 100,000 and budget at 10,000,000
+- `--method` is validated against a fixed allowlist (`lhs`, `sobol`, `factorial`)
+- `--noise` is validated against a fixed allowlist (`low`, `medium`, `high`)
+- `--model` (surrogate type) is validated against a fixed allowlist (`rbf`, `linear`, `polynomial`)
 
-- **Parameter name validation**: `sensitivity_summary.py` validates `--names` against `[a-zA-Z_][a-zA-Z0-9_ .-]*` with a 200-char limit, preventing shell metacharacter injection via crafted parameter names.
-- **Input length limits**: Comma-separated value lists are capped (10,000 for scores, 100,000 for surrogate data) to prevent resource exhaustion.
-- **Finite-value enforcement**: All numeric list inputs are validated as finite numbers (`NaN`/`Inf` rejected).
-- **Dimension/budget bounds**: `doe_generator.py` caps dim at 1,000 and budget at 1,000,000; `optimizer_selector.py` caps dim at 100,000 and budget at 10,000,000.
-- **Reduced tool surface**: The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing user-provided parameter names and constraints.
+### File Access
+- Scripts read no external files; all inputs are provided via CLI arguments
+- Scripts write only to stdout (JSON output); no files are created unless the agent explicitly uses the Write tool
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, and user data files
+- **Write**: Used to save DOE sample plans, sensitivity rankings, or optimizer recommendations; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate relevant files and search references
+- The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing user-provided parameter names and constraints
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Reduced tool surface (no Bash) limits the agent to read/write operations only
+- Parameter names are sanitized before use, preventing injection via crafted identifiers
 
 ## Limitations
 

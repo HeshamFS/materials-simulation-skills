@@ -1,7 +1,28 @@
 ---
 name: performance-profiling
-description: Identify computational bottlenecks, analyze scaling behavior, estimate memory requirements, and receive optimization recommendations for any computational simulation. Use when simulations are slow, investigating parallel efficiency, planning resource allocation, or seeking performance improvements through timing analysis, scaling studies, memory profiling, or bottleneck detection.
+description: >
+  Identify computational bottlenecks, analyze parallel scaling, estimate memory
+  requirements, and generate optimization recommendations for materials
+  simulations — parse timing logs to find dominant phases (solver, assembly,
+  I/O), evaluate strong and weak scaling efficiency, profile memory from mesh
+  and field parameters, and detect bottlenecks with actionable fix suggestions.
+  Use when a simulation is running slower than expected, investigating MPI
+  scaling efficiency, planning HPC resource allocation, deciding whether to
+  tune the preconditioner or reduce I/O frequency, or estimating if a problem
+  fits in available RAM, even if the user only says "my simulation is too
+  slow" or "how many nodes do I need."
 allowed-tools: Read, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: medium
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Performance Profiling
@@ -239,15 +260,30 @@ python3 scripts/bottleneck_detector.py \
 
 ## Security
 
-The profiling scripts enforce the following safeguards when processing external data:
+### Input Validation
+- User-supplied `--pattern` regex values are validated for length (500 chars max) and rejected if they contain constructs prone to catastrophic backtracking (ReDoS)
+- Scaling data entries are validated for finite time values, integer processor counts, and bounded run count (10,000 max)
+- `available_gb` is validated as a positive finite number; mesh dimensions and field parameters are validated as positive integers
+- `--type` (scaling type) is validated against a fixed allowlist (`strong`, `weak`)
+- All loaded JSON files must have an object (dict) as root element
 
-- **File size limits**: Log files capped at 500 MB, JSON files at 100 MB — rejected before parsing.
-- **JSON structure validation**: All loaded JSON files must have an object (dict) as root element.
-- **Regex pattern validation**: User-supplied `--pattern` values are validated for length (500 chars max) and rejected if they contain constructs prone to catastrophic backtracking (ReDoS).
-- **Phase name sanitization**: Phase names extracted from log files are truncated to 200 characters and stripped of control characters to prevent prompt-injection payloads from propagating into agent context.
-- **Scaling data validation**: Run entries validated for finite time values, integer processor counts, and bounded run count (10,000 max).
-- **Memory parameter validation**: `available_gb` validated as positive finite number; mesh dimensions and field parameters validated as positive integers.
-- **Reduced tool surface**: The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing untrusted simulation logs or result files.
+### File Access
+- `timing_analyzer.py` reads a single log file specified by `--log`; log files are capped at 500 MB and rejected before parsing
+- `scaling_analyzer.py`, `memory_profiler.py`, and `bottleneck_detector.py` read JSON files capped at 100 MB
+- Phase names extracted from log files are truncated to 200 characters and stripped of control characters to prevent prompt-injection payloads from propagating into agent context
+- No scripts write to the filesystem; all output goes to stdout
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, simulation logs, and result files
+- **Write**: Used to save profiling reports or optimization recommendations; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate log files, result files, and search references
+- The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing untrusted simulation logs or result files
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Reduced tool surface (no Bash) limits the agent to read/write operations only
+- Phase names and diagnostic strings are sanitized before inclusion in output to prevent injection
 
 ## Limitations
 

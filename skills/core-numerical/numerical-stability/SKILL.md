@@ -1,7 +1,25 @@
 ---
 name: numerical-stability
-description: Analyze and enforce numerical stability for time-dependent PDE simulations. Use when selecting time steps, choosing explicit/implicit schemes, diagnosing numerical blow-up, checking CFL/Fourier criteria, von Neumann analysis, matrix conditioning, or detecting stiffness in advection/diffusion/reaction problems.
+description: >
+  Analyze numerical stability for time-dependent PDE simulations — check CFL
+  and Fourier criteria, perform von Neumann stability analysis, detect stiffness,
+  evaluate matrix conditioning, and recommend explicit vs implicit time-stepping
+  schemes. Use when selecting time steps, diagnosing numerical blow-up or solver
+  divergence, checking convergence criteria, or evaluating scheme stability for
+  advection, diffusion, or reaction problems, even if the user doesn't explicitly
+  mention "stability" or "CFL."
 allowed-tools: Read, Bash, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: high
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Numerical Stability
@@ -130,6 +148,32 @@ python3 scripts/matrix_condition.py --matrix A.npy --norm 2 --json
 | `stable: null` | No criteria could be applied | Provide more physics inputs |
 | Stiffness ratio > 1000 | Problem is stiff | Use implicit integrator |
 | Condition number > 10⁶ | Ill-conditioned | Use scaling/preconditioning |
+
+## Security
+
+### Input Validation
+- All numeric parameters (`dx`, `dt`, `velocity`, `diffusivity`, `dimensions`) are validated as finite positive numbers before any computation
+- `--dimensions` is restricted to `{1, 2, 3}`
+- Comma-separated eigenvalue lists (`--eigs`) are capped at 10,000 entries and validated as finite numbers
+- Stencil coefficient lists (`--coeffs`) are length-limited and validated as finite floats
+
+### File Access
+- `matrix_condition.py` reads a single matrix file (`.npy` format) specified by `--matrix`; no directory traversal beyond the given path
+- Matrix files are rejected if they exceed 500 MB before parsing
+- `np.load()` is called with `allow_pickle=False` to prevent arbitrary code execution via crafted `.npy` files
+- Scripts write only to stdout (JSON output); no files are created unless the agent explicitly uses the Write tool
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, and user configuration files
+- **Bash**: Used to execute the four Python analysis scripts (`cfl_checker.py`, `von_neumann_analyzer.py`, `matrix_condition.py`, `stiffness_detector.py`) with explicit argument lists
+- **Write**: Used to save analysis results or generated reports; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate relevant files and search references
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Matrix dimension limits (100,000 per dimension) prevent memory exhaustion
+- JSON output mode (`--json`) produces structured, parseable results without shell-interpretable content
 
 ## Limitations
 

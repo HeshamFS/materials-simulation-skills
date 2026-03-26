@@ -1,0 +1,49 @@
+{
+  "skill_name": "linear-solvers",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have a 1 million DOF sparse symmetric positive definite system from a FEM thermal analysis. What solver and preconditioner should I use?",
+      "expected_output": "Recommends CG with AMG or incomplete Cholesky preconditioner for large SPD system.",
+      "assertions": [
+        "Uses solver_selector.py with --symmetric --positive-definite --sparse --size 1000000",
+        "Recommends Conjugate Gradient (CG) as primary solver",
+        "Uses preconditioner_advisor.py to recommend AMG or IC preconditioner",
+        "Notes that direct solvers are impractical at this size"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My GMRES solver is stagnating. Residuals: 1, 0.1, 0.03, 0.01, 0.008, 0.007, 0.007, 0.007. The matrix is nonsymmetric from a convection-diffusion FVM discretization.",
+      "expected_output": "Diagnoses stagnation, recommends better preconditioner or increased restart parameter.",
+      "assertions": [
+        "Uses convergence_diagnostics.py with the given residual history",
+        "Identifies stagnation pattern in the residual decay",
+        "Uses preconditioner_advisor.py for nonsymmetric stagnating system",
+        "Recommends ILU with higher fill level, AMG, or increasing GMRES restart parameter"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to analyze the sparsity pattern of my assembled stiffness matrix stored in A.npy before choosing a solver. It's about 5000x5000.",
+      "expected_output": "Guidance on using sparsity_stats.py to characterize the matrix structure.",
+      "assertions": [
+        "Recommends sparsity_stats.py with --matrix A.npy",
+        "Explains that nnz, density, bandwidth, and symmetry will be reported",
+        "Notes the matrix is small enough for direct solver consideration",
+        "Suggests using results to inform solver_selector.py choice"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "My iterative solver for a saddle-point system from Stokes flow (velocity-pressure coupling) is completely failing. Any suggestions?",
+      "expected_output": "Identifies saddle-point structure as root cause and recommends Schur complement or block preconditioning.",
+      "assertions": [
+        "Uses solver_selector.py identifying the system as nonsymmetric/indefinite saddle-point",
+        "Recommends Schur complement approach or Uzawa iteration",
+        "Suggests block preconditioner appropriate for velocity-pressure coupling",
+        "Notes standard CG/GMRES without block preconditioning will fail for saddle-point systems"
+      ]
+    }
+  ]
+}

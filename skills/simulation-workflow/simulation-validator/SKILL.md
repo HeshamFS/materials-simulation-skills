@@ -1,7 +1,28 @@
 ---
 name: simulation-validator
-description: Validate simulations before, during, and after execution. Use for pre-flight checks, runtime monitoring, post-run validation, diagnosing failed simulations, checking convergence, detecting NaN/Inf, or verifying mass/energy conservation.
+description: >
+  Validate simulations across three stages — run pre-flight checks on
+  configuration files (parameter ranges, required fields, disk space),
+  monitor runtime logs for residual growth, NaN/Inf, and adaptive dt
+  collapse, and perform post-flight validation of results (physical bounds,
+  mass/energy conservation, convergence). Diagnose failed simulations with
+  probable-cause analysis and recommended fixes. Use when preparing to
+  launch a simulation, checking whether a running job is healthy, verifying
+  that finished results are trustworthy, or debugging a crash or blow-up,
+  even if the user only says "my simulation crashed" or "can I trust
+  these results."
 allowed-tools: Read, Bash, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: high
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Simulation Validator
@@ -177,6 +198,35 @@ python3 scripts/failure_diagnoser.py --log simulation.log --json
 | max iterations, did not converge | Solver failure | Tune preconditioner, tolerances |
 | out of memory | Memory exhaustion | Reduce mesh, enable out-of-core |
 | dt reduced | Adaptive stepping triggered | May be okay if controlled |
+
+## Security
+
+### Input Validation
+- Config file paths are validated for existence before parsing; non-existent paths produce clear errors
+- `--required` parameter names are validated against a safe-character allowlist
+- `--ranges` entries are parsed as `name:min:max` with finite numeric bounds enforced
+- `--min-free-gb` is validated as a finite positive number
+- `--residual-growth` and `--dt-drop` thresholds are validated as finite positive numbers
+- `--bound-min`, `--bound-max`, and `--mass-tol` are validated as finite numbers with `bound-max > bound-min`
+
+### File Access
+- `preflight_checker.py` reads a single user-specified config file (JSON/YAML) and checks disk space on the output directory
+- `runtime_monitor.py` reads a single log file specified by `--log`; log files are size-limited (500 MB max) before parsing
+- `result_validator.py` reads a single metrics file (JSON) specified by `--metrics`
+- `failure_diagnoser.py` reads a single log file specified by `--log`
+- No scripts write to the filesystem; all output goes to stdout
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, config files, and simulation logs
+- **Bash**: Used to execute the four Python validation scripts (`preflight_checker.py`, `runtime_monitor.py`, `result_validator.py`, `failure_diagnoser.py`) with explicit argument lists
+- **Write**: Used to save validation reports; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate log files, config files, and search references
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Log parsing uses pre-compiled regex patterns; user-supplied patterns are not accepted (patterns are hardcoded)
+- Phase names and diagnostic strings extracted from logs are sanitized (truncated, control characters stripped) before inclusion in output
 
 ## Limitations
 

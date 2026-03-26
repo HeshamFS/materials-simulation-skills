@@ -1,0 +1,60 @@
+{
+  "skill_name": "ontology-mapper",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Map the term 'space group' to the CMSO ontology. I want to know which class and properties correspond to this concept.",
+      "expected_output": "Agent runs concept_mapper.py to find CMSO classes and properties matching 'space group', returning matches with confidence scores.",
+      "assertions": [
+        "Invokes scripts/concept_mapper.py with --ontology cmso --term 'space group' --json",
+        "Output includes results.matches with confidence scores (1.0 for exact, 0.9 for synonym)",
+        "Returns the matching CMSO class (Space Group) and related properties",
+        "Reports any unmatched terms or alternative suggestions"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I have an FCC copper crystal with lattice parameter a=3.615 angstroms and space group 225. Map these crystallographic parameters to CMSO ontology terms.",
+      "expected_output": "Agent runs crystal_mapper.py to translate FCC, space group 225, and lattice constant into CMSO-compliant annotations with Bravais lattice symbol.",
+      "assertions": [
+        "Invokes scripts/crystal_mapper.py with --ontology cmso --bravais FCC --space-group 225 --a 3.615 --json",
+        "Output includes results.ontology_classes and results.ontology_properties",
+        "Maps FCC to the correct Bravais lattice symbol (cF) in CMSO terminology",
+        "Includes space group mapping to number 225 (Fm-3m)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Annotate this sample for CMSO: {\"material\": \"iron\", \"structure\": \"BCC\", \"lattice_a\": 2.87, \"space_group\": 229, \"simulation_type\": \"MD\"}",
+      "expected_output": "Agent runs sample_annotator.py with the full sample description, producing CMSO annotations for material, structure, lattice, and identifying unmapped fields.",
+      "assertions": [
+        "Invokes scripts/sample_annotator.py with --ontology cmso --sample '{\"material\":\"iron\",\"structure\":\"BCC\",\"lattice_a\":2.87,\"space_group\":229,\"simulation_type\":\"MD\"}' --json",
+        "Output includes results.annotations with class-property mappings for iron BCC",
+        "Maps iron to Fe element and BCC to cI Bravais lattice",
+        "Reports unmapped_fields for any keys not recognized (e.g., simulation_type may map or appear as unmapped)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Map these terms all at once: FCC, copper, lattice constant, unit cell, grain boundary",
+      "expected_output": "Agent runs concept_mapper.py with multiple terms to batch-map all five concepts to CMSO, identifying any that cannot be matched.",
+      "assertions": [
+        "Invokes scripts/concept_mapper.py with --ontology cmso --terms 'FCC,copper,lattice constant,unit cell,grain boundary' --json",
+        "Output includes results.matches for successfully mapped terms",
+        "Reports results.unmatched for any terms not found in CMSO (e.g., grain boundary may not exist)",
+        "Provides results.suggestions for unmatched terms to guide the user"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Map a hexagonal crystal: Bravais lattice HCP, a=3.21, c=5.21, space group 194. No ontology specified, just give me generic labels.",
+      "expected_output": "Agent runs crystal_mapper.py without specifying an ontology to produce generic crystallographic labels, including validation of hexagonal lattice constraints.",
+      "assertions": [
+        "Invokes scripts/crystal_mapper.py with --bravais HCP --space-group 194 --a 3.21 --c 5.21 --json (no --ontology flag)",
+        "Output includes generic crystal system identification (hexagonal)",
+        "Maps HCP to the appropriate Bravais lattice symbol (hP)",
+        "Validates that a != c for hexagonal system (no validation warning expected since 3.21 != 5.21)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "skill_name": "slurm-job-script-generator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Generate a SLURM script for a pure MPI job. I need 2 nodes, 64 tasks per node, 30 minutes walltime, on the compute partition. The command is 'mpirun ./lammps -in input.lammps'. Load gcc/12 and openmpi/4.1 modules. Job name: lammps-scaling.",
+      "expected_output": "Agent generates a pure MPI SLURM sbatch script with correct directives for 2 nodes, 128 total tasks, 1 cpu per task, and proper module loading.",
+      "assertions": [
+        "Invokes scripts/slurm_script_generator.py with --job-name lammps-scaling --time 00:30:00 --partition compute --nodes 2 --ntasks-per-node 64 --cpus-per-task 1 --module gcc/12 --module openmpi/4.1",
+        "Generated script includes #SBATCH directives for nodes, ntasks-per-node, time, partition, and job-name",
+        "Sets cpus-per-task to 1 for pure MPI layout",
+        "Includes module load commands for gcc/12 and openmpi/4.1 before the run command"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need an sbatch script for a hybrid MPI+OpenMP job. 4 nodes, 16 MPI ranks per node, 8 OpenMP threads per rank. Walltime 2 hours. 128 cores per node on the cluster. Partition: parallel. Run command: srun ./vasp_std",
+      "expected_output": "Agent generates a hybrid MPI+OpenMP SLURM script with correct cpus-per-task=8, OMP_NUM_THREADS=8, and validates against 128 cores per node.",
+      "assertions": [
+        "Invokes scripts/slurm_script_generator.py with --job-name, --time 02:00:00 --nodes 4 --ntasks-per-node 16 --cpus-per-task 8 --partition parallel",
+        "Sets cpus-per-task to 8 matching the OpenMP thread count",
+        "Generated script exports OMP_NUM_THREADS=8",
+        "Validates that 16 tasks x 8 cpus = 128 does not exceed cores per node"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Generate a GPU job script: 1 node, 4 GPUs, 32 MPI tasks, 2 hours, partition gpu, 64G memory per node. Command: srun ./gpu_sim --config params.json. Job name: gpu-phasefield.",
+      "expected_output": "Agent generates a GPU-enabled SLURM script with correct GPU resource request, memory allocation, and warns about task-to-GPU ratio.",
+      "assertions": [
+        "Invokes scripts/slurm_script_generator.py with --nodes 1 --ntasks 32 --gpus 4 --mem 64G --time 02:00:00 --partition gpu --job-name gpu-phasefield",
+        "Generated script includes GPU resource directive (--gpus-per-node or --gres=gpu:4)",
+        "Uses --mem 64G for per-node memory (not --mem-per-cpu)",
+        "Run command includes srun ./gpu_sim --config params.json"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Create a script with --mem-per-cpu 4G and --mem 128G for my job. 2 nodes, 32 tasks, 1 hour.",
+      "expected_output": "Agent detects the conflicting memory flags and either rejects the request or warns the user that --mem and --mem-per-cpu cannot both be specified.",
+      "assertions": [
+        "Detects that both --mem and --mem-per-cpu are provided simultaneously",
+        "Reports a warning or error about conflicting memory directives",
+        "Advises the user to choose either --mem (per node) or --mem-per-cpu (per CPU), not both",
+        "Does not generate a script with both conflicting flags"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "quick job: 1 node, 8 tasks, 10 minutes, run './my_sim'. save it to job.sbatch and give me JSON output too",
+      "expected_output": "Agent generates a minimal SLURM script for a small single-node job, writing to file and outputting JSON.",
+      "assertions": [
+        "Invokes scripts/slurm_script_generator.py with --nodes 1 --ntasks 8 --time 00:10:00 --out job.sbatch --json",
+        "Run command is './my_sim' passed after the -- separator",
+        "Generated script is written to job.sbatch file",
+        "JSON output includes results.script, results.directives, and results.warnings"
+      ]
+    }
+  ]
+}

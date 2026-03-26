@@ -61,7 +61,7 @@ No prompt engineering. No copy-pasting formulas. The agent finds the right skill
 
 ## What's Inside
 
-**17 skills** | **67 scripts** | **932 tests** | Cross-platform CI on Python 3.10-3.12
+**17 skills** | **67 scripts** | **932 tests** | **78 eval cases** | **312 assertions** | Cross-platform CI on Python 3.10-3.12
 
 ### Core Numerical Skills (`skills/core-numerical/`)
 
@@ -123,7 +123,12 @@ skills/core-numerical/numerical-stability/
         matrix_condition.py
         stiffness_detector.py
     references/           # Deep domain knowledge (loaded only when needed)
-        stability_reference.md
+        stability_criteria.md
+        common_pitfalls.md
+        scheme_catalog.md
+    evals/                # Evaluation suite per agentskills.io spec
+        evals.json        # Test cases with prompts, assertions, expected outputs
+    CHANGELOG.md          # Version history
 ```
 
 1. **Discovery** -- The agent sees each skill's name and description at startup (~100 tokens per skill)
@@ -146,7 +151,31 @@ All skills are hardened against the [OWASP Top 10 for LLM Applications](https://
 - **Command construction safety** -- `shlex.quote()` escapes paths interpolated into shell commands; command templates are validated against a shell-operator denylist
 - **ReDoS prevention** -- User-supplied regex patterns are length-capped and checked for catastrophic backtracking constructs
 
-Each skill documents its specific safeguards in a **Security** section within its `SKILL.md`.
+Each skill documents its specific safeguards in a **Security** section within its `SKILL.md`, with standardized subsections for Input Validation, File Access, Tool Restrictions, and Safety Measures.
+
+### Security Risk Tiers
+
+Every skill is classified by its tool access surface:
+
+| Tier | Criteria | Skills |
+|------|----------|-------|
+| **HIGH** | Has `Bash` (can execute scripts) | 9 skills — numerical-stability, time-stepping, convergence-study, differentiation-schemes, nonlinear-solvers, ontology-explorer, ontology-validator, simulation-validator, slurm-job-script-generator |
+| **MEDIUM** | Has `Write` but no `Bash` | 7 skills — linear-solvers, mesh-generation, numerical-integration, parameter-optimization, performance-profiling, post-processing, simulation-orchestrator |
+| **LOW** | Read/Grep/Glob only | 1 skill — ontology-mapper |
+
+---
+
+## Quality & Evaluation
+
+Every skill includes an evaluation suite (`evals/evals.json`) following the [agentskills.io evaluation spec](https://agentskills.io/skill-creation/evaluating-skills). Each suite contains 4-5 test cases with realistic prompts, expected outputs, and verifiable assertions.
+
+**Current metrics:** 78 eval test cases | 312 assertions | All 17 skills evaluated
+
+The CI pipeline validates:
+- SKILL.md frontmatter (name, description < 1024 chars, metadata block)
+- Eval suite completeness (every skill has evals.json with ≥ 3 test cases)
+- Security section presence (all skills must have `## Security`)
+- Changelog existence (all skills must have CHANGELOG.md)
 
 ---
 
@@ -278,12 +307,18 @@ skills/
     simulation-workflow/     # 5 skills: validation, optimization, orchestration, ...
     hpc-deployment/          # 1 skill: SLURM job script generation
     ontology/                # 3 skills: ontology exploration, mapping, validation
+    <each-skill>/
+        SKILL.md             # Instructions + YAML frontmatter (with metadata block)
+        scripts/             # Python CLI tools with --json output
+        references/          # Domain knowledge documents
+        evals/evals.json     # Evaluation suite (prompts, assertions)
+        CHANGELOG.md         # Version history
 tests/
     unit/                    # Pure-function tests via load_module()
     integration/             # Subprocess + JSON schema validation
     fixtures/                # Sample data files for CI smoke tests
 .github/
-    workflows/ci.yml         # Cross-platform CI (Ubuntu, Windows, macOS)
+    workflows/ci.yml         # Cross-platform CI + quality validation
     ISSUE_TEMPLATE/          # Bug reports, skill proposals
     PULL_REQUEST_TEMPLATE.md # PR checklist
 ```

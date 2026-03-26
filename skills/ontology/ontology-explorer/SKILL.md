@@ -1,11 +1,28 @@
 ---
 name: ontology-explorer
 description: >
-  Parse, navigate, and query materials science ontology structure (classes, properties, hierarchy).
-  Use when exploring an ontology like CMSO, understanding class relationships, finding properties
-  for a given class, or searching for ontology terms related to a materials science concept.
-  Supports OWL/XML format from the OCDO ecosystem (CMSO, ASMO, CDCO, PODO, PLDO, LDO).
+  Parse, navigate, and query materials science ontology structures — browse
+  class hierarchies, inspect individual classes and their properties, look up
+  object and data property definitions with domain/range, search for ontology
+  terms by keyword, and parse or summarize raw OWL/XML files. Supports the
+  OCDO ecosystem (CMSO, ASMO, CDCO, PODO, PLDO, LDO). Use when exploring
+  what classes or properties an ontology provides, finding the right CMSO
+  term for a crystal structure or simulation concept, understanding
+  parent-child class relationships, or onboarding to an unfamiliar materials
+  ontology, even if the user only says "what ontology terms describe my
+  FCC copper simulation" or "show me the CMSO class hierarchy."
 allowed-tools: Read, Bash
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: high
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Ontology Explorer
@@ -143,6 +160,31 @@ python3 skills/ontology/ontology-explorer/scripts/ontology_summarizer.py \
 - **Data properties**: show what literal values a class carries. A property with domain `ChemicalElement` and range `xsd:string` means an element has a string-valued attribute.
 - **Union domains**: some properties apply to multiple classes (e.g., `hasVector` applies to both `SimulationCell` and `UnitCell`), shown as `SimulationCell | UnitCell`.
 - **Search relevance**: 1.0 = label match, 0.5 = description match only.
+
+## Security
+
+### Input Validation
+- `--ontology` is validated against registered ontology names in `ontology_registry.json` (fixed allowlist)
+- `--class` and `--property` names are validated against a safe-character pattern to prevent injection
+- `--search` terms are length-limited and used only for substring matching against pre-processed labels (never interpolated into queries or code)
+- `--source` for `owl_parser.py` accepts file paths or URLs; URLs are validated against `https://` scheme only
+
+### File Access
+- `class_browser.py` and `property_lookup.py` read pre-processed JSON summary files from the `references/` directory (read-only)
+- `owl_parser.py` reads a single OWL/XML file from a local path or HTTPS URL; remote fetches have a 30-second timeout
+- `ontology_summarizer.py` writes a single JSON summary file to the path specified by `--output`
+- No scripts modify or delete existing files
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, reference files, and ontology summaries
+- **Bash**: Used to execute the four Python scripts (`owl_parser.py`, `ontology_summarizer.py`, `class_browser.py`, `property_lookup.py`) with explicit argument lists; URL fetching is contained within the Python scripts with timeout limits
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- OWL/XML parsing uses Python's `xml.etree.ElementTree` which does not resolve external entities by default, mitigating XXE attacks
+- Remote URL fetching is limited to HTTPS with a 30-second timeout to prevent abuse
+- Search results are capped in count to prevent output flooding
 
 ## Limitations
 

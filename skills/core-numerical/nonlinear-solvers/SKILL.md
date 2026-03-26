@@ -1,7 +1,28 @@
 ---
 name: nonlinear-solvers
-description: Select and configure nonlinear solvers for f(x)=0 or min F(x). Use for Newton methods, quasi-Newton (BFGS, L-BFGS), Broyden, Anderson acceleration, diagnosing convergence issues, choosing line search vs trust region, and analyzing Jacobian quality.
+description: >
+  Select and configure nonlinear solvers for root-finding f(x)=0, optimization
+  min F(x), and least-squares problems — choose among Newton, Newton-Krylov,
+  quasi-Newton (BFGS, L-BFGS), Broyden, Anderson acceleration, and
+  Levenberg-Marquardt methods, configure line search or trust-region
+  globalization, diagnose convergence rate (quadratic, linear, stagnated),
+  and assess Jacobian quality and conditioning. Use when a Newton solver
+  converges slowly or diverges, choosing between line search and trust region,
+  debugging nonlinear iteration failures in FEM or phase-field codes, or
+  selecting a solver for large-scale unconstrained optimization, even if
+  the user only says "my Newton iterations aren't converging."
 allowed-tools: Read, Bash, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: high
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Nonlinear Solvers
@@ -160,6 +181,34 @@ python3 scripts/step_quality.py --predicted-reduction 0.5 --actual-reduction 0.4
 | ρ < 0.25 | marginal | Shrink |
 | 0.25 ≤ ρ < 0.75 | good | Maintain |
 | ρ ≥ 0.75 | excellent | Expand if at boundary |
+
+## Security
+
+### Input Validation
+- `--size` (problem size) is validated as a positive integer, bounded at 10 billion
+- `--residuals` are validated as finite non-negative numbers, capped at 100,000 entries
+- `--tolerance` and `--target-tolerance` are validated as finite positive numbers
+- `--problem-type` and `--constraint-type` are validated against fixed allowlists
+- `--jacobian-quality` is validated against a fixed allowlist (`good`, `ill-conditioned`, etc.)
+- Step quality parameters (`predicted-reduction`, `actual-reduction`, `step-norm`, `gradient-norm`, `trust-radius`) are validated as finite numbers
+
+### File Access
+- `jacobian_diagnostics.py` reads a single matrix file specified by `--matrix`; no directory traversal beyond the given path
+- Matrix files are size-limited and loaded with `allow_pickle=False` to prevent code execution
+- All other scripts read no external files; inputs are provided via CLI arguments
+- Scripts write only to stdout (JSON output)
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, and user configuration files
+- **Bash**: Used to execute the six Python analysis scripts (`solver_selector.py`, `convergence_analyzer.py`, `jacobian_diagnostics.py`, `globalization_advisor.py`, `residual_monitor.py`, `step_quality.py`) with explicit argument lists
+- **Write**: Used to save analysis results or solver recommendations; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate relevant files and search references
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Matrix dimension limits prevent memory exhaustion when loading Jacobian files
+- Residual history analysis operates on bounded-length numeric arrays only
 
 ## Limitations
 

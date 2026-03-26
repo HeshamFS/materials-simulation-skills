@@ -1,7 +1,29 @@
 ---
 name: post-processing
-description: Extract, analyze, and visualize simulation output data. Use for field extraction, time series analysis, line profiles, statistical summaries, derived quantity computation, result comparison to references, and automated report generation from simulation results.
+description: >
+  Extract, analyze, and summarize simulation output data — pull spatial fields
+  at specific timesteps, compute time-series trends and detect steady state,
+  extract line profiles through the domain, generate statistical summaries
+  and distributions, calculate derived quantities (gradients, fluxes, volume
+  fractions, interface area), compare results against analytical solutions or
+  experimental data, and produce automated analysis reports. Use when
+  interpreting finished simulation results, checking mass or energy
+  conservation, comparing two runs or meshes, extracting interface profiles
+  from phase-field output, or preparing publication-quality analysis, even
+  if the user only says "what do my results look like" or "did my simulation
+  reach steady state."
 allowed-tools: Read, Write, Grep, Glob
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: medium
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Post-Processing Skill
@@ -320,15 +342,32 @@ All scripts support `--json` flag for machine-readable output:
 
 ## Security
 
-The post-processing scripts enforce the following safeguards when processing external simulation data:
+### Input Validation
+- User-provided field names are validated against `[a-zA-Z_][a-zA-Z0-9_.-]*` to prevent injection via crafted field names
+- `statistical_analyzer.py` validates `--region` conditions against a strict regex allowlist (variable comparisons with numbers only)
+- `profile_extractor.py` validates point coordinates as finite numbers with max 3 dimensions
+- `--metric` values in `comparison_tool.py` are validated against a fixed allowlist (`l2_error`, `rmse`, `max_difference`)
+- `--sections` in `report_generator.py` are validated against known section names
+- `--bins`, `--points`, and `--window` are validated as positive integers with upper bounds
 
-- **File size limits**: All JSON and CSV loading functions reject files exceeding 500 MB before parsing.
-- **JSON structure validation**: Loaded JSON files must have an object (dict) as root element.
-- **Field name validation**: User-provided field names are validated against `[a-zA-Z_][a-zA-Z0-9_.-]*` to prevent injection via crafted field names.
-- **Safe region parsing**: `statistical_analyzer.py` validates `--region` conditions against a strict regex allowlist (variable comparisons with numbers only). Never uses `eval()` or `exec()`.
-- **Point coordinate validation**: `profile_extractor.py` validates point coordinates as finite numbers with max 3 dimensions.
-- **Directory traversal limits**: `report_generator.py` caps directory listing at 10,000 entries.
-- **Reduced tool surface**: The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing untrusted simulation output files.
+### File Access
+- All JSON and CSV loading functions reject files exceeding 500 MB before parsing
+- Loaded JSON files must have an object (dict) as root element
+- `report_generator.py` caps directory listing at 10,000 entries to prevent resource exhaustion
+- Scripts read user-specified simulation output files (JSON, CSV) but do not traverse directories beyond what is explicitly provided
+- Output goes to stdout (JSON) unless the agent uses Write to save reports
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, references, and simulation output files
+- **Write**: Used to save analysis results, comparison reports, or generated summaries; writes are scoped to the user's working directory
+- **Grep/Glob**: Used to locate simulation output files and search references
+- The skill's `allowed-tools` excludes `Bash` to prevent the agent from executing arbitrary commands when processing untrusted simulation output files
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation — region parsing uses regex matching, never code evaluation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- Reduced tool surface (no Bash) limits the agent to read/write operations only
+- Field names and region expressions are sanitized before use to prevent injection
 
 ## References
 

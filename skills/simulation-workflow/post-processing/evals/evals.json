@@ -1,0 +1,60 @@
+{
+  "skill_name": "post-processing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Extract the concentration field from my simulation output at timestep 100. The output file is results/field_0100.json. I also want the phi and temperature fields.",
+      "expected_output": "Agent runs field_extractor.py to extract multiple fields (concentration, phi, temperature) from the specified timestep file.",
+      "assertions": [
+        "Invokes scripts/field_extractor.py with --input results/field_0100.json --field 'phi,concentration,temperature' --json",
+        "Output includes field data with shape, min, max, and mean for each field",
+        "Extracts all three requested fields from the single timestep file",
+        "Returns structured JSON with per-field statistics"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Did my simulation reach steady state? The residual history is in results/history.json. Use a tolerance of 1e-6 and check the residual quantity.",
+      "expected_output": "Agent runs time_series_analyzer.py with steady-state detection on the residual quantity and reports whether steady state was achieved.",
+      "assertions": [
+        "Invokes scripts/time_series_analyzer.py with --input results/history.json --quantity residual --detect-steady-state --tolerance 1e-6 --json",
+        "Reports whether steady state was detected and at which timestep",
+        "Uses the --detect-steady-state flag with the specified tolerance",
+        "Interprets the result (plateau = steady state, oscillations = possible instability)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "compute the volume fraction of the solid phase (phi > 0.5) and the interface area from results/field_final.json",
+      "expected_output": "Agent runs derived_quantities.py twice: once for volume fraction and once for interface area, both using the phi field with threshold 0.5.",
+      "assertions": [
+        "Invokes scripts/derived_quantities.py with --input results/field_final.json --quantity volume_fraction --field phi --threshold 0.5 --json",
+        "Invokes scripts/derived_quantities.py with --input results/field_final.json --quantity interface_area --threshold 0.5 --json",
+        "Returns volume fraction as a number between 0 and 1",
+        "Returns interface area estimate for the phase boundary"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Compare my simulation profile at results/profile.json against the analytical solution in reference/analytical.json using L2 error and RMSE metrics.",
+      "expected_output": "Agent runs comparison_tool.py to compute L2 error and RMSE between simulation and reference data, interpreting the agreement quality.",
+      "assertions": [
+        "Invokes scripts/comparison_tool.py with --simulation results/profile.json --reference reference/analytical.json --metric l2_error --json",
+        "Also runs or suggests running with --metric rmse for the second comparison",
+        "Interprets the L2 error magnitude (< 1% excellent, 1-5% good, 5-10% moderate, >10% poor)",
+        "Reports both metrics for a complete comparison picture"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I need a line profile of the phi field along the x-axis at y=0.5 from my 2D simulation output at results/field_0100.json. Extract 200 points from x=0 to x=1.",
+      "expected_output": "Agent runs profile_extractor.py to extract a 1D line profile through the domain with 200 sample points.",
+      "assertions": [
+        "Invokes scripts/profile_extractor.py with --input results/field_0100.json --field phi --start '0,0.5,0' --end '1,0.5,0' --points 200 --json",
+        "Specifies the correct start and end coordinates for a horizontal line at y=0.5",
+        "Requests 200 sample points along the profile",
+        "Output includes the 1D profile data suitable for plotting or further analysis"
+      ]
+    }
+  ]
+}

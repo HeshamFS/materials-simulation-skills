@@ -1,0 +1,60 @@
+{
+  "skill_name": "nonlinear-solvers",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "My Newton solver for a phase-field simulation (50,000 DOFs) is converging very slowly. Residuals over 10 iterations: 1, 0.8, 0.65, 0.52, 0.42, 0.35, 0.28, 0.22, 0.18, 0.15. The Jacobian is expensive to compute.",
+      "expected_output": "Diagnoses linear convergence, recommends Newton-Krylov or quasi-Newton (L-BFGS/Broyden) with globalization.",
+      "assertions": [
+        "Uses convergence_analyzer.py with the given residual history",
+        "Identifies convergence as linear or sublinear rather than quadratic",
+        "Uses solver_selector.py with --size 50000 and Jacobian cost consideration",
+        "Recommends Newton-Krylov, L-BFGS, or Broyden as alternatives to full Newton"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to choose between line search and trust region for a nonlinear FEM elasticity problem. The Jacobian is well-conditioned but my initial guess might be far from the solution.",
+      "expected_output": "Recommends trust region for robustness with poor initial guess.",
+      "assertions": [
+        "Uses globalization_advisor.py with --problem-type root-finding --jacobian-quality good",
+        "Recommends trust region for better robustness with distant initial guess",
+        "Explains that trust region controls step size more conservatively than line search",
+        "Uses step_quality.py to demonstrate how trust region evaluates step acceptance"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "evaluate this trust region step: predicted reduction 0.5, actual reduction -0.1, step norm 0.8, gradient norm 1.0, trust radius 1.0",
+      "expected_output": "Step quality is very poor (negative ratio), step should be rejected and trust radius shrunk aggressively.",
+      "assertions": [
+        "Uses step_quality.py with --predicted-reduction 0.5 --actual-reduction -0.1 --step-norm 0.8 --gradient-norm 1.0 --trust-radius 1.0",
+        "Reports negative ratio (rho = -0.2) indicating very poor step quality",
+        "Recommends rejecting the step",
+        "Recommends aggressive trust radius shrinkage"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I'm fitting experimental stress-strain data to a hyperelastic model. 200 data points, 6 material parameters, analytic Jacobian available. Which nonlinear solver should I use?",
+      "expected_output": "Recommends Levenberg-Marquardt for nonlinear least-squares with trust region.",
+      "assertions": [
+        "Uses solver_selector.py identifying this as a least-squares problem with small size",
+        "Recommends Levenberg-Marquardt as primary choice for nonlinear least-squares",
+        "Notes Gauss-Newton as alternative given the analytic Jacobian",
+        "Suggests trust region globalization for robustness"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "My nonlinear residuals are oscillating: 1, 0.8, 0.9, 0.7, 0.85, 0.65, 0.8. What's going on and how do I fix it?",
+      "expected_output": "Detects oscillatory pattern suggesting poor globalization or near-singular Jacobian.",
+      "assertions": [
+        "Uses residual_monitor.py with the oscillating residual sequence",
+        "Detects oscillatory pattern in the residual history",
+        "Recommends checking Jacobian quality with jacobian_diagnostics.py",
+        "Suggests adding or adjusting line search damping or switching to trust region"
+      ]
+    }
+  ]
+}

@@ -1,11 +1,28 @@
 ---
 name: ontology-validator
 description: >
-  Validate material sample annotations and data structures against ontology constraints.
-  Use when checking if CMSO annotations are correct, verifying that required properties are
-  present, or validating that object property relationships have consistent domain and range.
-  Catches unknown classes, unknown properties, domain mismatches, and missing required fields.
+  Validate material sample annotations against ontology constraints — check
+  that class names and property names exist in the ontology, verify domain
+  and range consistency for object property relationships, assess annotation
+  completeness (required, recommended, and optional properties), and flag
+  unknown or misspelled terms. Use when verifying that CMSO or other
+  ontology annotations are correct before publishing, checking whether all
+  required properties are present for a class like Crystal Structure or
+  Unit Cell, auditing relationship triples between instances, or catching
+  annotation errors early in a FAIR data workflow, even if the user only
+  says "is my annotation correct" or "what am I missing."
 allowed-tools: Read, Bash
+metadata:
+  author: HeshamFS
+  version: "1.1.0"
+  security_tier: high
+  security_reviewed: true
+  tested_with:
+    - claude-code
+    - gemini-cli
+    - vs-code-copilot
+  eval_cases: 2
+  last_reviewed: "2026-03-26"
 ---
 
 # Ontology Validator
@@ -115,6 +132,30 @@ python3 skills/ontology/ontology-validator/scripts/relationship_checker.py \
 - **required_missing**: must fix for valid annotation
 - **recommended_missing**: should fix for quality
 - **unrecognized**: may indicate typos or properties from a different ontology
+
+## Security
+
+### Input Validation
+- `--ontology` is validated against registered ontology names in `ontology_registry.json` (fixed allowlist)
+- `--annotation` JSON is parsed with `json.loads()` and validated as a dict with required `class` and `properties` keys
+- `--class` names are validated against known classes in the ontology summary; unknown classes produce clear errors
+- `--provided` property names are validated as comma-separated strings and matched against known properties
+- `--relationships` JSON is parsed and validated as a non-empty list of dicts, each requiring `subject_class`, `property`, and `object_class` keys
+
+### File Access
+- Scripts read pre-processed JSON files from the `references/` directory: `ontology_registry.json`, `cmso_summary.json`, `cmso_constraints.json` (all read-only)
+- No scripts write to the filesystem; all output goes to stdout
+- No network access is required
+
+### Tool Restrictions
+- **Read**: Used to inspect script source, reference files, and ontology constraint data
+- **Bash**: Used to execute the three Python validation scripts (`schema_checker.py`, `completeness_checker.py`, `relationship_checker.py`) with explicit argument lists
+
+### Safety Measures
+- No `eval()`, `exec()`, or dynamic code generation
+- All subprocess calls use explicit argument lists (no `shell=True`)
+- JSON input parsing uses `json.loads()` only (no pickle, no YAML with unsafe loaders)
+- Validation logic operates on pre-loaded in-memory data structures; no dynamic file discovery or traversal
 
 ## Limitations
 
