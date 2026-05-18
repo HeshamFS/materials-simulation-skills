@@ -1,6 +1,6 @@
 # Materials Simulation Skills
 
-[![CI](https://github.com/heshamfs/materials-simulation-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/heshamfs/materials-simulation-skills/actions/workflows/ci.yml)
+[![CI](https://github.com/HeshamFS/materials-simulation-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/HeshamFS/materials-simulation-skills/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-standard-orange.svg)](https://agentskills.io)
 [![Python 3.10-3.12](https://img.shields.io/badge/Python-3.10--3.12-blue.svg)](https://www.python.org/)
@@ -19,6 +19,9 @@ Give your AI coding agent domain expertise in numerical methods, simulation best
   - [Core Numerical Skills](#core-numerical-skills-skillscore-numerical)
   - [Simulation Workflow Skills](#simulation-workflow-skills-skillssimulation-workflow)
   - [HPC Deployment Skills](#hpc-deployment-skills-skillshpc-deployment)
+  - [Verification & Validation Skills](#verification--validation-skills-skillsverification-validation)
+  - [Data Management Skills](#data-management-skills-skillsdata-management)
+  - [Robustness Skills](#robustness-skills-skillsrobustness)
   - [Ontology Skills](#ontology-skills-skillsontology)
 - [How Skills Work](#how-skills-work)
 - [Security](#security)
@@ -61,7 +64,7 @@ No prompt engineering. No copy-pasting formulas. The agent finds the right skill
 
 ## What's Inside
 
-**17 skills** | **67 scripts** | **932 tests** | **78 eval cases** | **312 assertions** | Cross-platform CI on Python 3.10-3.12
+**23 skills** | **73 scripts** | **956 tests** | **96 eval cases** | **366 assertions** | Cross-platform CI on Python 3.10-3.12
 
 ### Core Numerical Skills (`skills/core-numerical/`)
 
@@ -89,6 +92,8 @@ End-to-end simulation management and automation.
 | `simulation-orchestrator` | Parameter sweeps, batch campaign management, result aggregation |
 | `post-processing` | Field extraction, time series analysis, derived quantity computation |
 | `performance-profiling` | Timing analysis, scaling studies, memory profiling, bottleneck detection |
+| `workflow-engine-mapper` | Map simulations onto jobflow, atomate2, AiiDA, pyiron, or simpler scripts with DAG and provenance guidance |
+| `md-analysis-planner` | Plan MD post-processing for RDF, MSD/diffusion, VACF/VDOS, coordination, stress-strain, and equilibration checks |
 
 ### HPC Deployment Skills (`skills/hpc-deployment/`)
 
@@ -97,6 +102,31 @@ Deployment and job submission tooling for running simulations on HPC systems.
 | Skill | What it does |
 |-------|-------------|
 | `slurm-job-script-generator` | Generate `sbatch` scripts, sanity-check resource requests, and standardize `#SBATCH` directives |
+| `hpc-runtime-doctor` | Diagnose module, MPI/OpenMP/GPU, scheduler, scratch, restart, walltime, and resource mismatch issues |
+
+### Verification & Validation Skills (`skills/verification-validation/`)
+
+Code verification, benchmark selection, and validation reporting.
+
+| Skill | What it does |
+|-------|-------------|
+| `benchmark-and-mms-planner` | Plan manufactured solutions, canonical benchmarks, refinement protocols, uncertainty propagation, and pass/fail reports |
+
+### Data Management Skills (`skills/data-management/`)
+
+Reproducibility and FAIR packaging for simulation campaigns.
+
+| Skill | What it does |
+|-------|-------------|
+| `fair-simulation-packager` | Create metadata manifests with units, engine versions, hashes, structure identifiers, provenance, and repository-friendly fields |
+
+### Robustness Skills (`skills/robustness/`)
+
+Failure diagnosis and retry planning across simulation engines.
+
+| Skill | What it does |
+|-------|-------------|
+| `simulation-failure-triage` | Build retry ladders for nonconvergence, NaN/Inf, exploding energies, unstable timesteps, pressure blow-up, bad potentials, and incomplete runs |
 
 ### Ontology Skills (`skills/ontology/`)
 
@@ -141,9 +171,9 @@ All scripts are standalone CLI tools with `--help`, a pure-function core for tes
 
 ## Security
 
-All skills are hardened against the [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/), with 75 dedicated security tests. Key safeguards:
+All skills are hardened against the [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/), with dedicated validation and edge-case tests. Key safeguards:
 
-- **No shell access by default** -- Skills use `allowed-tools: Read, Write, Grep, Glob` (no `Bash`), preventing the agent from executing arbitrary commands when processing untrusted data
+- **Tool access is explicit** -- Skills that only inspect or write files avoid `Bash`; script-bearing skills declare `Bash` and keep executable behavior inside reviewed Python CLIs
 - **Input validation at every boundary** -- Numeric parameters are bounds-checked and validated as finite; string inputs (parameter names, field names, term names) are validated against regex allowlists
 - **Safe file loading** -- All JSON/CSV/NPY loaders enforce file size limits (100-500 MB) and structure validation (dict root required); `np.load()` uses `allow_pickle=False`
 - **No `eval()`/`exec()`** -- Region condition parsing uses strict regex matching, never dynamic code execution
@@ -159,7 +189,7 @@ Every skill is classified by its tool access surface:
 
 | Tier | Criteria | Skills |
 |------|----------|-------|
-| **HIGH** | Has `Bash` (can execute scripts) | 9 skills — numerical-stability, time-stepping, convergence-study, differentiation-schemes, nonlinear-solvers, ontology-explorer, ontology-validator, simulation-validator, slurm-job-script-generator |
+| **HIGH** | Has `Bash` (can execute scripts) | 15 skills — numerical-stability, time-stepping, convergence-study, differentiation-schemes, nonlinear-solvers, ontology-explorer, ontology-validator, simulation-validator, slurm-job-script-generator, benchmark-and-mms-planner, workflow-engine-mapper, fair-simulation-packager, md-analysis-planner, hpc-runtime-doctor, simulation-failure-triage |
 | **MEDIUM** | Has `Write` but no `Bash` | 7 skills — linear-solvers, mesh-generation, numerical-integration, parameter-optimization, performance-profiling, post-processing, simulation-orchestrator |
 | **LOW** | Read/Grep/Glob only | 1 skill — ontology-mapper |
 
@@ -169,7 +199,7 @@ Every skill is classified by its tool access surface:
 
 Every skill includes an evaluation suite (`evals/evals.json`) following the [agentskills.io evaluation spec](https://agentskills.io/skill-creation/evaluating-skills). Each suite contains 4-5 test cases with realistic prompts, expected outputs, and verifiable assertions.
 
-**Current metrics:** 78 eval test cases | 312 assertions | All 17 skills evaluated
+**Current metrics:** 96 eval test cases | 366 assertions | All 23 skills evaluated
 
 The CI pipeline validates:
 - SKILL.md frontmatter (name, description < 1024 chars, metadata block)
@@ -184,15 +214,24 @@ The CI pipeline validates:
 ### Install
 
 ```bash
-git clone https://github.com/heshamfs/materials-simulation-skills.git
+git clone https://github.com/HeshamFS/materials-simulation-skills.git
 cd materials-simulation-skills
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
+```
+
+### Use the helper CLI
+
+```bash
+mss list --json
+mss validate --json
+mss run numerical-stability cfl_checker -- --dx 0.01 --dt 0.001 --velocity 2.0 --json
+mss install --agent codex --scope project --skill numerical-stability
 ```
 
 ### Run the test suite
 
 ```bash
-python -m pytest tests/ -v --tb=short          # All 932 tests
+python -m pytest tests/ -v --tb=short          # All 956 tests
 python -m pytest tests/unit -v --tb=short       # Unit tests only
 python -m pytest tests/integration -v           # Integration tests only
 ```
@@ -304,8 +343,11 @@ The agent loads the skill's instructions, runs the appropriate scripts, and inte
 ```
 skills/
     core-numerical/          # 8 skills: stability, solvers, meshing, convergence, ...
-    simulation-workflow/     # 5 skills: validation, optimization, orchestration, ...
-    hpc-deployment/          # 1 skill: SLURM job script generation
+    simulation-workflow/     # 7 skills: validation, optimization, orchestration, workflow mapping, ...
+    hpc-deployment/          # 2 skills: SLURM generation and runtime diagnosis
+    verification-validation/ # 1 skill: MMS and benchmark planning
+    data-management/         # 1 skill: FAIR simulation packaging
+    robustness/              # 1 skill: simulation failure triage
     ontology/                # 3 skills: ontology exploration, mapping, validation
     <each-skill>/
         SKILL.md             # Instructions + YAML frontmatter (with metadata block)
@@ -317,6 +359,11 @@ tests/
     unit/                    # Pure-function tests via load_module()
     integration/             # Subprocess + JSON schema validation
     fixtures/                # Sample data files for CI smoke tests
+materials_simulation_skills/
+    cli.py                   # Installable mss helper CLI
+tools/
+    validate_skills.py       # Repo quality validation
+    update_metrics.py        # README metric computation
 .github/
     workflows/ci.yml         # Cross-platform CI + quality validation
     ISSUE_TEMPLATE/          # Bug reports, skill proposals
@@ -327,7 +374,7 @@ tests/
 
 ## Contributing
 
-We welcome contributions of all kinds -- new skills, bug fixes, documentation, and tests. The project is designed to grow from 17 skills across 4 categories into a broader collection spanning materials physics, verification & validation, HPC deployment, and more.
+We welcome contributions of all kinds -- new skills, bug fixes, documentation, and tests. The project is designed to grow from 23 skills across 7 active categories into a broader collection spanning materials physics, simulation patterns, HPC deployment, and more.
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for:
 - Step-by-step guide to creating a new skill

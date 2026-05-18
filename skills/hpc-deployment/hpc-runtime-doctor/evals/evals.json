@@ -1,0 +1,22 @@
+{
+  "evals": [
+    {
+      "id": "gpu_job_slow",
+      "prompt": "Diagnose a SLURM LAMMPS GPU job that runs much slower than expected.",
+      "expected_outputs": ["GPU build", "device binding", "ranks per GPU"],
+      "assertions": ["checks accelerator build", "reviews MPI/GPU layout", "does not assume physics problem"]
+    },
+    {
+      "id": "killed_by_scheduler",
+      "prompt": "My MOOSE job gets killed before finishing and no result files are copied back.",
+      "expected_outputs": ["walltime", "memory", "restart", "scratch"],
+      "assertions": ["checks scheduler limits", "adds restart plan", "mentions scratch handling"]
+    },
+    {
+      "id": "mpi_openmp_layout",
+      "prompt": "Review a hybrid MPI/OpenMP layout with 128 tasks and 1 CPU per task.",
+      "expected_outputs": ["cpus-per-task", "OpenMP", "warning"],
+      "assertions": ["flags thread mismatch", "reports resource layout", "suggests one-variable retry"]
+    }
+  ]
+}

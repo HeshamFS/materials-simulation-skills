@@ -1,0 +1,22 @@
+{
+  "evals": [
+    {
+      "id": "oxide_glass_local_structure",
+      "prompt": "Plan analysis for an oxide glass LAMMPS dump: RDF, coordination, and bond angles.",
+      "expected_outputs": ["RDF", "coordination", "bond-angle"],
+      "assertions": ["requires positions and species", "mentions neighbor cutoff", "includes equilibration checks"]
+    },
+    {
+      "id": "diffusion_requires_unwrap",
+      "prompt": "Plan diffusion analysis for ions crossing periodic boundaries.",
+      "expected_outputs": ["MSD", "unwrap", "time axis"],
+      "assertions": ["requires unwrapped positions", "requires timestep", "warns about fitting regime"]
+    },
+    {
+      "id": "vacf_missing_velocities",
+      "prompt": "Can I compute VDOS if my trajectory only stores positions?",
+      "expected_outputs": ["velocities", "blocked", "warning"],
+      "assertions": ["does not claim ready status", "explains velocity requirement", "suggests prerequisite"]
+    }
+  ]
+}

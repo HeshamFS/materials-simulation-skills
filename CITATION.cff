@@ -1,0 +1,15 @@
+cff-version: 1.2.0
+message: "If you use Materials Simulation Skills in research or teaching, please cite it."
+title: "Materials Simulation Skills"
+authors:
+  - name: "Materials Simulation Skills Contributors"
+repository-code: "https://github.com/HeshamFS/materials-simulation-skills"
+url: "https://github.com/HeshamFS/materials-simulation-skills"
+license: "Apache-2.0"
+version: "1.0.0"
+date-released: "2026-05-18"
+keywords:
+  - agent-skills
+  - computational-materials-science
+  - numerical-simulation
+  - scientific-computing

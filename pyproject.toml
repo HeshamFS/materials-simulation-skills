@@ -7,8 +7,8 @@ name = "materials-simulation-skills"
 version = "1.0.0"
 description = "Agent Skills for materials science simulations - numerical methods, validation, and parameter optimization"
 readme = "README.md"
-license = {text = "MIT"}
-requires-python = ">=3.8"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
 authors = [
     {name = "Materials Simulation Skills Contributors"}
 ]
@@ -28,11 +28,9 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -57,17 +55,20 @@ full = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/username/materials-simulation-skills"
-Documentation = "https://github.com/username/materials-simulation-skills#readme"
-Repository = "https://github.com/username/materials-simulation-skills.git"
-Issues = "https://github.com/username/materials-simulation-skills/issues"
+Homepage = "https://github.com/HeshamFS/materials-simulation-skills"
+Documentation = "https://github.com/HeshamFS/materials-simulation-skills#readme"
+Repository = "https://github.com/HeshamFS/materials-simulation-skills.git"
+Issues = "https://github.com/HeshamFS/materials-simulation-skills/issues"
+
+[project.scripts]
+mss = "materials_simulation_skills.cli:main"
 
 [tool.setuptools]
-packages = ["skills"]
+packages = ["materials_simulation_skills", "skills"]
 package-dir = {"" = "."}
 
 [tool.setuptools.package-data]
-"*" = ["*.md", "*.txt", "*.json"]
+skills = ["**/*.md", "**/*.json", "**/*.txt", "**/*.py"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -83,6 +84,7 @@ addopts = [
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 source = ["skills"]

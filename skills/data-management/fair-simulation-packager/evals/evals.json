@@ -1,0 +1,22 @@
+{
+  "evals": [
+    {
+      "id": "lammps_bundle_manifest",
+      "prompt": "Package a LAMMPS diffusion run with input, data, log, trajectory, and units.",
+      "expected_outputs": ["hashes", "units", "engine"],
+      "assertions": ["records input and output files", "reports missing files", "includes units"]
+    },
+    {
+      "id": "nomad_ready_metadata",
+      "prompt": "Create metadata for sharing a VASP relaxation result with NOMAD-like fields.",
+      "expected_outputs": ["structure id", "engine version", "provenance"],
+      "assertions": ["captures structure identity", "requires code version", "keeps provenance fields"]
+    },
+    {
+      "id": "missing_file_warning",
+      "prompt": "Build a manifest where one output file is not present yet.",
+      "expected_outputs": ["missing_files", "warning"],
+      "assertions": ["does not silently drop missing files", "keeps manifest usable", "recommends next steps"]
+    }
+  ]
+}

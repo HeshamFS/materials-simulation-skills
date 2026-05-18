@@ -1,0 +1,22 @@
+{
+  "evals": [
+    {
+      "id": "aiida_provenance_campaign",
+      "prompt": "Map a 500-run Quantum ESPRESSO campaign on HPC with strong provenance requirements.",
+      "expected_outputs": ["AiiDA", "provenance", "scheduler"],
+      "assertions": ["recommends provenance-first engine", "includes restart strategy", "includes metadata storage"]
+    },
+    {
+      "id": "atomate2_vasp_dos",
+      "prompt": "Choose a workflow pattern for VASP relax-static-DOS calculations across 50 structures.",
+      "expected_outputs": ["atomate2", "relax", "static", "DOS"],
+      "assertions": ["uses branch DAG", "mentions input/output storage", "does not recommend one-off script"]
+    },
+    {
+      "id": "one_off_exploration",
+      "prompt": "I need one local ASE test calculation to inspect a structure.",
+      "expected_outputs": ["one-off", "exploratory"],
+      "assertions": ["allows one-off script", "states migration trigger", "keeps provenance lightweight"]
+    }
+  ]
+}

@@ -21,7 +21,7 @@ metadata:
     - claude-code
     - gemini-cli
     - vs-code-copilot
-  eval_cases: 2
+  eval_cases: 5
   last_reviewed: "2026-03-26"
 ---
 

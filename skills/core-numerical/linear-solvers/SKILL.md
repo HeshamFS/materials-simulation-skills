@@ -20,7 +20,7 @@ metadata:
     - claude-code
     - gemini-cli
     - vs-code-copilot
-  eval_cases: 2
+  eval_cases: 4
   last_reviewed: "2026-03-26"
 ---
 
@@ -32,7 +32,7 @@ Provide a universal workflow to select a solver, assess conditioning, and diagno
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy, SciPy (for matrix operations)
 - See individual scripts for dependencies
 

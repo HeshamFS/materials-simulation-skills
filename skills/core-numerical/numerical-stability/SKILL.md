@@ -18,7 +18,7 @@ metadata:
     - claude-code
     - gemini-cli
     - vs-code-copilot
-  eval_cases: 2
+  eval_cases: 4
   last_reviewed: "2026-03-26"
 ---
 
@@ -30,7 +30,7 @@ Provide a repeatable checklist and script-driven checks to keep time-dependent s
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy (for matrix_condition.py and von_neumann_analyzer.py)
 - See `scripts/requirements.txt` for dependencies
 

@@ -21,7 +21,7 @@ metadata:
     - claude-code
     - gemini-cli
     - vs-code-copilot
-  eval_cases: 2
+  eval_cases: 4
   last_reviewed: "2026-03-26"
 ---
 
@@ -33,7 +33,7 @@ Provide a reliable workflow to select integrators, set tolerances, and manage ad
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy (for some scripts)
 - No heavy dependencies for core functionality
 

@@ -2,7 +2,7 @@
 
 Thanks for your interest in contributing! This project provides open-source **Agent Skills** for computational materials science and numerical simulation workflows. Each skill is a structured folder (SKILL.md + scripts + references) that AI agents discover by name and load on demand.
 
-Our goal is to grow from the current 17 skills across 4 categories to approximately **38 skills across 8 categories**, covering everything from core numerical methods to materials physics, HPC deployment, and robustness techniques. Every contribution -- whether a new skill, a bug fix, improved documentation, or better tests -- helps the community build more reliable simulation workflows.
+Our goal is to grow from the current 23 skills across 7 active categories to approximately **38 skills across 9 categories**, covering everything from core numerical methods to materials physics, HPC deployment, and robustness techniques. Every contribution -- whether a new skill, a bug fix, improved documentation, or better tests -- helps the community build more reliable simulation workflows.
 
 All contributors are expected to follow the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
@@ -27,7 +27,7 @@ All contributors are expected to follow the [Contributor Covenant Code of Conduc
 ### 1. Fork and Clone
 
 ```bash
-git clone https://github.com/heshamfs/materials-simulation-skills.git
+git clone https://github.com/HeshamFS/materials-simulation-skills.git
 cd materials-simulation-skills
 ```
 
@@ -115,7 +115,7 @@ What problem does this skill solve? One or two sentences.
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.10+
 - NumPy
 - List any other dependencies
 
@@ -471,21 +471,21 @@ python -m pytest tests/ --cov=skills --cov-report=term-missing
 
 ## Skill Taxonomy & Roadmap
 
-The project is organized into categories. The first four categories are established with 17 skills; the remaining five are open directions where the community can propose and build new skills over time.
+The project is organized into categories. Seven categories currently contain skills; the remaining directions are open areas where the community can propose and build new skills over time.
 
 ### Overview
 
 | Category | Status | Description |
 |----------|--------|-------------|
 | core-numerical | 8 skills | Foundational numerical methods and analysis tools |
-| simulation-workflow | 5 skills | End-to-end simulation management and automation |
+| simulation-workflow | 7 skills | End-to-end simulation management and automation |
 | materials-physics | Open | Material behavior, constitutive models, physical properties |
-| verification-validation | Open | Code verification, benchmarking, uncertainty quantification |
-| data-management | Open | Data formats, visualization, checkpointing |
-| hpc-deployment | 1 skill | Parallel computing, job scheduling, build systems |
+| verification-validation | 1 skill | Code verification, benchmarking, uncertainty quantification |
+| data-management | 1 skill | Data formats, reproducibility packaging, checkpointing |
+| hpc-deployment | 2 skills | Parallel computing, job scheduling, build systems |
 | ontology | 3 skills | Materials science ontology exploration, mapping, and validation |
 | simulation-patterns | Open | Multi-physics coupling, transient strategies, inverse methods |
-| robustness | Open | Handling discontinuities, numerical artifacts, difficult physics |
+| robustness | 1 skill | Handling discontinuities, numerical artifacts, difficult physics |
 
 ### core-numerical/ (8 skills)
 
@@ -500,7 +500,7 @@ The project is organized into categories. The first four categories are establis
 | linear-solvers | Iterative/direct solver selection and preconditioning |
 | nonlinear-solvers | Newton, quasi-Newton, and fixed-point method configuration |
 
-### simulation-workflow/ (5 skills)
+### simulation-workflow/ (7 skills)
 
 | Skill | Description |
 |-------|-------------|
@@ -509,14 +509,33 @@ The project is organized into categories. The first four categories are establis
 | simulation-orchestrator | Parameter sweeps and batch job management |
 | post-processing | Field extraction and derived quantity computation |
 | performance-profiling | Timing analysis, memory profiling, scaling studies |
+| workflow-engine-mapper | Map simulations onto jobflow, atomate2, AiiDA, pyiron, or simpler scripts with DAG, provenance, restartability, and storage guidance |
+| md-analysis-planner | Plan MD post-processing for RDF, MSD/diffusion, VACF/VDOS, coordination, stress-strain, equilibration checks, and trajectory handling |
 
-### hpc-deployment/ (1 skill)
+### verification-validation/ (1 skill)
+
+| Skill | Description |
+|-------|-------------|
+| benchmark-and-mms-planner | Plan manufactured solutions, canonical benchmarks, grid/time refinement, uncertainty propagation, and pass/fail validation reports |
+
+Contributions welcome: expand this category with code-to-code comparison, validation evidence grading, experimental benchmark selection, and uncertainty budgeting workflows.
+
+### data-management/ (1 skill)
+
+| Skill | Description |
+|-------|-------------|
+| fair-simulation-packager | Create reproducibility bundles with manifests, units, engine versions, input/output hashes, structure identifiers, provenance, and repository-friendly metadata |
+
+Contributions welcome: expand this category with HDF5/VTK conversion, checkpoint design, visualization planning, OPTIMADE/NOMAD export helpers, and data lifecycle workflows.
+
+### hpc-deployment/ (2 skills)
 
 | Skill | Description |
 |-------|-------------|
 | slurm-job-script-generator | Generate `sbatch` scripts, sanity-check resource requests, and standardize `#SBATCH` directives |
+| hpc-runtime-doctor | Diagnose modules, MPI/OpenMP/GPU layout, Kokkos/CUDA hints, scratch paths, job arrays, restart strategy, scheduler portability, walltime, and resource mismatch |
 
-Contributions welcome: expand this category with scheduler portability (PBS/LSF), MPI decomposition guidance, job arrays, build toolchains, and cluster-friendly profiling workflows.
+Contributions welcome: expand this category with PBS/LSF templates, MPI decomposition planners, build toolchains, and cluster-friendly profiling workflows.
 
 ### ontology/ (3 skills)
 
@@ -532,21 +551,17 @@ Currently supports CMSO (Computational Material Sample Ontology) from the OCDO e
 
 Skills related to the physics of materials -- constitutive models, thermodynamic properties, phase behavior, crystallography, chemical kinetics, and microstructure characterization. Example areas include stress-strain analysis, equation of state selection, phase-field modeling, and grain morphology. The community will shape which specific skills emerge first based on demand and contributor interest.
 
-### verification-validation/ (open for contributions)
-
-Skills for verifying simulation codes and validating results against known solutions. This covers manufactured solutions for code verification, standard benchmark problems, uncertainty propagation methods, and sensitivity analysis techniques. If you work in V&V, your domain expertise is especially valuable here.
-
-### data-management/ (open for contributions)
-
-Skills for handling simulation data throughout its lifecycle -- reading and writing common formats (HDF5, VTK, CSV), planning effective visualizations, converting between formats, and managing checkpoint/restart workflows. Contributions that help bridge the gap between simulation output and analysis are welcome.
-
 ### simulation-patterns/ (open for contributions)
 
 Skills for common simulation design patterns that cut across specific physics -- multi-physics coupling strategies, transient startup and ramp procedures, data assimilation, and inverse problem formulations. These tend to be more advanced and benefit from real-world experience.
 
-### robustness/ (open for contributions)
+### robustness/ (1 skill)
 
-Skills for handling numerically challenging scenarios -- shock capturing and limiters, numerical diffusion diagnosis, contact mechanics, and other situations where standard methods struggle. Contributions from practitioners who have dealt with these difficulties firsthand are particularly welcome.
+| Skill | Description |
+|-------|-------------|
+| simulation-failure-triage | Diagnose nonconvergence, NaN/Inf, exploding energies, unstable timesteps, pressure blow-up, missing potentials, bad pseudopotentials, corrupted output, and incomplete runs |
+
+Contributions welcome: expand this category with shock-capturing and limiter diagnosis, contact mechanics stabilization, numerical diffusion detection, and recovery strategies for difficult multiphysics runs.
 
 ### Contributing a New Skill
 
@@ -559,9 +574,9 @@ Skills for handling numerically challenging scenarios -- shock capturing and lim
 
 ## Getting Help
 
-- **Questions about a skill**: Open a [GitHub Issue](https://github.com/heshamfs/materials-simulation-skills/issues) with the question label
+- **Questions about a skill**: Open a [GitHub Issue](https://github.com/HeshamFS/materials-simulation-skills/issues) with the question label
 - **Implementation questions**: Tag your issue with `help wanted`
-- **General discussion**: Use [GitHub Discussions](https://github.com/heshamfs/materials-simulation-skills/discussions) for open-ended topics
+- **General discussion**: Use [GitHub Discussions](https://github.com/HeshamFS/materials-simulation-skills/discussions) for open-ended topics
 
 ### Label Conventions
 

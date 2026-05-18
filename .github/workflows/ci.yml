@@ -48,23 +48,7 @@ jobs:
 
       - name: Check Python syntax
         run: |
-          python -m py_compile skills/core-numerical/numerical-stability/scripts/*.py
-          python -m py_compile skills/core-numerical/numerical-integration/scripts/*.py
-          python -m py_compile skills/core-numerical/linear-solvers/scripts/*.py
-          python -m py_compile skills/core-numerical/time-stepping/scripts/*.py
-          python -m py_compile skills/core-numerical/differentiation-schemes/scripts/*.py
-          python -m py_compile skills/core-numerical/mesh-generation/scripts/*.py
-          python -m py_compile skills/simulation-workflow/simulation-validator/scripts/*.py
-          python -m py_compile skills/simulation-workflow/parameter-optimization/scripts/*.py
-          python -m py_compile skills/simulation-workflow/simulation-orchestrator/scripts/*.py
-          python -m py_compile skills/simulation-workflow/post-processing/scripts/*.py
-          python -m py_compile skills/simulation-workflow/performance-profiling/scripts/*.py
-          python -m py_compile skills/core-numerical/nonlinear-solvers/scripts/*.py
-          python -m py_compile skills/core-numerical/convergence-study/scripts/*.py
-          python -m py_compile skills/ontology/ontology-explorer/scripts/*.py
-          python -m py_compile skills/ontology/ontology-mapper/scripts/*.py
-          python -m py_compile skills/ontology/ontology-validator/scripts/*.py
-          python -m py_compile skills/hpc-deployment/slurm-job-script-generator/scripts/*.py
+          python -m compileall -q skills materials_simulation_skills tools
 
   smoke:
     runs-on: ubuntu-latest
@@ -127,96 +111,5 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install frontmatter parser
-        run: pip install python-frontmatter
-
-      - name: Validate SKILL.md files
-        run: |
-          python3 -c "
-          import os, sys, frontmatter
-          errors = []
-          for root, dirs, files in os.walk('skills'):
-              if 'SKILL.md' in files:
-                  path = os.path.join(root, 'SKILL.md')
-                  try:
-                      p = frontmatter.load(path)
-                      name = p.get('name', '')
-                      desc = p.get('description', '')
-                      dirname = os.path.basename(root)
-                      if not name:
-                          errors.append(f'{path}: missing name')
-                      if name != dirname:
-                          errors.append(f'{path}: name \"{name}\" != directory \"{dirname}\"')
-                      if not desc:
-                          errors.append(f'{path}: missing description')
-                      if len(desc) > 1024:
-                          errors.append(f'{path}: description too long ({len(desc)} > 1024)')
-                      if 'metadata' not in p.metadata:
-                          errors.append(f'{path}: missing metadata block')
-                  except Exception as e:
-                      errors.append(f'{path}: parse error: {e}')
-          if errors:
-              for e in errors: print(f'ERROR: {e}', file=sys.stderr)
-              sys.exit(1)
-          print('All SKILL.md files valid')
-          "
-
-      - name: Check eval suite completeness
-        run: |
-          python3 -c "
-          import os, json, sys
-          errors = []
-          for root, dirs, files in os.walk('skills'):
-              if 'SKILL.md' in files:
-                  skill_name = os.path.basename(root)
-                  eval_path = os.path.join(root, 'evals', 'evals.json')
-                  if not os.path.exists(eval_path):
-                      errors.append(f'{skill_name}: missing evals/evals.json')
-                  else:
-                      with open(eval_path) as f:
-                          data = json.load(f)
-                      cases = data.get('evals', [])
-                      if len(cases) < 3:
-                          errors.append(f'{skill_name}: only {len(cases)} eval cases (minimum 3)')
-                      for case in cases:
-                          if not case.get('assertions'):
-                              errors.append(f'{skill_name} eval {case.get(\"id\")}: missing assertions')
-          if errors:
-              for e in errors: print(f'ERROR: {e}', file=sys.stderr)
-              sys.exit(1)
-          print('All eval suites complete')
-          "
-
-      - name: Check security sections
-        run: |
-          python3 -c "
-          import os, sys
-          errors = []
-          for root, dirs, files in os.walk('skills'):
-              if 'SKILL.md' in files:
-                  skill_name = os.path.basename(root)
-                  content = open(os.path.join(root, 'SKILL.md')).read()
-                  if '## Security' not in content:
-                      errors.append(f'{skill_name}: missing ## Security section')
-          if errors:
-              for e in errors: print(f'ERROR: {e}', file=sys.stderr)
-              sys.exit(1)
-          print('All skills have Security sections')
-          "
-
-      - name: Check changelogs
-        run: |
-          python3 -c "
-          import os, sys
-          errors = []
-          for root, dirs, files in os.walk('skills'):
-              if 'SKILL.md' in files:
-                  skill_name = os.path.basename(root)
-                  changelog = os.path.join(root, 'CHANGELOG.md')
-                  if not os.path.exists(changelog):
-                      errors.append(f'{skill_name}: missing CHANGELOG.md')
-          if errors:
-              for e in errors: print(f'ERROR: {e}', file=sys.stderr)
-              sys.exit(1)
-          print('All skills have CHANGELOG.md')
-          "
+      - name: Validate skill quality gates
+        run: python tools/validate_skills.py

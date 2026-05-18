@@ -1,0 +1,22 @@
+{
+  "evals": [
+    {
+      "id": "lammps_lost_atoms",
+      "prompt": "Triage a LAMMPS run with lost atoms, pressure blow-up, and NaN temperature.",
+      "expected_outputs": ["timestep", "overlaps", "barostat"],
+      "assertions": ["classifies instability", "preserves evidence", "uses safe retry ladder"]
+    },
+    {
+      "id": "vasp_nonconvergence",
+      "prompt": "Diagnose a VASP electronic nonconvergence failure after changing smearing.",
+      "expected_outputs": ["nonconvergence", "recent change", "retry"],
+      "assertions": ["isolates recent change", "checks setup before retry", "sets stop conditions"]
+    },
+    {
+      "id": "missing_potential",
+      "prompt": "My MD run cannot find the potential for one species.",
+      "expected_outputs": ["missing potential", "species mapping", "stop"],
+      "assertions": ["does not invent potential parameters", "requires verification", "stops if model data missing"]
+    }
+  ]
+}

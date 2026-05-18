@@ -1,0 +1,22 @@
+{
+  "evals": [
+    {
+      "id": "diffusion_mms_plan",
+      "prompt": "Plan V&V for a 2D diffusion solver with an analytic reference and second-order finite volumes.",
+      "expected_outputs": ["MMS", "observed order", "L2"],
+      "assertions": ["mentions manufactured solution", "includes refinement protocol", "sets pass/fail criteria"]
+    },
+    {
+      "id": "phase_field_benchmark",
+      "prompt": "Choose benchmark checks for phase-field grain growth without a closed-form analytic solution.",
+      "expected_outputs": ["coarsening", "convergence", "warning"],
+      "assertions": ["does not overclaim validation", "uses benchmark-led strategy", "includes physical consistency checks"]
+    },
+    {
+      "id": "high_risk_uncertainty",
+      "prompt": "Create a validation plan for high-risk elasticity results with experimental inputs.",
+      "expected_outputs": ["uncertainty", "benchmark", "acceptance criteria"],
+      "assertions": ["requires uncertainty propagation", "separates model and discretization error", "flags reference limitations"]
+    }
+  ]
+}
