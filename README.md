@@ -384,6 +384,16 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for:
 
 ---
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=HeshamFS%2Fmaterials-simulation-skills&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=HeshamFS/materials-simulation-skills&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=HeshamFS/materials-simulation-skills&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=HeshamFS/materials-simulation-skills&type=date&legend=top-left" />
+ </picture>
+</a>
+
 ## License
 
 [Apache 2.0](LICENSE)
