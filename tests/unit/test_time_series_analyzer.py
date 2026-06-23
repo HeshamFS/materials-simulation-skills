@@ -124,6 +124,32 @@ class TestTimeSeriesAnalyzer(unittest.TestCase):
         self.assertFalse(result["reached"])
         self.assertIn("Not enough", result["reason"])
 
+    def test_detect_convergence_by_threshold_reached(self):
+        """F5: a small final residual converges by absolute threshold even
+        though the relative steady-state test reports not-reached."""
+        residual = [1e-2, 5e-3, 2e-3, 1e-3, 5e-4, 2e-4, 1e-4, 5e-5, 2e-5, 1e-5, 5e-6]
+        conv = self.mod.detect_convergence_by_threshold(residual, threshold=1e-5)
+        self.assertTrue(conv["reached"])
+        self.assertEqual(conv["final_value"], 5e-6)
+        self.assertEqual(conv["criterion"], "absolute_threshold")
+        # Relative steady-state test should NOT report reached on this still-
+        # decreasing residual at a tight tolerance.
+        ss = self.mod.detect_steady_state(residual, tolerance=1e-6, window=10)
+        self.assertFalse(ss["reached"])
+
+    def test_detect_convergence_by_threshold_not_reached(self):
+        residual = [1.0, 0.5, 0.1, 0.05, 0.02]
+        conv = self.mod.detect_convergence_by_threshold(residual, threshold=1e-6)
+        self.assertFalse(conv["reached"])
+        self.assertIsNone(conv["index"])
+
+    def test_detect_convergence_by_threshold_index(self):
+        values = [1.0, 0.1, 1e-7, 1e-8, 1e-9]
+        conv = self.mod.detect_convergence_by_threshold(values, threshold=1e-6)
+        self.assertTrue(conv["reached"])
+        # First index from which all subsequent values stay below threshold.
+        self.assertEqual(conv["index"], 2)
+
     def test_detect_oscillations_none(self):
         """Test oscillation detection with no oscillations."""
         values = [1, 2, 3, 4, 5]

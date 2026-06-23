@@ -42,6 +42,20 @@ class TestResidualNorms(unittest.TestCase):
         )
         self.assertFalse(meta["converged"])
 
+    def test_nonfinite_tolerance_rejected(self):
+        """Security hardening: non-finite tolerances must raise ValueError."""
+        for abs_tol, rel_tol in ((float("inf"), 1e-6), (1e-8, float("nan"))):
+            with self.assertRaises(ValueError):
+                self.mod.compute_residual_metrics(
+                    residual=[1.0],
+                    rhs=None,
+                    initial=None,
+                    abs_tol=abs_tol,
+                    rel_tol=rel_tol,
+                    norm="l2",
+                    require_both=False,
+                )
+
     def test_invalid_norm(self):
         with self.assertRaises(ValueError):
             self.mod.compute_residual_metrics(

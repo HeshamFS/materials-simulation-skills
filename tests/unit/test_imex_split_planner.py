@@ -45,6 +45,19 @@ class TestImexSplitPlanner(unittest.TestCase):
                 conservative=False,
             )
 
+    def test_no_terms_message(self):
+        # Regression (F3): documented Error Handling string must match.
+        with self.assertRaises(ValueError) as ctx:
+            self.mod.plan_imex(
+                stiff_terms=[],
+                nonstiff_terms=[],
+                coupling="weak",
+                accuracy="medium",
+                stiffness_ratio=1e3,
+                conservative=False,
+            )
+        self.assertIn("Provide at least one stiff or non-stiff term", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

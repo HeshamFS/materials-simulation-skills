@@ -2,6 +2,20 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.0] - 2026-06-23
+
+### Fixed
+- **Domain matching now uses exact class equality plus subclass traversal** instead of naive substring containment in both `completeness_checker.py` and `schema_checker.py`. Previously, because many CMSO class names are substrings of others (e.g. "Material" in "Crystalline Material", "Unit" in "Unit Cell"), the tools produced wrong completeness recommendations and missed/false domain-mismatch warnings. A bare `Material` no longer recommends `has crystallographic defect` (a `Crystalline Material` property); `Unit` (the measurement unit) no longer inherits `Unit Cell` properties; and `schema_checker.py` now correctly warns on a `Unit Cell`-domain property applied to `Unit`, while no longer warning when the class IS-A the domain (subclasses).
+- Subclass-aware traversal also correctly credits subclasses with inherited domain properties (e.g. `Lattice Vector` inherits `Vector` component properties).
+
+### Added
+- Nearest-match suggestions: `schema_checker.py` now attaches a `suggestions` array (and an inline "did you mean 'X'?" hint) to `unknown_class` and `unknown_property` errors using stdlib `difflib`. Surfaces corrections that case-insensitive matching misses (e.g. `has_unit_cell` -> `has unit cell`, `CrystalStructurr` -> `Crystal Structure`).
+- Input-validation caps across all three scripts (exit code 2 on violation): 1,000,000-byte cap on raw JSON inputs and annotation files; max 1000 annotations/relationships/provided properties per call; 500-character cap per class/property name; type checks that names are strings.
+
+### Changed
+- Corrected eval suite: eval 1 now uses the real property `has lattice parameter` (CMSO has no per-axis `has lattice parameter a`) so it is a clean positive case; eval 4 now asserts that nearest-match `suggestions` surface; eval 5 now uses `Atomic Scale Sample` with a genuine missing required property (`has simulation cell`, score 0.2) so its "low score / required_missing" assertions are truthful.
+- SKILL.md: rewrote the Conversational Workflow Example to attribute the domain-mismatch insight to `schema_checker.py` (the tool that actually produces it) and the missing-required finding to `completeness_checker.py`; documented that `completeness_score` weights all property tiers equally so `required_missing` must be checked first; documented the new `suggestions` output and input caps.
+
 ## [1.1.0] - 2026-03-26
 
 ### Added

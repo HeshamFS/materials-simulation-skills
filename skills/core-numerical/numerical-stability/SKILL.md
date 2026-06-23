@@ -11,15 +11,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 4
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Numerical Stability
@@ -76,7 +75,7 @@ Is the problem stiff (fast + slow dynamics)?
 | `scripts/cfl_checker.py` | `metrics.cfl`, `metrics.fourier`, `recommended_dt`, `stable` |
 | `scripts/von_neumann_analyzer.py` | `results.max_amplification`, `results.stable` |
 | `scripts/matrix_condition.py` | `results.condition_number`, `results.is_symmetric` |
-| `scripts/stiffness_detector.py` | `results.stiffness_ratio`, `results.stiff`, `results.recommendation` |
+| `scripts/stiffness_detector.py` | `results.stiffness_ratio`, `results.real_part_stiffness_ratio`, `results.imag_dominated`, `results.stiff`, `results.recommendation`, `results.warning` |
 
 ## Workflow
 
@@ -90,19 +89,19 @@ Is the problem stiff (fast + slow dynamics)?
 
 ## Conversational Workflow Example
 
-**User**: My phase-field simulation is blowing up after 100 steps. I'm using explicit Euler with dx=0.01, dt=1e-4, and diffusivity D=1e-3.
+**User**: My phase-field simulation is blowing up after 100 steps. I'm using explicit Euler with dx=0.01, dt=1e-4, and diffusivity D=1.0.
 
 **Agent workflow**:
 1. Check stability criteria:
    ```bash
-   python3 scripts/cfl_checker.py --dx 0.01 --dt 1e-4 --diffusivity 1e-3 --dimensions 2 --json
+   python3 scripts/cfl_checker.py --dx 0.01 --dt 1e-4 --diffusivity 1.0 --dimensions 2 --json
    ```
 2. Interpret results:
-   - Fourier number: `Fo = 1e-3 × 1e-4 / (0.01)² = 1.0`
+   - Fourier number: `Fo = 1.0 × 1e-4 / (0.01)² = 1.0`
    - 2D limit: `Fo ≤ 0.25`
    - **Violation**: Fo = 1.0 > 0.25, unstable!
 3. Recommend fix:
-   - Reduce dt to `2.5e-5` (to get Fo = 0.25)
+   - Reduce dt to `2.5e-5` (the tool's `recommended_dt`, giving Fo = 0.25)
    - Or increase dx, or switch to implicit
 
 ## Pre-Simulation Stability Checklist
@@ -136,7 +135,7 @@ python3 scripts/matrix_condition.py --matrix A.npy --norm 2 --json
 |-------|-------|------------|
 | `dx and dt must be positive` | Zero or negative values | Provide valid positive numbers |
 | `No stability criteria applied` | Missing velocity/diffusivity | Provide at least one physics parameter |
-| `Matrix file not found` | Invalid path | Check matrix file exists |
+| `Matrix not found: <path>` | Invalid path | Check matrix file exists |
 | `Could not compute eigenvalues` | Singular or ill-formed matrix | Check matrix validity |
 
 ## Interpretation Guidance
@@ -147,20 +146,23 @@ python3 scripts/matrix_condition.py --matrix A.npy --norm 2 --json
 | `stable: false` | At least one limit violated | Reduce dt or change scheme |
 | `stable: null` | No criteria could be applied | Provide more physics inputs |
 | Stiffness ratio > 1000 | Problem is stiff | Use implicit integrator |
-| Condition number > 10⁶ | Ill-conditioned | Use scaling/preconditioning |
+| Condition number > 10⁸ | Poorly-conditioned (`status: poorly-conditioned`) | Preconditioning likely needed |
+| Condition number > 10¹⁰ | Ill-conditioned (`status: ill-conditioned`) | Use scaling/preconditioning |
+
+> Conditioning thresholds assume IEEE double precision: solving loses roughly `log10(κ)` significant digits, and a matrix becomes numerically singular near `κ ≈ 1/eps ≈ 4.5e15`. The `> 10⁸` / `> 10¹⁰` cutoffs (matching `matrix_condition.py` `status`) leave ample margin; well-conditioned-for-double FEM matrices (κ up to ~10⁶–10⁷) report `status: ok`.
 
 ## Security
 
 ### Input Validation
-- All numeric parameters (`dx`, `dt`, `velocity`, `diffusivity`, `dimensions`) are validated as finite positive numbers before any computation
-- `--dimensions` is restricted to `{1, 2, 3}`
+- `dx`, `dt`, and `safety` are validated as finite positive numbers before any computation; `velocity`, `diffusivity`, and `reaction_rate`, when supplied, are validated as finite
+- `--dimensions` is restricted to `{1, 2, 3}` (cfl_checker.py raises and exits 2 otherwise)
 - Comma-separated eigenvalue lists (`--eigs`) are capped at 10,000 entries and validated as finite numbers
-- Stencil coefficient lists (`--coeffs`) are length-limited and validated as finite floats
+- Stencil coefficient lists (`--coeffs`) are capped at 10,000 entries and validated as finite floats
 
 ### File Access
-- `matrix_condition.py` reads a single matrix file (`.npy` format) specified by `--matrix`; no directory traversal beyond the given path
-- Matrix files are rejected if they exceed 500 MB before parsing
-- `np.load()` is called with `allow_pickle=False` to prevent arbitrary code execution via crafted `.npy` files
+- `matrix_condition.py` reads a single matrix file (`.npy` or text) specified by `--matrix`; no directory traversal beyond the given path
+- Matrix/Jacobian files are rejected if they exceed 500 MB before parsing (matrix_condition.py, stiffness_detector.py)
+- `np.load()` is called with `allow_pickle=False` to prevent arbitrary code execution via crafted `.npy` files (matrix_condition.py, stiffness_detector.py)
 - Scripts write only to stdout (JSON output); no files are created unless the agent explicitly uses the Write tool
 
 ### Tool Restrictions
@@ -172,14 +174,14 @@ python3 scripts/matrix_condition.py --matrix A.npy --norm 2 --json
 ### Safety Measures
 - No `eval()`, `exec()`, or dynamic code generation
 - All subprocess calls use explicit argument lists (no `shell=True`)
-- Matrix dimension limits (100,000 per dimension) prevent memory exhaustion
+- Matrix dimension limit (100,000 per side) in matrix_condition.py prevents memory exhaustion
 - JSON output mode (`--json`) produces structured, parseable results without shell-interpretable content
 
 ## Limitations
 
 - **Explicit schemes only** for CFL/Fourier checks (implicit is unconditionally stable)
 - **Von Neumann analysis** assumes linear, constant-coefficient, periodic BCs
-- **Stiffness detection** requires eigenvalue estimates from user
+- **Stiffness detection** requires eigenvalue estimates from user. The `stiff` verdict is based on scale separation among genuinely decaying modes (`Re(λ) < 0`); the magnitude ratio is still reported as `stiffness_ratio`. Imaginary-axis-dominated spectra (oscillatory/advection/Hamiltonian) are flagged via `imag_dominated` and a `warning`, and are NOT classified as stiff — for those, prefer symplectic/leapfrog or an A-stable scheme sized by the CFL limit, not BDF/Radau.
 
 ## References
 
@@ -189,5 +191,6 @@ python3 scripts/matrix_condition.py --matrix A.npy --norm 2 --json
 
 ## Version History
 
+- **v1.2.0** (2026-06-23): Corrected the phase-field worked example (genuinely unstable Fo=1.0 with D=1.0); fixed eval case 1 Fourier value; reconciled conditioning thresholds and error-message docs with the scripts; real-part-based stiffness classification with imaginary-dominated detection; enforced documented input/file-size/dimension safeguards
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 4 stability analysis scripts

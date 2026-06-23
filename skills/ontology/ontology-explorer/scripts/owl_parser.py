@@ -155,8 +155,13 @@ def parse_owl(source: str) -> Dict:
     ValueError
         If the source cannot be read or parsed.
     """
+    if source.startswith("http://"):
+        raise ValueError(
+            "Insecure URL rejected: only https:// URLs are accepted for "
+            "remote OWL sources (got http://)"
+        )
     try:
-        if source.startswith("http://") or source.startswith("https://"):
+        if source.startswith("https://"):
             with urlopen(source, timeout=30) as resp:
                 xml_bytes = resp.read()
             root = ET.fromstring(xml_bytes)

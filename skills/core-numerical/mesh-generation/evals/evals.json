@@ -8,7 +8,7 @@
       "assertions": [
         "Uses grid_sizing.py with --length 0.001 and appropriate resolution",
         "Recommends at least 5 points across the 10um interface width",
-        "Computes required dx <= 2um, giving nx >= 500",
+        "Computes required dx <= 2um, giving counts >= 500 per dimension (resolution=500 yields counts of exactly 500)",
         "Notes that fewer than 5 points per interface may cause numerical artifacts"
       ]
     },
@@ -20,7 +20,36 @@
         "Uses mesh_quality.py with --dx 1.0 --dy 0.1 --dz 0.1",
         "Reports aspect ratio of 10:1",
         "Flags aspect ratio as exceeding the 5:1 quality threshold",
+        "Reports skewness of 0 (orthogonal cell) and does NOT flag high_skewness",
         "Recommends reducing dx or increasing dy/dz to improve aspect ratio"
+      ],
+      "script_checks": [
+        {
+          "description": "Anisotropic cell: aspect=10, skewness=0 (orthogonal)",
+          "cmd": [
+            "scripts/mesh_quality.py",
+            "--dx",
+            "1.0",
+            "--dy",
+            "0.1",
+            "--dz",
+            "0.1",
+            "--json"
+          ],
+          "assert": [
+            {
+              "path": "results.aspect_ratio",
+              "op": "approx",
+              "value": 10.0,
+              "rel_tol": 1e-06
+            },
+            {
+              "path": "results.skewness",
+              "op": "eq",
+              "value": 0.0
+            }
+          ]
+        }
       ]
     },
     {
@@ -39,9 +68,9 @@
       "prompt": "my solver keeps crashing and i suspect it's the mesh. cells are dx=0.5, dy=0.5. anything obviously wrong?",
       "expected_output": "Mesh quality check shows good aspect ratio (1:1); problem is likely elsewhere.",
       "assertions": [
-        "Uses mesh_quality.py with --dx 0.5 --dy 0.5",
+        "Uses mesh_quality.py with --dx 0.5 --dy 0.5 (dz omitted, treated as a 2D cell)",
         "Reports aspect ratio of 1:1, which is excellent",
-        "Reports low or zero skewness for uniform cells",
+        "Reports skewness of 0 for the uniform orthogonal cell",
         "Concludes mesh quality is not the issue and suggests checking other factors like stability or boundary conditions"
       ]
     }

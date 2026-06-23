@@ -4,11 +4,11 @@
     {
       "id": 1,
       "prompt": "I'm running a 10-hour phase-field simulation. Each checkpoint takes about 2 minutes to write. How often should I save so I don't lose more than 30 minutes of work if it crashes?",
-      "expected_output": "Checkpoint every 30 minutes with ~0.7% overhead, max 30 min lost work on crash.",
+      "expected_output": "Checkpoint every 30 minutes with ~6.7% overhead (Acceptable per the 5-10% band), max 30 min lost work on crash.",
       "assertions": [
         "Uses checkpoint_planner.py with --run-time 36000 --checkpoint-cost 120 --max-lost-time 1800",
         "Recommends checkpoint interval of approximately 30 minutes",
-        "Reports overhead percentage below 1%",
+        "Reports overhead of approximately 6-7% (5-10% Acceptable band)",
         "Mentions tradeoff between checkpoint frequency and computational overhead"
       ]
     },
@@ -26,10 +26,10 @@
     {
       "id": 3,
       "prompt": "Set up output times for a solidification sim from t=0 to t=5s. I want snapshots every 0.05s to capture the dendritic growth front.",
-      "expected_output": "Output schedule with 100 snapshots at 0.05s intervals from 0 to 5s.",
+      "expected_output": "Output schedule with 101 output frames (100 intervals) at 0.05 s spacing, including endpoints t=0 and t=5.",
       "assertions": [
         "Uses output_schedule.py with --t-start 0 --t-end 5 --interval 0.05",
-        "Reports 100 output frames total",
+        "Reports 101 output frames (100 intervals, both endpoints t=0 and t=5 included)",
         "Lists output times starting at 0 and ending at 5",
         "Notes interval should be consistent with physical timescale of dendrite growth"
       ]

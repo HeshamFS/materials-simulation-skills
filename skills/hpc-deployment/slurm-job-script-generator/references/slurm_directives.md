@@ -39,6 +39,15 @@ echo "nodes=$SLURM_JOB_NODELIST"
 echo "submit_dir=$SLURM_SUBMIT_DIR"
 ```
 
+## Directive placement (important)
+
+Per SchedMD's `sbatch` specification: *"Once the first non-comment, non-whitespace
+line has been reached in the script, no more `#SBATCH` directives will be processed."*
+Therefore **all `#SBATCH` directives must appear immediately after the shebang and
+before any executable command** (including `set -euo pipefail`). A directive placed
+after the first real command is silently ignored, and the job falls back to cluster
+defaults.
+
 ## Common mapping advice
 
 - **MPI-only:** `cpus-per-task=1`, increase `ntasks`.

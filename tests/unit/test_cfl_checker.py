@@ -227,6 +227,95 @@ class TestCflChecker(unittest.TestCase):
                 safety=1.0,
             )
 
+    def test_dimensions_whitelist_rejects_four(self):
+        """Regression (F3 security): --dimensions outside {1,2,3} must raise."""
+        with self.assertRaises(ValueError):
+            self.mod.compute_cfl(
+                dx=0.01,
+                dt=1e-4,
+                velocity=None,
+                diffusivity=1e-3,
+                reaction_rate=None,
+                dimensions=4,
+                scheme="explicit",
+                advection_limit=None,
+                diffusion_limit=None,
+                reaction_limit=None,
+                safety=1.0,
+            )
+
+    def test_non_finite_dx_raises(self):
+        """Security: non-finite dx must raise, not propagate inf/nan."""
+        with self.assertRaises(ValueError):
+            self.mod.compute_cfl(
+                dx=float("inf"),
+                dt=1e-4,
+                velocity=None,
+                diffusivity=1e-3,
+                reaction_rate=None,
+                dimensions=1,
+                scheme="explicit",
+                advection_limit=None,
+                diffusion_limit=None,
+                reaction_limit=None,
+                safety=1.0,
+            )
+
+    def test_non_finite_diffusivity_raises(self):
+        with self.assertRaises(ValueError):
+            self.mod.compute_cfl(
+                dx=0.01,
+                dt=1e-4,
+                velocity=None,
+                diffusivity=float("nan"),
+                reaction_rate=None,
+                dimensions=1,
+                scheme="explicit",
+                advection_limit=None,
+                diffusion_limit=None,
+                reaction_limit=None,
+                safety=1.0,
+            )
+
+    def test_phase_field_example_unstable(self):
+        """Regression (F1): the SKILL.md worked example (D=1, dt=1e-4, dx=0.01,
+        2D) must report Fo=1.0, unstable, with recommended_dt=2.5e-5."""
+        result = self.mod.compute_cfl(
+            dx=0.01,
+            dt=1e-4,
+            velocity=None,
+            diffusivity=1.0,
+            reaction_rate=None,
+            dimensions=2,
+            scheme="explicit",
+            advection_limit=None,
+            diffusion_limit=None,
+            reaction_limit=None,
+            safety=1.0,
+        )
+        self.assertAlmostEqual(result["metrics"]["fourier"], 1.0, places=9)
+        self.assertAlmostEqual(result["limits"]["diffusion_limit"], 0.25, places=9)
+        self.assertFalse(result["stable"])
+        self.assertAlmostEqual(result["recommended_dt"], 2.5e-5, places=12)
+
+    def test_eval_case1_fourier_value(self):
+        """Regression (F2): eval case 1 inputs give Fo=1e-4 and stable=True."""
+        result = self.mod.compute_cfl(
+            dx=0.01,
+            dt=0.001,
+            velocity=None,
+            diffusivity=1e-5,
+            reaction_rate=None,
+            dimensions=1,
+            scheme="explicit",
+            advection_limit=None,
+            diffusion_limit=None,
+            reaction_limit=None,
+            safety=1.0,
+        )
+        self.assertAlmostEqual(result["metrics"]["fourier"], 1e-4, places=9)
+        self.assertTrue(result["stable"])
+
 
 if __name__ == "__main__":
     unittest.main()

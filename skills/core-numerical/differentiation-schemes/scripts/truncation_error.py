@@ -7,11 +7,13 @@ from typing import Dict
 
 
 def estimate_truncation_error(dx: float, accuracy: int, scale: float) -> Dict[str, object]:
-    if dx <= 0:
+    if not math.isfinite(dx) or dx <= 0:
         raise ValueError("dx must be positive")
     if accuracy <= 0:
         raise ValueError("accuracy must be positive")
-    if scale < 0:
+    if accuracy > 12:
+        raise ValueError("accuracy must be <= 12")
+    if not math.isfinite(scale) or scale < 0:
         raise ValueError("scale must be non-negative")
 
     error_scale = scale * (dx ** accuracy)

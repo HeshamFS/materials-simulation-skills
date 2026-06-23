@@ -53,6 +53,8 @@ def compute_residual_metrics(
     norm: str,
     require_both: bool,
 ) -> Tuple[Dict[str, float], Optional[Dict[str, float]], Optional[Dict[str, float]], Dict[str, object]]:
+    if not math.isfinite(abs_tol) or not math.isfinite(rel_tol):
+        raise ValueError("abs_tol and rel_tol must be finite numbers")
     if abs_tol < 0 or rel_tol < 0:
         raise ValueError("abs_tol and rel_tol must be non-negative")
 

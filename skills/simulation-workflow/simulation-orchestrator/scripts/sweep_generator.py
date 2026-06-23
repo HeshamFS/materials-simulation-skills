@@ -5,13 +5,22 @@ This script creates multiple configuration files by varying parameters across
 specified ranges. Supports grid (full factorial), linspace (uniform), and
 LHS (Latin Hypercube Sampling) methods.
 
+Swept parameter names may use dot notation (e.g. ``parameters.kappa``) to
+target nested keys in the base config. ``merge_config`` walks/creates the
+nested dict path and assigns the value there. A bare name (e.g. ``kappa``)
+sets/overwrites a top-level key. This mirrors the dot-notation reads used by
+result_aggregator.py, so a sweep on ``parameters.kappa`` actually changes the
+value a solver reads from ``parameters.kappa`` (instead of silently leaving the
+base value in place while adding an unused top-level ``kappa``).
+
 Usage:
     python sweep_generator.py --base-config sim.json --params "dt:1e-4:1e-2:5" --method linspace --output-dir ./sweep
+    python sweep_generator.py --base-config sim.json --params "parameters.kappa:0.1:1.0:4" --method linspace --output-dir ./sweep
 
 Output (JSON):
     {
         "configs": ["config_0000.json", "config_0001.json", ...],
-        "parameter_space": {"dt": [0.0001, 0.00325, 0.0055, 0.00775, 0.01]},
+        "parameter_space": {"dt": [0.0001, 0.002575, 0.00505, 0.007525, 0.01]},
         "sweep_method": "linspace",
         "total_runs": 5
     }
@@ -21,10 +30,21 @@ import argparse
 import copy
 import itertools
 import json
+import math
 import os
 import random
+import re
 import sys
 from typing import Any, Dict, List, Tuple
+
+# Security limits
+MAX_PARAM_SPECS = 32  # maximum number of parameters in one --params string
+MAX_COUNT = 100_000  # maximum points per parameter (linspace/grid)
+MAX_SAMPLES = 1_000_000  # maximum LHS samples
+MAX_NESTED_DEPTH = 10  # maximum dot-notation depth for an override key
+# Parameter names: identifier segments separated by dots (mirrors the metric
+# allowlist used by result_aggregator.py), e.g. "dt" or "parameters.kappa".
+PARAM_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)*$")
 
 
 def parse_param_spec(spec: str) -> Tuple[str, float, float, int]:
@@ -40,15 +60,18 @@ def parse_param_spec(spec: str) -> Tuple[str, float, float, int]:
     parts = spec.strip().split(":")
     if len(parts) == 4:
         name, min_val, max_val, count = parts
-        fmin, fmax = float(min_val), float(max_val)
+        _validate_param_name(name)
+        fmin, fmax = _parse_finite_float(name, min_val), _parse_finite_float(name, max_val)
         if fmin >= fmax:
             raise ValueError(
                 f"Invalid range for '{name}': min ({fmin}) must be less than max ({fmax})"
             )
-        return name, fmin, fmax, int(count)
+        icount = _parse_count(name, count)
+        return name, fmin, fmax, icount
     elif len(parts) == 3:
         name, min_val, max_val = parts
-        fmin, fmax = float(min_val), float(max_val)
+        _validate_param_name(name)
+        fmin, fmax = _parse_finite_float(name, min_val), _parse_finite_float(name, max_val)
         if fmin >= fmax:
             raise ValueError(
                 f"Invalid range for '{name}': min ({fmin}) must be less than max ({fmax})"
@@ -60,9 +83,55 @@ def parse_param_spec(spec: str) -> Tuple[str, float, float, int]:
         )
 
 
+def _validate_param_name(name: str) -> None:
+    """Validate a swept parameter name (allows dot notation for nested keys)."""
+    if not PARAM_NAME_PATTERN.match(name):
+        raise ValueError(
+            f"Invalid parameter name '{name}'. "
+            "Must match [a-zA-Z_][a-zA-Z0-9_]*(.[a-zA-Z_][a-zA-Z0-9_]*)* "
+            "(e.g. 'dt' or 'parameters.kappa')"
+        )
+    if name.count(".") + 1 > MAX_NESTED_DEPTH:
+        raise ValueError(
+            f"Parameter name '{name}' exceeds maximum nesting depth {MAX_NESTED_DEPTH}"
+        )
+
+
+def _parse_finite_float(name: str, raw: str) -> float:
+    """Parse a bound as a finite float, rejecting NaN/Inf."""
+    try:
+        val = float(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"Invalid numeric bound for '{name}': {raw!r}")
+    if not math.isfinite(val):
+        raise ValueError(
+            f"Bound for '{name}' must be finite, got {raw!r} (NaN/Inf not allowed)"
+        )
+    return val
+
+
+def _parse_count(name: str, raw: str) -> int:
+    """Parse a point count as a positive integer within the allowed bound."""
+    try:
+        icount = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"Invalid count for '{name}': {raw!r} (must be an integer)")
+    if icount <= 0:
+        raise ValueError(f"Count for '{name}' must be a positive integer, got {icount}")
+    if icount > MAX_COUNT:
+        raise ValueError(
+            f"Count for '{name}' ({icount}) exceeds maximum {MAX_COUNT}"
+        )
+    return icount
+
+
 def parse_params(params_str: str) -> List[Tuple[str, float, float, int]]:
     """Parse comma-separated parameter specifications."""
     specs = [s.strip() for s in params_str.split(",") if s.strip()]
+    if len(specs) > MAX_PARAM_SPECS:
+        raise ValueError(
+            f"Too many parameters ({len(specs)}); maximum is {MAX_PARAM_SPECS}"
+        )
     return [parse_param_spec(s) for s in specs]
 
 
@@ -136,10 +205,37 @@ def load_base_config(path: str) -> Dict[str, Any]:
         return json.load(f)
 
 
+def _set_nested(target: Dict[str, Any], dotted_key: str, value: Any) -> None:
+    """Set ``value`` at the dot-notation path ``dotted_key`` inside ``target``.
+
+    Intermediate dicts are created as needed. If an intermediate path element
+    exists but is not a dict, it is replaced with a dict so the override can be
+    applied (the swept parameter always wins). A bare key (no dot) sets a
+    top-level key.
+    """
+    keys = dotted_key.split(".")
+    node = target
+    for key in keys[:-1]:
+        child = node.get(key)
+        if not isinstance(child, dict):
+            child = {}
+            node[key] = child
+        node = child
+    node[keys[-1]] = value
+
+
 def merge_config(base: Dict[str, Any], overrides: Dict[str, float]) -> Dict[str, Any]:
-    """Merge override parameters into base config."""
+    """Merge override parameters into a deep copy of the base config.
+
+    Override keys may use dot notation (e.g. ``parameters.kappa``) to target
+    nested locations; ``merge_config`` walks/creates the nested dict path and
+    assigns there. Bare keys set top-level values. This ensures a sweep on a
+    nested parameter actually overwrites the value a solver reads, rather than
+    silently adding an unused duplicate top-level key.
+    """
     result = copy.deepcopy(base)
-    result.update(overrides)
+    for key, value in overrides.items():
+        _set_nested(result, key, value)
     return result
 
 
@@ -215,6 +311,10 @@ def generate_sweep(
                 raise ValueError(f"Linspace method requires count for parameter {p[0]}")
         configs, param_space = generate_linspace(params)
     elif method == "lhs":
+        if samples <= 0:
+            raise ValueError(f"--samples must be a positive integer, got {samples}")
+        if samples > MAX_SAMPLES:
+            raise ValueError(f"--samples ({samples}) exceeds maximum {MAX_SAMPLES}")
         configs, param_space = generate_lhs(params, samples, seed)
     else:
         raise ValueError(f"Unknown method: {method}. Use grid, linspace, or lhs.")
@@ -269,7 +369,7 @@ def parse_args() -> argparse.Namespace:
         "--samples",
         type=int,
         default=10,
-        help="Number of samples for LHS method",
+        help=f"Number of samples for LHS method (positive, max {MAX_SAMPLES})",
     )
     parser.add_argument(
         "--seed",

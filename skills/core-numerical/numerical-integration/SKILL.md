@@ -4,7 +4,7 @@ description: >
   Select and configure time integration methods for ODE and PDE simulations —
   choose among explicit Runge-Kutta, BDF, Rosenbrock, and Adams families,
   set relative and absolute error tolerances, implement adaptive step-size
-  control with I/PI/PID controllers, plan IMEX operator splitting for mixed
+  control with P/PI step-size controllers, plan IMEX operator splitting for mixed
   stiff and non-stiff terms, and estimate splitting errors. Use when picking
   an integrator for a new simulation, diagnosing step rejections or tolerance
   failures, setting up operator splitting for phase-field or reaction-diffusion
@@ -14,15 +14,14 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 4
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Numerical Integration
@@ -135,10 +134,11 @@ python3 scripts/splitting_error_estimator.py --dt 1e-4 --scheme strang --commuta
 
 | Error | Cause | Resolution |
 |-------|-------|------------|
-| `rtol and atol must be positive` | Invalid tolerances | Use positive values |
-| `error-norm must be positive` | Negative error norm | Check error computation |
-| `Unknown controller` | Invalid controller type | Use `i`, `pi`, or `pid` |
-| `Splitting requires at least one term` | Empty term list | Specify stiff or nonstiff terms |
+| `rtol must be a non-negative finite number` / `atol must be a non-negative finite number` | Invalid tolerances | Use non-negative finite values |
+| `error_norm must be finite and non-negative` | Negative or non-finite error norm | Check error computation |
+| `scale must be positive; with min_scale=0 ensure atol>0 or rtol*\|y\|>0` | All scale entries collapsed to 0 (e.g. `rtol=0`, `atol=0`, default `min_scale=0`) | Set `atol>0`, `rtol>0`, or `--min-scale` > 0 |
+| `argument --controller: invalid choice: ... (choose from p, pi)` | Invalid controller type | Use `p` or `pi` |
+| `Provide at least one stiff or non-stiff term` | Empty term list | Specify stiff or nonstiff terms |
 
 ## Interpretation Guidance
 
@@ -152,11 +152,13 @@ python3 scripts/splitting_error_estimator.py --dt 1e-4 --scheme strang --commuta
 
 ### Controller Selection
 
-| Controller | Properties | Best For |
-|------------|------------|----------|
-| I (integral) | Simple, some overshoot | Non-stiff, moderate accuracy |
-| PI (proportional-integral) | Smooth, robust | General use |
-| PID | Aggressive adaptation | Rapidly varying dynamics |
+| Controller | CLI value | Properties | Best For |
+|------------|-----------|------------|----------|
+| P (elementary / integral) | `p` (default) | Simple, some overshoot | Non-stiff, moderate accuracy |
+| PI (proportional-integral) | `pi` | Smooth, robust (requires `--prev-error`) | General use |
+
+> PID control is described in `references/error_control.md` for reference only; the
+> `adaptive_step_controller.py` CLI implements `p` and `pi` controllers.
 
 ### IMEX Strategy
 
@@ -173,7 +175,7 @@ python3 scripts/splitting_error_estimator.py --dt 1e-4 --scheme strang --commuta
 - `imex_split_planner.py` validates term names against `[a-zA-Z_][a-zA-Z0-9_ -]*` with length and count limits, preventing injection payloads in user-supplied term lists
 - Comma-separated value lists are capped at 100,000 entries to prevent resource exhaustion
 - Numeric bounds enforced: `dimension` capped at 10 billion, `order` at 20, `stiffness_ratio` at 1e30
-- `--controller` is validated against a fixed allowlist (`i`, `pi`, `pid`)
+- `--controller` is validated against a fixed allowlist (`p`, `pi`)
 - `--scheme` is validated against known splitting schemes (`lie`, `strang`)
 
 ### File Access
@@ -209,5 +211,6 @@ python3 scripts/splitting_error_estimator.py --dt 1e-4 --scheme strang --commuta
 
 ## Version History
 
+- **v1.2.0** (2026-06-23): Fixed PI controller coefficient/sign to standard form, fixed error_norm scale-collapse crash, corrected error-message and controller documentation to match the scripts
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 5 integration scripts

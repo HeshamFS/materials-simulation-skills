@@ -11,6 +11,9 @@ from typing import Dict, List
 
 
 MAX_LOG_SIZE = 10 * 1024 * 1024
+MAX_SYMPTOMS = 50
+MAX_SYMPTOM_LEN = 100
+MAX_CODE_LEN = 100
 STAGES = {"setup", "runtime", "postprocess", "unknown"}
 
 PATTERNS = {
@@ -24,6 +27,8 @@ PATTERNS = {
     "bad-pseudopotential": ("DFT setup", "Check element, valence, functional compatibility, and cutoff convergence."),
     "corrupted-output": ("I/O failure", "Preserve raw files, check disk/scratch, and rerun smallest case."),
     "incomplete-run": ("interrupted execution", "Check scheduler walltime, restart files, and final completion markers."),
+    "out-of-memory": ("memory exhaustion", "Reduce ranks-per-node or domain/grid size, raise --mem/--mem-per-cpu, and check per-rank memory footprint; consider out-of-core options."),
+    "crash": ("process crash / memory fault", "Check for out-of-bounds/null-pointer bugs and stack/heap overflow, validate input array sizes and indices, verify available memory and ulimits, and confirm library/MPI/BLAS build/ABI consistency; reproduce under a debugger (gdb/valgrind/ASan) on the smallest case."),
 }
 
 LOG_HINTS = {
@@ -31,9 +36,15 @@ LOG_HINTS = {
     "nan": "nan",
     "zbrent": "nonconvergence",
     "sub-space-matrix": "nonconvergence",
-    "out of memory": "incomplete-run",
+    "out of memory": "out-of-memory",
+    "oom-kill": "out-of-memory",
+    "bad_alloc": "out-of-memory",
+    "allocation failed": "out-of-memory",
     "killed": "incomplete-run",
-    "segmentation fault": "corrupted-output",
+    "segmentation fault": "crash",
+    "sigsegv": "crash",
+    "signal 11": "crash",
+    "core dumped": "crash",
     "potcar": "bad-pseudopotential",
     "pair coeff": "missing-potential",
 }
@@ -65,6 +76,13 @@ def triage_failure(
         raise ValueError(f"stage must be one of: {', '.join(sorted(STAGES))}")
     if not code.strip():
         raise ValueError("code must not be empty")
+    if len(code) > MAX_CODE_LEN:
+        raise ValueError(f"code must be at most {MAX_CODE_LEN} characters")
+    if len(symptoms) > MAX_SYMPTOMS:
+        raise ValueError(f"too many symptoms (max {MAX_SYMPTOMS})")
+    for symptom in symptoms:
+        if len(symptom) > MAX_SYMPTOM_LEN:
+            raise ValueError(f"symptom too long (max {MAX_SYMPTOM_LEN} characters)")
     inferred = list(symptoms)
     lower_log = log_text.lower()
     for phrase, symptom in LOG_HINTS.items():
@@ -97,6 +115,7 @@ def triage_failure(
         "validate input files and units",
         "run a short minimized or equilibrated case",
         "tighten diagnostics and reduce timestep/load increment",
+        "if memory-bound, reduce ranks-per-node or domain size and raise per-task memory",
         "change one solver or resource parameter at a time",
         "compare against a benchmark or previously working case",
     ]
@@ -115,7 +134,7 @@ def triage_failure(
             "code": code,
             "stage": stage,
             "symptoms": inferred,
-            "log_excerpt": lower_log[:500],
+            "log_excerpt": log_text[:500],
         },
     }
 

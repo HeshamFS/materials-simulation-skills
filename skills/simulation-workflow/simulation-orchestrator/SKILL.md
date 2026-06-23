@@ -14,15 +14,14 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.1.1"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 5
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Simulation Orchestrator
@@ -81,9 +80,13 @@ Need every combination (full factorial)?
 | Script | Output Fields |
 |--------|---------------|
 | `scripts/sweep_generator.py` | `configs`, `parameter_space`, `sweep_method`, `total_runs` |
-| `scripts/campaign_manager.py` | `campaign_id`, `status`, `jobs`, `progress` |
+| `scripts/campaign_manager.py --action init` | `campaign_id`, `total_jobs`, `config_dir`, `command_template` |
+| `scripts/campaign_manager.py --action status` | `campaign_id`, `status`, `jobs`, `progress`, `total_jobs`, `created_at` |
+| `scripts/campaign_manager.py --action list` | `jobs` (array of job records) |
 | `scripts/job_tracker.py` | `job_id`, `status`, `start_time`, `end_time`, `exit_code` |
-| `scripts/result_aggregator.py` | `summary`, `statistics`, `best_run`, `failed_runs` |
+| `scripts/result_aggregator.py` | `summary` (incl. `minimize`), `statistics`, `best_run`, `failed_runs` |
+
+> **Note on swept parameter names**: `sweep_generator.py` writes each swept value into the base config by key path. A bare name (e.g. `kappa`) overwrites a top-level key; a dot-notation name (e.g. `parameters.kappa`) targets a nested key. The swept key path must match where the solver reads the value — sweeping `kappa` against a config that nests `parameters.kappa` would add an unused top-level key and silently leave the base value in place. See `references/sweep_strategies.md`.
 
 ## Workflow
 
@@ -130,9 +133,26 @@ Combine results from completed runs:
 ```bash
 python3 scripts/result_aggregator.py \
     --campaign-dir ./campaign_001 \
-    --metric objective_value \
+    --metric final_energy \
     --json
 ```
+
+`result_aggregator.py` **minimizes by default**: `best_run` is the run with the
+**lowest** metric value (and `summary.minimize` is `true`). If higher is better
+(e.g. yield, accuracy, throughput), pass `--maximize` so `best_run` becomes the
+**highest** value:
+
+```bash
+# Higher is better -> select the maximum
+python3 scripts/result_aggregator.py \
+    --campaign-dir ./campaign_001 \
+    --metric yield \
+    --maximize \
+    --json
+```
+
+> **Decision guidance**: If higher is better (yield, accuracy, throughput), pass
+> `--maximize`; otherwise the reported `best_run` is the **minimum**.
 
 ## CLI Examples
 
@@ -160,10 +180,24 @@ python3 scripts/campaign_manager.py \
     --config-dir ./sweep_001 \
     --json
 
-# Get summary statistics from completed runs
+# List jobs (read-only), optionally filtered by status
+python3 scripts/campaign_manager.py \
+    --action list \
+    --config-dir ./sweep_001 \
+    --status-filter failed \
+    --json
+
+# Get summary statistics from completed runs (minimize: best = lowest)
 python3 scripts/result_aggregator.py \
     --campaign-dir ./sweep_001 \
     --metric final_energy \
+    --json
+
+# Maximization metric: best = highest value (yield, accuracy, throughput)
+python3 scripts/result_aggregator.py \
+    --campaign-dir ./sweep_001 \
+    --metric yield \
+    --maximize \
     --json
 ```
 
@@ -236,12 +270,13 @@ parameter-optimization          simulation-orchestrator
 ## Security
 
 ### Input Validation
-- Metric names are validated against `[a-zA-Z_][a-zA-Z0-9_.]*` to prevent traversal or injection via crafted keys
+- Metric names (`result_aggregator.py --metric`) are validated against `[a-zA-Z_][a-zA-Z0-9_.]*` to prevent traversal or injection via crafted keys
+- Swept parameter names (`sweep_generator.py --params`) are validated against `[a-zA-Z_][a-zA-Z0-9_]*(.[a-zA-Z_][a-zA-Z0-9_]*)*` (dot notation for nested keys); invalid names are rejected
 - `campaign_manager.py` validates command templates to reject shell chaining operators (`;`, `|`, `&`, backticks, `$`)
-- `--params` format strings are parsed and validated (`name:min:max:count` with finite numeric bounds and positive integer counts)
+- `--params` format strings are parsed and validated (`name:min:max:count` with finite numeric bounds — `NaN`/`Inf` rejected — `min < max`, and positive integer counts capped at 100,000); at most 32 parameters per sweep
 - `--method` is validated against a fixed allowlist (`grid`, `linspace`, `lhs`)
-- `--samples` is validated as a positive integer with an upper bound
-- `--action` is validated against a fixed allowlist (`init`, `status`)
+- `--samples` is validated as a positive integer with an upper bound (max 1,000,000)
+- `--action` is validated against a fixed allowlist (`init`, `status`, `list`); for the read-only `list` action, `--status-filter` is validated against `pending`, `running`, `completed`, `failed`
 
 ### File Access
 - `sweep_generator.py` reads a single base config file (JSON) specified by `--base-config` and writes generated configs to `--output-dir`
@@ -276,4 +311,8 @@ parameter-optimization          simulation-orchestrator
 
 ## Version History
 
-- **v1.0.0** (2024-12-24): Initial release with sweep, campaign, tracking, and aggregation
+See `CHANGELOG.md` for the authoritative, dated history. Summary:
+
+- **v1.1.1** (2026-06-23): Dot-notation nested overrides in `sweep_generator.py`, input-validation hardening (`--params` name/finite/count caps, `--samples` bounds), documented `--maximize` and the `list` action, corrected Script Outputs table and worked-example numbers
+- **v1.1.0** (2026-03-26): Standardized metadata, evaluation suite, security review, CHANGELOG
+- **v1.0.0** (2026-02-25): Initial release with sweep, campaign, tracking, and aggregation

@@ -14,15 +14,14 @@ allowed-tools:
   - Read
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 4
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Convergence Study
@@ -34,7 +33,7 @@ Provide script-driven convergence analysis for verifying that numerical solution
 ## Requirements
 
 - Python 3.10+
-- NumPy (not required; scripts use only math stdlib)
+- No third-party packages — scripts use only the Python standard library (`math`).
 
 ## Inputs to Gather
 
@@ -53,7 +52,7 @@ Provide script-driven convergence analysis for verifying that numerical solution
 | `scripts/h_refinement.py` | `results.observed_orders`, `results.mean_order`, `results.richardson_extrapolated_value`, `results.convergence_assessment` |
 | `scripts/dt_refinement.py` | Same as h_refinement but for temporal convergence |
 | `scripts/richardson_extrapolation.py` | `results.extrapolated_value`, `results.error_estimate`, `results.observed_order` |
-| `scripts/gci_calculator.py` | `results.observed_order`, `results.gci_fine`, `results.gci_coarse`, `results.asymptotic_ratio`, `results.in_asymptotic_range` |
+| `scripts/gci_calculator.py` | `results.observed_order`, `results.gci_fine`, `results.gci_coarse`, `results.asymptotic_ratio`, `results.in_asymptotic_range`, `results.extrapolated_value`, `results.notes` |
 
 ## Workflow
 
@@ -105,11 +104,25 @@ python3 scripts/gci_calculator.py --spacings 0.04,0.02,0.01 --values 1.0128,1.00
 
 | Scenario | Meaning | Action |
 |----------|---------|--------|
-| Observed order matches expected | Solution in asymptotic range | Report GCI, extrapolate |
+| Observed order matches expected | Strongest evidence of asymptotic range | Report GCI, extrapolate |
 | Observed order < expected | Pre-asymptotic or coding bug | Refine further or debug |
 | Negative observed order | Solution diverging | Check implementation |
-| GCI asymptotic ratio near 1.0 | Grids in asymptotic range | Results are reliable |
+| GCI asymptotic ratio near 1.0 | See caveat below | Confirm with order comparison |
 | GCI asymptotic ratio far from 1.0 | Not in asymptotic range | Refine further |
+
+> **Asymptotic-ratio caveat (constant refinement ratios).** When the refinement
+> ratios are equal (`r21 == r32`, the common case), the asymptotic ratio
+> `AR = GCI_coarse / (r^p * GCI_fine)` reduces algebraically to `f1/f2`. It then
+> only measures the relative gap between the two finest QoI values — **not** whether
+> the data follow the assumed power law — so an `AR` near 1.0 can give false
+> reassurance even when the observed order is far from expected. The
+> `gci_calculator.py` JSON emits a `notes` entry flagging this. For a real
+> asymptotic-range determination:
+> 1. Compare the observed order `p` to the scheme's theoretical/expected order — a
+>    match is the meaningful evidence of being in the asymptotic range.
+> 2. For stronger verification, use 4+ systematically refined grids and check that
+>    the observed order is consistent across successive grid triplets
+>    (`h_refinement.py` reports one order per triplet plus `mean_order`).
 
 ## Security
 
@@ -117,7 +130,7 @@ python3 scripts/gci_calculator.py --spacings 0.04,0.02,0.01 --values 1.0128,1.00
 - All numeric parameters (`spacings`, `timesteps`, `values`, `expected-order`, `order`) are validated as finite positive numbers
 - Comma-separated value lists are length-matched (spacings and values must have equal length) and capped at 10,000 entries
 - GCI calculator enforces exactly 3 refinement levels; Richardson extrapolation requires at least 2
-- Safety factor is validated as a finite number greater than 1.0
+- Safety factor is validated as a finite number not less than 1.0 (Roache uses Fs in {1.25, 3.0})
 
 ### File Access
 - Scripts read no external files; all inputs are provided via CLI arguments

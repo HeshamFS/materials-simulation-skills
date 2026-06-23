@@ -2,6 +2,39 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.0] - 2026-06-23
+
+### Fixed
+- **ASMO crystal/sample annotation correctness (F1):** `sample_annotator.py` now
+  validates every emitted class/property against the loaded ontology summary. Terms not
+  defined in the ontology are flagged with a `validation_warning` (and `confidence: 0.0`)
+  and aggregated in a new `results.validation_warnings` field, instead of silently
+  emitting unresolvable terms. Removed the invalid `crystal_output`, `sample_schema`,
+  `material_type_rules` and `annotation_routing` blocks from `asmo_mappings.json` (ASMO
+  is a simulation-methods ontology with no crystal/sample vocabulary); ASMO retains the
+  concept-mapping path (`synonyms`/`property_synonyms`), which resolves correctly.
+- **Unmatched-term suggestion (F4):** `concept_mapper.py` now emits a self-contained,
+  runnable command — `python skills/ontology/ontology-explorer/scripts/class_browser.py
+  --ontology <name> --search '<term>'` — including the correct path and required
+  `--ontology` flag (placeholder when invoked via `--summary-file`).
+
+### Changed
+- **Confidence-score documentation (F3):** SKILL.md now states that the per-ontology
+  synonym table is consulted before exact-label matching, so a term that is both a
+  synonym key and a class label (e.g. `space group`, `unit cell`, `atom`) is reported as
+  a 0.9 synonym match (matched class/IRI still correct).
+- Documented that crystal/sample annotation is CMSO-only and that ASMO supports the
+  concept-mapping path only.
+- Corrected evals.json: eval #1 wording (synonym precedence), eval #4 assertion 3
+  (`copper` is unmatched; `grain boundary` maps to Crystal Defect), runnable suggestion
+  wording; added eval #6 covering the ASMO crystalline-sample validation regression.
+
+### Security
+- Hardened input validation to match the SKILL.md Security section: `--term`/`--terms`
+  length (200 chars) and count (100) caps; `--bravais` validated against a fixed
+  allowlist of recognized names/Pearson symbols; `--sample` key count (100) and string
+  value length (500) caps.
+
 ## [1.1.0] - 2026-03-26
 
 ### Added

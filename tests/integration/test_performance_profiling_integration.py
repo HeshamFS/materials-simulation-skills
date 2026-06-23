@@ -107,7 +107,25 @@ class TestPerformanceProfilingCLI(unittest.TestCase):
             self.assertIn('results', output)
             self.assertIn('bottlenecks', output['results'])
             self.assertIn('recommendations', output['results'])
-            self.assertGreater(len(output['results']['recommendations']), 0)
+            # Regression guard (finding performance-profiling-F1/F4): the
+            # detector must actually consume the analyzer's `results.phases`
+            # schema and flag the solver-dominated fixture. A weak
+            # len(recommendations) > 0 check passed even when the detector
+            # silently found nothing, because of the "No significant
+            # bottlenecks detected" placeholder. Assert real detection.
+            bottlenecks = output['results']['bottlenecks']
+            self.assertGreaterEqual(
+                len(bottlenecks), 1,
+                "detector found no bottleneck on a solver-dominated log "
+                "(schema mismatch regression)",
+            )
+            phases = {b.get('phase') for b in bottlenecks}
+            self.assertIn('Linear Solver', phases)
+            categories = {
+                (r.get('category') if isinstance(r, dict) else None)
+                for r in output['results']['recommendations']
+            }
+            self.assertIn('solver', categories)
         finally:
             os.unlink(timing_file)
     

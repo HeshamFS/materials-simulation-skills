@@ -14,15 +14,14 @@ description: >
 allowed-tools: Read, Bash
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 5
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Ontology Validator
@@ -62,7 +61,7 @@ What do you need to validate?
 
 | Script | Key Outputs |
 |--------|-------------|
-| `scripts/schema_checker.py` | `results.valid`, `results.errors`, `results.warnings`, `results.class_valid`, `results.properties_valid` |
+| `scripts/schema_checker.py` | `results.valid`, `results.errors` (each unknown_class/unknown_property error carries a `suggestions` array of nearest matches), `results.warnings`, `results.class_valid`, `results.properties_valid` |
 | `scripts/completeness_checker.py` | `results.completeness_score`, `results.required_missing`, `results.recommended_missing`, `results.optional_missing`, `results.unrecognized` |
 | `scripts/relationship_checker.py` | `results.valid`, `results.results`, `results.errors` |
 
@@ -78,18 +77,25 @@ What do you need to validate?
 User: I annotated my sample as CrystalStructure with properties hasUnitCell and hasBasis.
       Is this correct and complete?
 
-Agent: Let me validate your annotation and check completeness.
+Agent: Let me both validate the annotation and check its completeness.
 
-[Runs: completeness_checker.py --ontology cmso --class "Crystal Structure" --provided "has unit cell,has basis" --json]
+[Runs: schema_checker.py --ontology cmso --annotation
+       '{"class":"Crystal Structure","properties":{"has unit cell":true,"has basis":true}}' --json]
+[Runs: completeness_checker.py --ontology cmso --class "Crystal Structure"
+       --provided "has unit cell,has basis" --json]
 
-Your annotation is partially complete:
-- has unit cell: provided (required)
-- has basis: not a direct property of Crystal Structure (it belongs to Unit Cell)
-- **Missing required**: has space group
+From schema_checker.py (results.warnings):
+- has unit cell: valid for Crystal Structure
+- has basis: domain_mismatch warning — its domain is "Unit Cell", not
+  Crystal Structure (so this property belongs on the Unit Cell instance)
 
-The "has basis" property belongs to the Unit Cell class, not Crystal Structure.
-You should add "has space group" to Crystal Structure and move "has basis"
-to the Unit Cell annotation.
+From completeness_checker.py (results, completeness_score = 0.5):
+- **required_missing**: has space group
+
+So: add "has space group" to the Crystal Structure annotation, and move
+"has basis" onto the Unit Cell annotation. (The domain insight comes from
+schema_checker.py's warnings; completeness_checker.py only reports the
+missing required "has space group".)
 ```
 
 ## CLI Examples
@@ -119,8 +125,8 @@ python3 skills/ontology/ontology-validator/scripts/relationship_checker.py \
 
 | Error | Cause | Resolution |
 |-------|-------|------------|
-| `Class 'X' not found` | Invalid class name | Use ontology-explorer to find correct name |
-| `Property 'X' not found` | Invalid property name | Use property_lookup.py to search |
+| `Class 'X' not found ... (did you mean 'Y'?)` | Invalid/misspelled class name | Apply the nearest-match `suggestions` from the error, or use ontology-explorer to find the correct name |
+| `Property 'X' not found ... (did you mean 'Y'?)` | Invalid/misspelled property name | Apply the nearest-match `suggestions` from the error, or use property_lookup.py to search |
 | `Annotation must be a dict` | Wrong input format | Provide valid JSON dict |
 | `Relationships must be a non-empty list` | Wrong input format | Provide JSON array of relationship dicts |
 
@@ -128,7 +134,11 @@ python3 skills/ontology/ontology-validator/scripts/relationship_checker.py \
 
 - **Errors** indicate definite problems (unknown class/property, range mismatch)
 - **Warnings** indicate potential issues (domain mismatch — may be intentional for subclasses)
-- **Completeness score**: 0.0-1.0 ratio of provided vs. total tracked properties
+- **Completeness score**: 0.0-1.0 ratio of provided vs. total tracked
+  properties. It weights required, recommended, and optional properties
+  **equally**, so a moderate score (e.g. 0.5-0.67) can coexist with missing
+  required properties. ALWAYS check `required_missing` first: a non-empty
+  `required_missing` means the annotation is invalid regardless of the score.
 - **required_missing**: must fix for valid annotation
 - **recommended_missing**: should fix for quality
 - **unrecognized**: may indicate typos or properties from a different ontology
@@ -141,6 +151,7 @@ python3 skills/ontology/ontology-validator/scripts/relationship_checker.py \
 - `--class` names are validated against known classes in the ontology summary; unknown classes produce clear errors
 - `--provided` property names are validated as comma-separated strings and matched against known properties
 - `--relationships` JSON is parsed and validated as a non-empty list of dicts, each requiring `subject_class`, `property`, and `object_class` keys
+- Size/length caps reject abusive input (exit code 2): raw JSON inputs and annotation files are capped at 1,000,000 bytes; at most 1000 annotations/relationships/provided properties per call; each class or property name is capped at 500 characters. Class and property names must be strings.
 
 ### File Access
 - Scripts read pre-processed JSON files from the `references/` directory: `ontology_registry.json`, `cmso_summary.json`, `cmso_constraints.json` (all read-only)
@@ -174,4 +185,5 @@ python3 skills/ontology/ontology-validator/scripts/relationship_checker.py \
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-06-23 | 1.2.0 | Subclass-aware domain matching (fixes substring false positives/negatives), nearest-match suggestions on unknown class/property, input size/length caps, eval and doc corrections |
 | 2026-02-25 | 1.0 | Initial release with CMSO validation support |

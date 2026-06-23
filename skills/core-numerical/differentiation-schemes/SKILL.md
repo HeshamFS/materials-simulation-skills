@@ -13,15 +13,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 4
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Differentiation Schemes
@@ -74,9 +73,9 @@ Is the field smooth?
 
 | Script | Key Outputs |
 |--------|-------------|
-| `scripts/stencil_generator.py` | `offsets`, `coefficients`, `order`, `accuracy` |
+| `scripts/stencil_generator.py` | `offsets`, `coefficients`, `order`, `accuracy`, `scheme` |
 | `scripts/scheme_selector.py` | `recommended`, `alternatives`, `notes` |
-| `scripts/truncation_error.py` | `error_scale`, `order`, `notes` |
+| `scripts/truncation_error.py` | `error_scale`, `order`, `reduction_if_halved` |
 
 ## Workflow
 
@@ -91,9 +90,11 @@ Is the field smooth?
 **User**: I need to discretize a second derivative for a diffusion equation on a uniform grid. I want 4th-order accuracy.
 
 **Agent workflow**:
-1. Select appropriate scheme:
+1. Select appropriate scheme (boundary type was not stated; if the domain is
+   bounded rather than periodic, add `--boundary` to surface one-sided/ghost-cell
+   guidance, or ask the user):
    ```bash
-   python3 scripts/scheme_selector.py --smooth --periodic --order 2 --accuracy 4 --json
+   python3 scripts/scheme_selector.py --smooth --order 2 --accuracy 4 --json
    ```
 2. Generate the stencil:
    ```bash
@@ -122,16 +123,17 @@ python3 scripts/stencil_generator.py --order 1 --accuracy 2 --scheme central --j
 python3 scripts/stencil_generator.py --order 2 --accuracy 4 --scheme central --json
 
 # Estimate truncation error
-python3 scripts/truncation_error.py --dx 0.01 --order 2 --accuracy 2 --scale 1.0 --json
+python3 scripts/truncation_error.py --dx 0.01 --accuracy 2 --scale 1.0 --json
 ```
 
 ## Error Handling
 
 | Error | Cause | Resolution |
 |-------|-------|------------|
-| `order must be positive` | Invalid derivative order | Use 1, 2, 3, ... |
-| `accuracy must be even for central` | Odd accuracy requested | Use 2, 4, 6, ... |
-| `Unknown scheme` | Invalid scheme type | Use central, upwind, compact |
+| `order must be positive` | Invalid derivative order | Use 1, 2, 3, ... (max 6) |
+| `order must be <= 6` | Derivative order too large | Use 1–6 |
+| `accuracy must be even for central` | Odd accuracy requested for central scheme | Use 2, 4, 6, ... |
+| `scheme must be central, forward, or backward` | Invalid `--scheme` value | Use `central`, `forward`, or `backward` |
 
 ## Interpretation Guidance
 
@@ -163,10 +165,11 @@ python3 scripts/truncation_error.py --dx 0.01 --order 2 --accuracy 2 --scale 1.0
 ## Security
 
 ### Input Validation
-- `--order` (derivative order) is validated as a positive integer with an upper bound
-- `--accuracy` is validated as a positive even integer for central schemes
-- `--scheme` is validated against a fixed allowlist (`central`, `upwind`, `compact`)
-- `--dx` and `--scale` are validated as finite positive numbers
+- `--order` (derivative order) is validated as a positive integer with an upper bound (`order <= 6`)
+- `--accuracy` is validated as a positive integer (`<= 8`), and additionally must be even for central schemes
+- `--scheme` is validated against a fixed allowlist (`central`, `forward`, `backward`)
+- `--offsets` (custom stencil) is length-capped (max 51), parsed as distinct integers, and must exceed the derivative order
+- `--dx` and `--scale` are validated as finite, non-negative numbers (`--dx` strictly positive)
 - No user-supplied strings are interpolated into code paths or shell commands
 
 ### File Access
@@ -182,7 +185,7 @@ python3 scripts/truncation_error.py --dx 0.01 --order 2 --accuracy 2 --scale 1.0
 ### Safety Measures
 - No `eval()`, `exec()`, or dynamic code generation
 - All subprocess calls use explicit argument lists (no `shell=True`)
-- Stencil computation uses only NumPy linear algebra on small, bounded matrices (stencil width limited by accuracy order)
+- Stencil computation uses only small, bounded arrays (derivative order capped at 6, accuracy at 8, and custom offset lists capped at 51 points)
 - All output is deterministic JSON with no shell-interpretable content
 
 ## Limitations
@@ -200,5 +203,6 @@ python3 scripts/truncation_error.py --dx 0.01 --order 2 --accuracy 2 --scale 1.0
 
 ## Version History
 
+- **v1.2.0** (2026-06-23): Enforced even-accuracy and order upper-bound validation, corrected Security/error-handling/output docs to match scripts, fixed CLI/eval examples, hardened input validation
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 3 differentiation scripts

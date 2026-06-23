@@ -125,6 +125,38 @@ class TestCrystalMapper(unittest.TestCase):
         props = {p["property"] for p in result["ontology_properties"]}
         self.assertIn("bravais_lattice", props)
 
+    def test_invalid_bravais_rejected(self):
+        """Unrecognized Bravais symbols are rejected (security allowlist)."""
+        with self.assertRaises(ValueError):
+            CRYSTAL_MAPPER.map_crystal(bravais="ZZZ")
+        with self.assertRaises(ValueError):
+            CRYSTAL_MAPPER.map_crystal(bravais="not-a-lattice")
+
+    def test_unrecognized_bravais_tolerated_when_not_strict(self):
+        """Free-text structure (e.g. a prototype name) must NOT crash the
+        annotator path: strict_bravais=False warns and leaves it unmapped
+        instead of raising. Regression guard for the sample_annotator path."""
+        result = CRYSTAL_MAPPER.map_crystal(
+            bravais="rocksalt", a=5.64, strict_bravais=False
+        )
+        # Did not raise; lattice left unmapped, surfaced as a warning.
+        self.assertIsNone(result.get("bravais_lattice"))
+        self.assertTrue(
+            any("rocksalt" in w for w in result["validation_warnings"])
+        )
+        # Strict path (the CLI default) still rejects the same value.
+        with self.assertRaises(ValueError):
+            CRYSTAL_MAPPER.map_crystal(bravais="rocksalt", strict_bravais=True)
+
+    def test_canonical_pearson_symbol_accepted(self):
+        """Canonical Pearson symbols (e.g. cF, hP) pass through unchanged."""
+        self.assertEqual(
+            CRYSTAL_MAPPER.map_crystal(bravais="cF")["bravais_lattice"], "cF"
+        )
+        self.assertEqual(
+            CRYSTAL_MAPPER.map_crystal(bravais="hP")["bravais_lattice"], "hP"
+        )
+
     def test_ontology_specific_output_with_config(self):
         """With CMSO config, output uses CMSO-specific labels."""
         result = CRYSTAL_MAPPER.map_crystal(

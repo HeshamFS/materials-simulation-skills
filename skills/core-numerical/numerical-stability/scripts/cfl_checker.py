@@ -45,12 +45,17 @@ def compute_cfl(
     safety: float,
 ) -> Dict[str, object]:
     notes: List[str] = []
+    if not (math.isfinite(dx) and math.isfinite(dt)):
+        raise ValueError("dx and dt must be finite")
     if dx <= 0 or dt <= 0:
         raise ValueError("dx and dt must be positive")
-    if dimensions <= 0:
-        raise ValueError("dimensions must be positive")
-    if safety <= 0:
+    if dimensions not in (1, 2, 3):
+        raise ValueError("dimensions must be one of {1, 2, 3}")
+    if not math.isfinite(safety) or safety <= 0:
         raise ValueError("safety must be positive")
+    for name, val in (("velocity", velocity), ("diffusivity", diffusivity), ("reaction_rate", reaction_rate)):
+        if val is not None and not math.isfinite(val):
+            raise ValueError(f"{name} must be finite")
 
     v = None
     if velocity is not None:

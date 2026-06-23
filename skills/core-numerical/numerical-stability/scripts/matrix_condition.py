@@ -8,10 +8,16 @@ from typing import Dict, Optional, Union
 import numpy as np
 
 
+MAX_MATRIX_BYTES = 500 * 1024 * 1024  # 500 MB
+MAX_DIM = 100000  # max entries per matrix dimension
+
+
 def load_matrix(path: str, delimiter: Optional[str]) -> np.ndarray:
+    if os.path.getsize(path) > MAX_MATRIX_BYTES:
+        raise ValueError("matrix file exceeds 500 MB size limit")
     _, ext = os.path.splitext(path)
     if ext == ".npy":
-        return np.load(path)
+        return np.load(path, allow_pickle=False)
     return np.loadtxt(path, delimiter=delimiter)
 
 
@@ -63,6 +69,8 @@ def compute_condition(
 ) -> Dict[str, object]:
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError("matrix must be square")
+    if matrix.shape[0] > MAX_DIM:
+        raise ValueError(f"matrix dimension exceeds limit of {MAX_DIM} per side")
     if not np.all(np.isfinite(matrix)):
         raise ValueError("matrix contains non-finite values")
 

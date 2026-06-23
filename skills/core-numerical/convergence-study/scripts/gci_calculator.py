@@ -46,10 +46,12 @@ def compute_gci(spacings, values, safety_factor=1.25):
         in_asymptotic_range, refinement_ratio_21, refinement_ratio_32,
         and extrapolated_value.
     """
+    if len(spacings) > 10000 or len(values) > 10000:
+        raise ValueError("too many refinement levels (max 10000)")
     if len(spacings) != 3 or len(values) != 3:
         raise ValueError("Exactly 3 refinement levels required for GCI calculation")
-    if safety_factor <= 0:
-        raise ValueError("safety_factor must be positive")
+    if not math.isfinite(safety_factor) or safety_factor < 1.0:
+        raise ValueError("safety_factor must be a finite number >= 1.0")
     for s in spacings:
         if not math.isfinite(s) or s <= 0:
             raise ValueError("All spacings must be positive finite numbers")
@@ -90,6 +92,7 @@ def compute_gci(spacings, values, safety_factor=1.25):
                 "refinement_ratio_21": r21,
                 "refinement_ratio_32": r32,
                 "extrapolated_value": f1,
+                "notes": [],
             },
         }
 
@@ -99,14 +102,67 @@ def compute_gci(spacings, values, safety_factor=1.25):
     if e32 == 0:
         raise ValueError("Medium and coarse solutions are identical but fine differs; cannot compute order")
 
-    p = abs(math.log(abs(e32 / e21))) / math.log(r21)
+    constant_ratio = abs(r21 - r32) <= 1e-6
+    notes = []
+    if constant_ratio:
+        # Closed-form observed order for equal refinement ratios.
+        p = abs(math.log(abs(e32 / e21))) / math.log(r21)
+        notes.append(
+            "Constant refinement ratio (r21 == r32): the asymptotic_ratio reduces "
+            "algebraically to f1/f2 and therefore only measures the relative gap "
+            "between the two finest QoI values, NOT adherence to the assumed power "
+            "law. Confirm the asymptotic range by comparing the observed order to "
+            "the scheme's expected order and, ideally, by checking order "
+            "consistency across 4+ systematically refined grids."
+        )
+    else:
+        # Non-uniform refinement ratios: solve the ASME V&V 20 / Celik fixed-point
+        # equation iteratively (gci_guidelines.md). Initialize from the simple
+        # equal-ratio formula then iterate to convergence.
+        s = 1.0 if (e32 / e21) > 0 else -1.0
+        ln_ratio = math.log(abs(e32 / e21))
+        ln_r21 = math.log(r21)
+
+        def _g(pp):
+            denom = r32 ** pp - s
+            return abs(ln_ratio + math.log(abs((r21 ** pp - s) / denom))) / ln_r21
+
+        # Damped fixed-point iteration (averaging) for robust convergence;
+        # the undamped Celik iteration oscillates when r21 != r32.
+        p = abs(ln_ratio) / ln_r21
+        converged = False
+        for _ in range(100):
+            denom = r32 ** p - s
+            if denom == 0:
+                break
+            p_new = 0.5 * (p + _g(p))
+            if abs(p_new - p) < 1e-10:
+                p = p_new
+                converged = True
+                break
+            p = p_new
+        if not converged:
+            raise ValueError(
+                "Iterative observed-order solver did not converge for non-uniform "
+                "refinement ratios (r21=%.6g, r32=%.6g)" % (r21, r32)
+            )
+        notes.append(
+            "Non-uniform refinement ratio (r21 != r32): observed order solved "
+            "iteratively per ASME V&V 20 / Celik et al. (2008)."
+        )
 
     # GCI fine and coarse
     gci_fine = safety_factor * abs(e21 / f1) / (r21 ** p - 1) if f1 != 0 else float("inf")
     gci_coarse = safety_factor * abs(e32 / f2) / (r32 ** p - 1) if f2 != 0 else float("inf")
 
     # Asymptotic ratio
-    if gci_fine != 0 and math.isfinite(gci_fine) and math.isfinite(gci_coarse):
+    if (
+        gci_fine != 0
+        and math.isfinite(gci_fine)
+        and math.isfinite(gci_coarse)
+        and (r21 ** p) != 0
+        and gci_fine != float("inf")
+    ):
         asymptotic_ratio = gci_coarse / (r21 ** p * gci_fine)
     else:
         asymptotic_ratio = None
@@ -133,6 +189,7 @@ def compute_gci(spacings, values, safety_factor=1.25):
             "refinement_ratio_21": r21,
             "refinement_ratio_32": r32,
             "extrapolated_value": extrapolated_value,
+            "notes": notes,
         },
     }
 
@@ -168,6 +225,8 @@ def main():
         if r["in_asymptotic_range"] is not None:
             print("  in asymptotic range: %s" % r["in_asymptotic_range"])
         print("  extrapolated value: %.6g" % r["extrapolated_value"])
+        for note in r.get("notes", []):
+            print("  note: %s" % note)
 
 
 if __name__ == "__main__":

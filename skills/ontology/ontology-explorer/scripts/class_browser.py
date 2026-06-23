@@ -8,6 +8,34 @@ import re
 import sys
 from typing import Dict, List, Optional
 
+# Safe-character pattern for --class / --search inputs.
+# Allows letters, digits, whitespace, and a few punctuation marks common in
+# ontology labels (hyphen, slash, underscore, parentheses). Bounded length.
+_SAFE_NAME_RE = re.compile(r"^[\w \-/()]{1,128}$")
+_MAX_SEARCH_LEN = 128
+# Cap on the number of search results returned, to prevent output flooding.
+_MAX_RESULTS = 200
+
+
+def _validate_name(value: Optional[str], field: str) -> None:
+    """Reject inputs that exceed the length cap or contain unsafe characters."""
+    if value is None:
+        return
+    if len(value) > _MAX_SEARCH_LEN:
+        raise ValueError(
+            f"{field} is too long (max {_MAX_SEARCH_LEN} characters)"
+        )
+    if not _SAFE_NAME_RE.match(value):
+        raise ValueError(
+            f"{field} contains unsupported characters; allowed: "
+            "letters, digits, space, and - / _ ( )"
+        )
+
+
+def _norm(value: str) -> str:
+    """Normalize a label/domain token: drop spaces and lowercase."""
+    return value.replace(" ", "").lower()
+
 
 def _load_summary(ontology: Optional[str] = None,
                   summary_file: Optional[str] = None) -> Dict:
@@ -71,10 +99,17 @@ def _subtree(classes: Dict, label: str, depth: int, current: int = 0) -> Dict:
 
 def _applicable_properties(summary: Dict, label: str) -> Dict:
     """Find object and data properties where the class is in the domain."""
+    def _domain_matches(domain: Optional[str]) -> bool:
+        # Domains may be a single class or a union like "A | B"; normalize both
+        # sides identically (space-insensitive, case-insensitive).
+        if not domain:
+            return False
+        target = _norm(label)
+        return any(_norm(part.strip()) == target for part in domain.split("|"))
+
     obj_props = []
     for name, info in summary.get("object_properties", {}).items():
-        domain = info.get("domain", "")
-        if domain and (label in domain or label.replace(" ", "") in domain):
+        if _domain_matches(info.get("domain")):
             obj_props.append({
                 "name": name,
                 "range": info.get("range"),
@@ -82,8 +117,7 @@ def _applicable_properties(summary: Dict, label: str) -> Dict:
             })
     data_props = []
     for name, info in summary.get("data_properties", {}).items():
-        domain = info.get("domain", "")
-        if domain and (label in domain or label.replace(" ", "") in domain):
+        if _domain_matches(info.get("domain")):
             data_props.append({
                 "name": name,
                 "range_type": info.get("range_type"),
@@ -132,6 +166,9 @@ def browse_class(
             "Provide --class, --list-roots, or --search"
         )
 
+    _validate_name(class_name, "--class")
+    _validate_name(search, "--search")
+
     result: Dict = {}
 
     if list_roots:
@@ -159,7 +196,7 @@ def browse_class(
                     "relevance": score,
                 })
         matches.sort(key=lambda m: (-m["relevance"], m["label"]))
-        result["search_results"] = matches
+        result["search_results"] = matches[:_MAX_RESULTS]
 
     if class_name:
         # Try exact match first, then case-insensitive

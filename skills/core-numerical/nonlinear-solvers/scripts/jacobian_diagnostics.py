@@ -2,10 +2,17 @@
 """Analyze Jacobian matrix quality for nonlinear solvers."""
 import argparse
 import json
+import math
+import os
 import sys
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+
+
+# Security limits for matrix file loading.
+MAX_MATRIX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+MAX_MATRIX_DIM = 100_000
 
 
 def diagnose_jacobian(
@@ -29,10 +36,17 @@ def diagnose_jacobian(
     if matrix.size == 0:
         raise ValueError("matrix must not be empty")
 
-    if tolerance <= 0:
-        raise ValueError("tolerance must be positive")
-
     m, n = matrix.shape
+    if m > MAX_MATRIX_DIM or n > MAX_MATRIX_DIM:
+        raise ValueError(
+            f"Matrix dimensions ({m}x{n}) exceed limit ({MAX_MATRIX_DIM})"
+        )
+
+    if not np.all(np.isfinite(matrix)):
+        raise ValueError("matrix contains non-finite values")
+
+    if not math.isfinite(tolerance) or tolerance <= 0:
+        raise ValueError("tolerance must be a positive finite number")
     notes: List[str] = []
 
     # Compute SVD for condition number and rank analysis
@@ -87,6 +101,8 @@ def diagnose_jacobian(
     if finite_diff_matrix is not None:
         if finite_diff_matrix.shape != matrix.shape:
             notes.append("Finite-diff matrix shape mismatch; skipping comparison.")
+        elif not np.all(np.isfinite(finite_diff_matrix)):
+            notes.append("Finite-diff matrix contains non-finite values; skipping comparison.")
         else:
             diff = matrix - finite_diff_matrix
             relative_error = np.linalg.norm(diff) / (np.linalg.norm(matrix) + 1e-30)
@@ -113,8 +129,25 @@ def diagnose_jacobian(
 
 
 def load_matrix(path: str) -> np.ndarray:
-    """Load matrix from text file."""
+    """Load matrix from a text or .npy file with security limits.
+
+    Files are size-limited to prevent memory exhaustion, and .npy files are
+    loaded with ``allow_pickle=False`` to prevent arbitrary code execution.
+    """
+    if not os.path.exists(path):
+        raise ValueError(f"Matrix file not found: {path}")
+
+    file_size = os.path.getsize(path)
+    if file_size > MAX_MATRIX_FILE_SIZE:
+        raise ValueError(
+            f"Matrix file exceeds size limit "
+            f"({file_size} > {MAX_MATRIX_FILE_SIZE}): {path}"
+        )
+
+    _, ext = os.path.splitext(path)
     try:
+        if ext == ".npy":
+            return np.load(path, allow_pickle=False)
         return np.loadtxt(path)
     except Exception as e:
         raise ValueError(f"Failed to load matrix from {path}: {e}")

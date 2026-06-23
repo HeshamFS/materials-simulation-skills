@@ -14,11 +14,33 @@ from typing import Dict, List, Optional, Sequence, Tuple, TypedDict
 
 _JOB_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _WALLTIME_RE = re.compile(r"^(?:(?P<days>[0-9]+)-)?(?P<hours>[0-9]{1,3}):(?P<mins>[0-9]{2}):(?P<secs>[0-9]{2})$")
-# Slurm --mem/--mem-per-cpu/--mem-per-gpu accept integer MB by default, or an
+# Slurm memory flags (--mem, --mem-per-cpu) accept integer MB by default, or an
 # integer with a suffix in [K|M|G|T]. Keep validation strict to avoid generating
-# scripts that Slurm rejects.
+# scripts that Slurm rejects. (This describes Slurm's format convention; only
+# --mem and --mem-per-cpu are exposed as CLI flags.)
 _MEM_RE = re.compile(r"^[0-9]+(?:[KMGT])?$", re.IGNORECASE)
 _ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+# Safe-character allowlist for SLURM identifier-style fields (partition, account,
+# qos, constraint, reservation). These are emitted unquoted into #SBATCH lines,
+# so we forbid shell metacharacters and whitespace.
+_IDENT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:,+-]{0,127}$")
+# Module specs may include a slash for version (e.g. openmpi/4.1). Forbid shell
+# metacharacters that could escape the `module load` directive.
+_MODULE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/+-]{0,127}$")
+
+# Launcher basenames that already establish an MPI launch context. If the user's
+# run command starts with one of these, the generator must not wrap it in srun.
+_NESTED_LAUNCHERS = frozenset(
+    {"srun", "mpirun", "mpiexec", "mpiexec.hydra", "orterun", "aprun", "jsrun"}
+)
+
+# Upper bounds for integer resource requests. These guard against typos /
+# pathological requests; they are generous enough for any real cluster.
+_MAX_NODES = 100_000
+_MAX_NTASKS = 10_000_000
+_MAX_CPUS_PER_TASK = 4_096
+_MAX_GPUS_PER_NODE = 64
+_MAX_CORES_PER_NODE = 4_096
 
 class SlurmResources(TypedDict):
     nodes: int
@@ -56,10 +78,44 @@ def _normalize_walltime(value: str) -> str:
     return f"{hours:02d}:{mins:02d}:{secs:02d}"
 
 
-def _validate_positive_int(name: str, value: int) -> int:
+def _validate_positive_int(name: str, value: int, upper: Optional[int] = None) -> int:
     if value <= 0:
         raise ValueError(f"{name} must be positive")
+    if upper is not None and value > upper:
+        raise ValueError(f"{name} must be <= {upper} (got {value})")
     return value
+
+
+def _validate_identifier(flag: str, value: Optional[str]) -> Optional[str]:
+    """Validate a SLURM identifier-style field against a safe-character allowlist.
+
+    These values are emitted unquoted into #SBATCH directives, so they must not
+    contain shell metacharacters or whitespace.
+    """
+    if value is None:
+        return None
+    v = value.strip()
+    if not v:
+        raise ValueError(f"{flag} must be non-empty when provided")
+    if not _IDENT_RE.match(v):
+        raise ValueError(
+            f"{flag} must match /^[A-Za-z0-9][A-Za-z0-9._:,+-]{{0,127}}$/ "
+            "(no spaces or shell metacharacters)"
+        )
+    return v
+
+
+def _validate_modules(modules: Sequence[str]) -> List[str]:
+    out: List[str] = []
+    for mod in modules:
+        m = mod.strip()
+        if not m or not _MODULE_RE.match(m):
+            raise ValueError(
+                f"module must match /^[A-Za-z0-9][A-Za-z0-9._/+-]{{0,127}}$/ "
+                f"(no shell metacharacters); got {mod!r}"
+            )
+        out.append(m)
+    return out
 
 
 def _validate_mem_spec(flag: str, value: Optional[str]) -> Optional[str]:
@@ -100,18 +156,22 @@ def build_resources(
     gpu_type: Optional[str],
 ) -> SlurmResources:
     """Pure function: validate and normalize resource request."""
-    nodes = _validate_positive_int("nodes", nodes)
-    cpus_per_task = _validate_positive_int("cpus-per-task", cpus_per_task)
+    nodes = _validate_positive_int("nodes", nodes, _MAX_NODES)
+    cpus_per_task = _validate_positive_int(
+        "cpus-per-task", cpus_per_task, _MAX_CPUS_PER_TASK
+    )
 
     if ntasks is not None and ntasks_per_node is not None:
         raise ValueError("Provide either --ntasks or --ntasks-per-node, not both")
 
     if ntasks_per_node is not None:
-        ntasks_per_node = _validate_positive_int("ntasks-per-node", ntasks_per_node)
+        ntasks_per_node = _validate_positive_int(
+            "ntasks-per-node", ntasks_per_node, _MAX_NTASKS
+        )
         derived_ntasks = nodes * ntasks_per_node
-        ntasks = derived_ntasks
+        ntasks = _validate_positive_int("ntasks", derived_ntasks, _MAX_NTASKS)
     else:
-        ntasks = _validate_positive_int("ntasks", ntasks or 1)
+        ntasks = _validate_positive_int("ntasks", ntasks or 1, _MAX_NTASKS)
 
     mem = _validate_mem_spec("--mem", mem)
     mem_per_cpu = _validate_mem_spec("--mem-per-cpu", mem_per_cpu)
@@ -119,9 +179,11 @@ def build_resources(
         raise ValueError("Provide either --mem or --mem-per-cpu, not both")
 
     if gpus_per_node is not None:
-        gpus_per_node = _validate_positive_int("gpus-per-node", gpus_per_node)
-        if gpu_type is not None and not gpu_type.strip():
-            raise ValueError("gpu-type must be non-empty when provided")
+        gpus_per_node = _validate_positive_int(
+            "gpus-per-node", gpus_per_node, _MAX_GPUS_PER_NODE
+        )
+        if gpu_type is not None:
+            gpu_type = _validate_identifier("gpu-type", gpu_type)
 
     return {
         "nodes": nodes,
@@ -131,7 +193,7 @@ def build_resources(
         "mem": mem,
         "mem_per_cpu": mem_per_cpu,
         "gpus_per_node": gpus_per_node,
-        "gpu_type": gpu_type.strip() if gpu_type is not None else None,
+        "gpu_type": gpu_type,
     }
 
 
@@ -163,6 +225,18 @@ def generate_sbatch_script(
     time_limit = _normalize_walltime(time_limit)
     if not command:
         raise ValueError("Provide a run command after --")
+
+    # Validate identifier-style fields against a safe-character allowlist before
+    # they are emitted unquoted into #SBATCH directives.
+    partition = _validate_identifier("--partition", partition)
+    account = _validate_identifier("--account", account)
+    qos = _validate_identifier("--qos", qos)
+    constraint = _validate_identifier("--constraint", constraint)
+    reservation = _validate_identifier("--reservation", reservation)
+    modules = _validate_modules(modules)
+
+    if launcher not in ("srun", "none"):
+        raise ValueError("launcher must be one of: srun, none")
 
     directives: List[str] = []
     directives.append(f"#SBATCH --job-name={job_name}")
@@ -220,7 +294,9 @@ def generate_sbatch_script(
     }
 
     if cores_per_node is not None:
-        cores_per_node = _validate_positive_int("cores-per-node", cores_per_node)
+        cores_per_node = _validate_positive_int(
+            "cores-per-node", cores_per_node, _MAX_CORES_PER_NODE
+        )
         derived["cores_per_node"] = cores_per_node
         if resources["ntasks_per_node"] is not None:
             per_node = resources["ntasks_per_node"] * resources["cpus_per_task"]
@@ -230,28 +306,70 @@ def generate_sbatch_script(
                     f"Oversubscription risk: ntasks-per-node*cpus-per-task={per_node} > cores-per-node={cores_per_node}"
                 )
 
+    # GPU layout sanity check: when GPUs are requested, derive the rank-to-GPU
+    # mapping and warn if ranks do not divide evenly across the allocated GPUs.
+    if resources["gpus_per_node"] is not None:
+        total_gpus = resources["nodes"] * resources["gpus_per_node"]
+        derived["total_gpus"] = total_gpus
+        ranks_per_gpu = resources["ntasks"] / total_gpus
+        derived["ranks_per_gpu"] = ranks_per_gpu
+        if resources["ntasks"] % total_gpus != 0:
+            warnings.append(
+                f"Task-to-GPU ratio is not an integer: ntasks={resources['ntasks']} "
+                f"is not divisible by total GPUs={total_gpus} "
+                f"(nodes={resources['nodes']} * gpus-per-node={resources['gpus_per_node']}). "
+                "Ranks will not map evenly to devices; consider --gpu-bind or "
+                "intentional MPS sharing."
+            )
+
     env_pairs = _validate_env_kv(env)
 
     cmd_str = " ".join(shlex.quote(x) for x in command)
+    effective_launcher = launcher
     if launcher == "srun":
+        first_tok = os.path.basename(command[0]) if command else ""
+        if first_tok in _NESTED_LAUNCHERS:
+            # The run command already starts with a launcher (e.g. mpirun, srun).
+            # Wrapping it in another srun would spawn N independent copies of the
+            # inner launcher (each starting its own MPI world) or nest srun
+            # invocations, which is malformed. Treat as launcher='none' and warn.
+            effective_launcher = "none"
+            warnings.append(
+                f"Run command already starts with a launcher ({first_tok!r}); "
+                "skipping the automatic 'srun' wrap (equivalent to --launcher none). "
+                "Pass --launcher none explicitly to silence this warning."
+            )
+
+    if effective_launcher == "srun":
         srun_bits = [
             "srun",
             f"--ntasks={resources['ntasks']}",
             f"--cpus-per-task={resources['cpus_per_task']}",
         ]
         if srun_extra:
-            srun_bits.append(srun_extra.strip())
+            # Tokenize honoring existing quoting, then re-quote each token so no
+            # shell metacharacter (;, |, &, $, backticks, ...) can inject a live
+            # command into the run line.
+            try:
+                srun_tokens = shlex.split(srun_extra.strip())
+            except ValueError as exc:
+                raise ValueError(f"--srun-extra is not valid shell syntax: {exc}")
+            srun_bits.extend(shlex.quote(tok) for tok in srun_tokens)
         run_line = " ".join(srun_bits + [cmd_str])
-    elif launcher == "none":
+    elif effective_launcher == "none":
         run_line = cmd_str
     else:
         raise ValueError("launcher must be one of: srun, none")
 
     lines: List[str] = []
+    # Per SchedMD's sbatch spec, once the first non-comment, non-whitespace line
+    # is reached, no further #SBATCH directives are processed. Therefore all
+    # directives must immediately follow the shebang and precede any executable
+    # command (such as `set -euo pipefail`).
     lines.append("#!/usr/bin/env bash")
-    lines.append("set -euo pipefail")
-    lines.append("")
     lines.extend(directives)
+    lines.append("")
+    lines.append("set -euo pipefail")
     lines.append("")
 
     lines.append('echo "job_id=${SLURM_JOB_ID:-unknown} start=$(date)"')
@@ -365,8 +483,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gpus-per-node", type=int, default=None, help="GPUs per node")
     parser.add_argument("--gpu-type", default=None, help="GPU type for --gres (optional)")
 
-    parser.add_argument("--output", default=None, help="Stdout file pattern (e.g. slurm-%j.out)")
-    parser.add_argument("--error", default=None, help="Stderr file pattern (e.g. slurm-%j.err)")
+    parser.add_argument("--output", default=None, help="Stdout file pattern (e.g. slurm-%%j.out)")
+    parser.add_argument("--error", default=None, help="Stderr file pattern (e.g. slurm-%%j.err)")
     parser.add_argument("--mail-user", default=None, help="Email address for notifications")
     parser.add_argument("--mail-type", default=None, help="Mail types (e.g. END,FAIL)")
 

@@ -7,6 +7,9 @@ from typing import Dict, List
 
 
 def schedule_outputs(t_start: float, t_end: float, interval: float, max_outputs: int) -> Dict[str, object]:
+    for name, value in (("t_start", t_start), ("t_end", t_end), ("interval", interval)):
+        if not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite number")
     if t_end <= t_start:
         raise ValueError("t_end must be greater than t_start")
     if interval <= 0:
@@ -14,11 +17,16 @@ def schedule_outputs(t_start: float, t_end: float, interval: float, max_outputs:
     if max_outputs <= 0:
         raise ValueError("max_outputs must be positive")
 
-    times: List[float] = []
-    t = t_start
-    while t <= t_end + 1e-12 and len(times) < max_outputs:
-        times.append(t)
-        t += interval
+    # Generate by index to avoid accumulated float drift from repeated += interval.
+    span = t_end - t_start
+    tol = 1e-9 * max(1.0, abs(t_end))
+    n = int(math.floor(span / interval + tol)) + 1
+    if n > max_outputs:
+        n = max_outputs
+    times: List[float] = [t_start + i * interval for i in range(n)]
+    # Snap the final point to t_end when it is within tolerance (endpoint inclusive).
+    if times and abs(times[-1] - t_end) <= tol:
+        times[-1] = t_end
 
     return {
         "interval": interval,

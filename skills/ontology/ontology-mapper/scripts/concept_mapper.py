@@ -88,12 +88,17 @@ def _load_mappings(ontology: Optional[str] = None) -> Dict:
         return json.load(f)
 
 
+_MAX_TERM_LEN = 200
+_MAX_TERMS = 100
+
+
 def map_concept(
     summary: Dict,
     term: Optional[str] = None,
     terms: Optional[List[str]] = None,
     synonyms: Optional[Dict[str, str]] = None,
     property_synonyms: Optional[Dict[str, str]] = None,
+    ontology: Optional[str] = None,
 ) -> Dict:
     """Map natural-language terms to ontology concepts.
 
@@ -109,6 +114,9 @@ def map_concept(
         Term-to-class synonym table. Loaded from config if not provided.
     property_synonyms : dict, optional
         Term-to-property synonym table. Loaded from config if not provided.
+    ontology : str, optional
+        Ontology name, used to build a self-contained search suggestion for
+        unmatched terms. If None, a ``<name>`` placeholder is emitted.
 
     Returns
     -------
@@ -118,7 +126,8 @@ def map_concept(
     Raises
     ------
     ValueError
-        If neither term nor terms is provided.
+        If neither term nor terms is provided, or if a term exceeds the
+        length / count limits.
     """
     if not term and not terms:
         raise ValueError("Provide --term or --terms")
@@ -133,6 +142,16 @@ def map_concept(
         all_terms.append(term)
     if terms:
         all_terms.extend(terms)
+
+    if len(all_terms) > _MAX_TERMS:
+        raise ValueError(f"Too many terms (max {_MAX_TERMS})")
+    for t in all_terms:
+        if not isinstance(t, str):
+            raise ValueError("Each term must be a string")
+        if len(t) > _MAX_TERM_LEN:
+            raise ValueError(
+                f"Term exceeds maximum length of {_MAX_TERM_LEN} characters"
+            )
 
     classes = summary.get("classes", {})
     obj_props = summary.get("object_properties", {})
@@ -244,10 +263,16 @@ def map_concept(
             seen.add(key)
             unique_matches.append(m)
 
-    # Generate suggestions from unmatched terms
+    # Generate suggestions from unmatched terms. The class_browser.py script
+    # lives in the sibling ontology-explorer skill and requires --ontology, so
+    # emit a fully-pathed, runnable command.
+    ont = ontology or "<name>"
     suggestions = []
     for t in unmatched:
-        suggestions.append(f"Try searching with class_browser.py --search '{t}'")
+        suggestions.append(
+            "Try: python skills/ontology/ontology-explorer/scripts/"
+            f"class_browser.py --ontology {ont} --search '{t}'"
+        )
 
     return {
         "matches": unique_matches,
@@ -293,6 +318,7 @@ def main() -> None:
             terms=terms_list,
             synonyms=synonyms,
             property_synonyms=property_synonyms,
+            ontology=args.ontology,
         )
     except ValueError as exc:
         if args.json:

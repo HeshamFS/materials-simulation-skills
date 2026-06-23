@@ -14,15 +14,14 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 5
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Performance Profiling
@@ -80,12 +79,14 @@ Need optimization recommendations?
 
 ## Script Outputs (JSON Fields)
 
-| Script | Key Outputs |
+All scripts wrap their payload in a top-level object with two keys: `inputs` and `results`. The fields below live under `results`.
+
+| Script | Key Outputs (under `results`) |
 |--------|-------------|
-| `timing_analyzer.py` | `timing_data.phases`, `timing_data.slowest_phase`, `timing_data.total_time` |
-| `scaling_analyzer.py` | `scaling_analysis.results`, `scaling_analysis.efficiency_threshold_processors` |
-| `memory_profiler.py` | `memory_profile.total_memory_gb`, `memory_profile.per_process_gb`, `memory_profile.warnings` |
-| `bottleneck_detector.py` | `bottlenecks`, `recommendations` |
+| `timing_analyzer.py` | `results.phases`, `results.slowest_phase`, `results.total_time` |
+| `scaling_analyzer.py` | `results.results`, `results.efficiency_threshold_processors`, `results.average_efficiency`, `results.baseline` |
+| `memory_profiler.py` | `results.total_memory_gb`, `results.per_process_gb`, `results.field_memory_gb`, `results.solver_workspace_gb`, `results.matrix_storage_gb`, `results.warnings` |
+| `bottleneck_detector.py` | `results.bottlenecks`, `results.recommendations` |
 
 ## Workflow
 
@@ -173,10 +174,10 @@ python3 scripts/bottleneck_detector.py \
    ```bash
    python3 scripts/timing_analyzer.py --log simulation.log --json
    ```
-3. Interpret results:
-   - If solver dominates (>50%): Recommend preconditioner tuning
-   - If assembly dominates: Recommend caching or vectorization
-   - If I/O dominates: Recommend reducing output frequency
+3. Interpret results (the detector flags solver/assembly phases above 50% and I/O phases above 30%; >70% is high severity):
+   - If solver dominates (>50%, high above 70%): Recommend preconditioner tuning
+   - If assembly dominates (>50%): Recommend caching or vectorization
+   - If I/O dominates (>30%): Recommend reducing output frequency
 4. If user has multi-run data, analyze scaling:
    ```bash
    python3 scripts/scaling_analyzer.py --data scaling.json --type strong --json
@@ -190,12 +191,14 @@ python3 scripts/bottleneck_detector.py \
 
 ### Timing Analysis
 
+The detector applies per-type dominance thresholds: solver/assembly/general phases are flagged above **50%** of runtime; I/O phases above **30%**. Any flagged phase above **70%** is reported as high severity.
+
 | Scenario | Meaning | Action |
 |----------|---------|--------|
-| Solver >70% | Solver-dominated | Tune preconditioner, check tolerance |
+| Solver >50% (high >70%) | Solver-dominated | Tune preconditioner, check tolerance |
 | Assembly >50% | Assembly-dominated | Cache matrices, vectorize, parallelize |
 | I/O >30% | I/O-dominated | Reduce frequency, use parallel I/O |
-| Balanced (<30% each) | Well-balanced | Look for algorithmic improvements |
+| Balanced (below thresholds) | Well-balanced | Look for algorithmic improvements |
 
 ### Scaling Analysis
 
@@ -214,6 +217,14 @@ python3 scripts/bottleneck_detector.py \
 | 60-80% available | Moderate | Monitor, consider optimization |
 | >80% available | High | Reduce resolution or increase processors |
 | >100% available | Exceeds capacity | Must reduce problem size |
+
+The estimate follows the three-term formula `Total = Field + Solver Workspace + Matrix Storage` (see `references/profiling_guide.md`). Matrix storage and solver workspace depend on `solver.type`:
+
+- `iterative` (default): sparse matrix (default 7-point stencil, override via `solver.stencil_nnz`) plus workspace vectors.
+- `direct`: sparse matrix scaled by a conservative fill-in factor (`solver.fillin_factor`, default 10) to reflect factorization fill-in — a direct solver estimates far more memory than an iterative one for the same mesh.
+- `matrix-free`: no assembled matrix; workspace vectors only.
+
+The estimate is intentionally conservative so a "will it fit in RAM?" decision does not silently under-estimate.
 
 ## Error Handling
 
@@ -299,4 +310,4 @@ python3 scripts/bottleneck_detector.py \
 
 ## Version History
 
-- **v1.0.0** (2025-01-22): Initial release with 4 profiling scripts
+See `CHANGELOG.md` for the authoritative, dated release history.

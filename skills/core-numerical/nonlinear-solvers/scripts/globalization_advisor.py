@@ -2,8 +2,13 @@
 """Recommend line search vs trust region globalization strategy."""
 import argparse
 import json
+import math
 import sys
 from typing import Any, Dict, List
+
+
+# Security limit: cap on number of reported previous failures.
+MAX_PREVIOUS_FAILURES = 1_000_000
 
 
 def advise_globalization(
@@ -12,6 +17,7 @@ def advise_globalization(
     previous_failures: int,
     oscillating_residual: bool,
     step_rejection_rate: float,
+    far_from_solution: bool = False,
 ) -> Dict[str, Any]:
     """Recommend globalization strategy for nonlinear solvers.
 
@@ -21,6 +27,7 @@ def advise_globalization(
         previous_failures: Number of previous solver failures
         oscillating_residual: Whether residual history shows oscillation
         step_rejection_rate: Fraction of rejected steps (0.0 to 1.0)
+        far_from_solution: Whether the initial guess is distant from the solution
 
     Returns:
         Dictionary with globalization strategy recommendations
@@ -33,9 +40,20 @@ def advise_globalization(
     if jacobian_quality not in valid_jacobian_quality:
         raise ValueError(f"jacobian_quality must be one of {valid_jacobian_quality}")
 
+    if not isinstance(previous_failures, int):
+        raise ValueError(
+            f"previous_failures must be an integer, got {type(previous_failures).__name__}"
+        )
     if previous_failures < 0:
         raise ValueError("previous_failures must be non-negative")
+    if previous_failures > MAX_PREVIOUS_FAILURES:
+        raise ValueError(
+            f"previous_failures ({previous_failures}) exceeds maximum "
+            f"({MAX_PREVIOUS_FAILURES})"
+        )
 
+    if not math.isfinite(step_rejection_rate):
+        raise ValueError("step_rejection_rate must be finite")
     if not 0.0 <= step_rejection_rate <= 1.0:
         raise ValueError("step_rejection_rate must be between 0.0 and 1.0")
 
@@ -48,6 +66,17 @@ def advise_globalization(
     if jacobian_quality in {"ill-conditioned", "near-singular"}:
         use_trust_region = True
         notes.append("Trust region provides better stability for poor Jacobian quality.")
+
+    # Trust region preferred when the initial guess is far from the solution:
+    # it controls step size more conservatively than line search and is more
+    # robust in the non-asymptotic regime where the local model is unreliable.
+    if far_from_solution:
+        use_trust_region = True
+        notes.append(
+            "Distant initial guess: trust region controls step size more "
+            "conservatively than line search, improving robustness when the "
+            "local model is unreliable far from the solution."
+        )
 
     # Trust region preferred for high failure rate
     if previous_failures >= 2:
@@ -73,7 +102,15 @@ def advise_globalization(
         strategy = "trust-region"
 
         # Select trust region type
-        if jacobian_quality == "near-singular":
+        if problem_type == "least-squares":
+            # Levenberg-Marquardt IS the trust-region method for nonlinear
+            # least-squares; surface it directly rather than only in a note.
+            trust_region_type = "Levenberg-Marquardt"
+            notes.append(
+                "Levenberg-Marquardt is the standard trust-region method for "
+                "nonlinear least-squares; damping adapts to Jacobian quality."
+            )
+        elif jacobian_quality == "near-singular":
             trust_region_type = "Levenberg-Marquardt"
             notes.append("LM regularization handles near-singular Jacobian.")
         elif problem_type == "optimization":
@@ -179,6 +216,11 @@ def parse_args() -> argparse.Namespace:
         help="Residual history shows oscillation",
     )
     parser.add_argument(
+        "--far-from-solution",
+        action="store_true",
+        help="Initial guess is far from the solution (favors trust region)",
+    )
+    parser.add_argument(
         "--step-rejection-rate",
         type=float,
         default=0.0,
@@ -198,6 +240,7 @@ def main() -> None:
             previous_failures=args.previous_failures,
             oscillating_residual=args.oscillating,
             step_rejection_rate=args.step_rejection_rate,
+            far_from_solution=args.far_from_solution,
         )
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
@@ -210,12 +253,13 @@ def main() -> None:
             "previous_failures": args.previous_failures,
             "oscillating_residual": args.oscillating,
             "step_rejection_rate": args.step_rejection_rate,
+            "far_from_solution": args.far_from_solution,
         },
         "results": result,
     }
 
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
         return
 
     print("Globalization strategy")

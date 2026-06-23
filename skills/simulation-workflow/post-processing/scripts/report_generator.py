@@ -22,6 +22,12 @@ from typing import Any, Dict, List, Optional
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 MAX_DIR_FILES = 10_000
 
+# Known report sections (allowlist for --sections validation).
+VALID_SECTIONS = frozenset({
+    "summary", "statistics", "convergence", "validation",
+    "files", "parameters", "all",
+})
+
 
 def _validate_file_size(filepath: str) -> None:
     size = os.path.getsize(filepath)
@@ -155,21 +161,65 @@ def analyze_field_files(directory: str, files: List[str]) -> Dict[str, Any]:
 
             analysis["final_state"] = {}
 
-            # Find numeric fields
-            for key, value in data.items():
-                if isinstance(value, list):
-                    flat = flatten_list(value)
-                    if flat and all(isinstance(x, (int, float)) for x in flat):
-                        analysis["final_state"][key] = {
-                            "min": min(flat),
-                            "max": max(flat),
-                            "mean": sum(flat) / len(flat),
-                            "count": len(flat)
-                        }
+            for key, value in iter_field_candidates(data):
+                resolved = resolve_field_values(value)
+                if resolved is None:
+                    continue
+                flat = flatten_list(resolved)
+                if flat and all(isinstance(x, (int, float)) for x in flat):
+                    analysis["final_state"][key] = {
+                        "min": min(flat),
+                        "max": max(flat),
+                        "mean": sum(flat) / len(flat),
+                        "count": len(flat)
+                    }
         except Exception:
             pass
 
     return analysis
+
+
+# Keys that hold scalar metadata rather than field arrays.
+_METADATA_KEYS = frozenset({
+    "timestep", "time_step", "step", "iteration", "n",
+    "time", "t", "physical_time",
+    "dx", "dy", "dz", "nx", "ny", "nz",
+    "lx", "ly", "lz",
+})
+
+
+def iter_field_candidates(data: Dict[str, Any]):
+    """Yield (name, raw_value) candidate fields from a field file.
+
+    Handles both the flat top-level layout ({"phi": [[...]]}) and the nested
+    layout used by the skill's fixtures and the other scripts
+    ({"fields": {"phi": {"values": [[...]]}}}). Scalar metadata keys
+    (timestep, time, dx, dy, ...) are skipped.
+    """
+    for key, value in data.items():
+        if key == "fields" and isinstance(value, dict):
+            for fname, fvalue in value.items():
+                if fname.lower() not in _METADATA_KEYS:
+                    yield fname, fvalue
+            continue
+        if key.lower() in _METADATA_KEYS or key.startswith("_"):
+            continue
+        yield key, value
+
+
+def resolve_field_values(value: Any) -> Optional[Any]:
+    """Resolve a candidate field value to its numeric data, or None.
+
+    Unwraps the nested {"values": [[...]]} dict form; returns lists directly;
+    returns None for anything that is not a list or a values-dict.
+    """
+    if isinstance(value, dict):
+        if "values" in value:
+            return value["values"]
+        return None
+    if isinstance(value, list):
+        return value
+    return None
 
 
 def analyze_history_files(directory: str, files: List[str]) -> Dict[str, Any]:
@@ -421,8 +471,19 @@ def main():
             print(f"Error: Not a directory: {args.input}", file=sys.stderr)
             sys.exit(1)
 
-        # Parse sections
-        sections = [s.strip().lower() for s in args.sections.split(",")]
+        # Parse and validate sections against the known allowlist.
+        sections = [s.strip().lower() for s in args.sections.split(",") if s.strip()]
+        if not sections:
+            print("Error: --sections must list at least one section", file=sys.stderr)
+            sys.exit(2)
+        unknown = [s for s in sections if s not in VALID_SECTIONS]
+        if unknown:
+            print(
+                f"Error: Unknown report section(s): {', '.join(unknown)}. "
+                f"Valid: {', '.join(sorted(VALID_SECTIONS))}",
+                file=sys.stderr,
+            )
+            sys.exit(2)
 
         # Generate report
         report = generate_report(args.input, sections)

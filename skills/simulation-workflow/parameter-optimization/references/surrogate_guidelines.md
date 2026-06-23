@@ -222,9 +222,11 @@ Is data noisy?
 ## Implementation Notes
 
 The `surrogate_builder.py` script in this skill:
-- Is a **placeholder** for demonstration
-- Computes basic MSE metric only
-- Does not fit actual models
+- Is a **lightweight, standard-library-only** implementation for demonstration
+- `model=poly`: fits a 1-D least-squares polynomial (degree up to 2) and reports the true residual `mse`
+- `model=rbf`: fits a Gaussian RBF interpolant; in-sample `mse` is near zero by construction, so a leave-one-out `cv_error` is reported for honest fit assessment
+- Also reports `output_variance` (variance of the y data) as a baseline reference
+- Handles 1-D inputs only; for multi-dimensional, noisy, or large problems use scipy/scikit-learn/GPyTorch
 
 For real surrogate modeling, use:
 - `scikit-learn` (polynomial, GP, neural networks)

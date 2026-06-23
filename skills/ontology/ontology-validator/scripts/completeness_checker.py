@@ -43,6 +43,50 @@ def _load_summary(ontology: Optional[str] = None,
         return json.load(f)
 
 
+# Input-validation caps (lightweight DoS / abuse guards, see SKILL.md Security)
+MAX_INPUT_BYTES = 1_000_000
+MAX_PROVIDED = 1000
+MAX_NAME_LEN = 500
+
+
+def _is_subclass_of(classes: Dict, child: str, parent: str) -> bool:
+    """Check if child is the same as or a subclass of parent.
+
+    Walks the single-parent chain in the ontology summary. Matching is
+    case-insensitive. Returns True when ``child`` IS-A ``parent``.
+    """
+    if not child or not parent:
+        return False
+    if child.lower() == parent.lower():
+        return True
+    current = child
+    seen = set()
+    while current in classes:
+        if current in seen:
+            break
+        seen.add(current)
+        p = classes[current].get("parent")
+        if not p:
+            break
+        if p.lower() == parent.lower():
+            return True
+        current = p
+    return False
+
+
+def _domain_applies(classes: Dict, target_class: str, domain: str) -> bool:
+    """Return True when ``target_class`` IS-A every-or-any domain part.
+
+    A property domain may be a single class or a ``|``-separated union of
+    classes. The property applies to ``target_class`` when the class is the
+    same as, or a subclass of, at least one domain part.
+    """
+    if not domain:
+        return False
+    parts = [d.strip() for d in domain.split("|") if d.strip()]
+    return any(_is_subclass_of(classes, target_class, d) for d in parts)
+
+
 def _load_constraints(ontology: Optional[str] = None,
                       constraints_file: Optional[str] = None) -> Dict:
     """Load constraints JSON."""
@@ -94,6 +138,21 @@ def check_completeness(
     """
     if not class_name:
         raise ValueError("class_name must not be empty")
+    if not isinstance(class_name, str) or len(class_name) > MAX_NAME_LEN:
+        raise ValueError(
+            f"class_name must be a string of at most {MAX_NAME_LEN} chars"
+        )
+    if len(provided_properties) > MAX_PROVIDED:
+        raise ValueError(
+            f"Too many provided properties ({len(provided_properties)}); "
+            f"maximum is {MAX_PROVIDED}"
+        )
+    for p in provided_properties:
+        if not isinstance(p, str) or len(p) > MAX_NAME_LEN:
+            raise ValueError(
+                f"Provided property names must be strings of at most "
+                f"{MAX_NAME_LEN} chars"
+            )
 
     classes = summary.get("classes", {})
     obj_props = summary.get("object_properties", {})
@@ -108,17 +167,16 @@ def check_completeness(
     if not matched_class:
         raise ValueError(f"Class '{class_name}' not found in ontology")
 
-    # Get all properties where this class is in the domain
+    # Get all properties where this class IS-A the declared domain. Uses exact
+    # class-name equality plus subclass traversal (not substring containment),
+    # so e.g. a bare "Material" is not credited with "Crystalline Material"
+    # properties such as "has crystallographic defect".
     all_class_props = set()
     for name, info in obj_props.items():
-        domain = info.get("domain", "")
-        if domain and (matched_class in domain
-                       or matched_class.replace(" ", "") in domain):
+        if _domain_applies(classes, matched_class, info.get("domain", "")):
             all_class_props.add(name)
     for name, info in data_props.items():
-        domain = info.get("domain", "")
-        if domain and (matched_class in domain
-                       or matched_class.replace(" ", "") in domain):
+        if _domain_applies(classes, matched_class, info.get("domain", "")):
             all_class_props.add(name)
 
     # Get constraints for this class
@@ -207,6 +265,10 @@ def main() -> None:
             ontology=args.ontology,
             constraints_file=args.constraints_file,
         )
+        if len(args.provided.encode("utf-8")) > MAX_INPUT_BYTES:
+            raise ValueError(
+                f"--provided exceeds maximum size of {MAX_INPUT_BYTES} bytes"
+            )
         provided = [p.strip() for p in args.provided.split(",")]
         result = check_completeness(
             summary=summary,

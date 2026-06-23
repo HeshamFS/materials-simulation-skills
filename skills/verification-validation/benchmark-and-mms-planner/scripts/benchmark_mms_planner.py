@@ -9,6 +9,16 @@ import sys
 from typing import Dict, List
 
 
+# Lightweight input caps so a planning helper never has to materialise pathological
+# strings. These mirror the bounds advertised in the SKILL.md "## Security" section.
+MAX_FIELD_LEN = 256
+
+# Model families whose dynamics are time dependent (and 'general', which we treat as
+# potentially transient by default). A model that falls back to 'general' is handled
+# identically to the explicit 'general' family.
+TIME_DEPENDENT_MODELS = {"diffusion", "advection", "phase-field", "fluid", "general"}
+
+
 MODEL_BENCHMARKS = {
     "diffusion": ["1D heat equation analytic decay", "2D manufactured source", "thermal step relaxation"],
     "advection": ["solid-body rotation", "1D periodic wave transport", "Gaussian pulse translation"],
@@ -35,6 +45,10 @@ def plan_vv(
 ) -> Dict:
     if dimension not in {1, 2, 3}:
         raise ValueError("dimension must be 1, 2, or 3")
+    if len(model) > MAX_FIELD_LEN:
+        raise ValueError(f"model must be at most {MAX_FIELD_LEN} characters")
+    if len(quantity) > MAX_FIELD_LEN:
+        raise ValueError(f"quantity must be at most {MAX_FIELD_LEN} characters")
     _positive_finite(expected_order, "expected_order")
     model_key = model.lower().strip() or "general"
     reference_key = reference.lower().strip()
@@ -44,9 +58,21 @@ def plan_vv(
     if reference_key not in {"analytic", "benchmark", "experimental", "none"}:
         raise ValueError("reference must be one of: analytic, benchmark, experimental, none")
 
+    # Resolve the effective model family exactly once. Unknown families fall back to
+    # 'general' so that benchmark selection and the time-refinement decision stay
+    # consistent (an unlisted but transient PDE must not be told to skip time
+    # refinement just because its name is not in the table).
+    effective_model = model_key if model_key in MODEL_BENCHMARKS else "general"
+
     refinement_levels = 4 if risk_key == "high" else 3
-    tolerance_factor = 0.25 if risk_key == "high" else 0.5
-    benchmark_cases = MODEL_BENCHMARKS.get(model_key, MODEL_BENCHMARKS["general"])
+    # Observed-order acceptance band. This is an engineering screening heuristic, not a
+    # certified bound: we accept an observed order within a fractional tolerance of the
+    # formal order, floored at first-order convergence. Using a *relative* band keeps the
+    # strictness consistent across formal orders (a fixed absolute offset is far stricter
+    # in relative terms for high-order schemes). See references/vv_patterns.md.
+    tolerance_fraction = 0.10 if risk_key == "high" else 0.20
+    accept_observed_order_min = round(max(1.0, expected_order * (1.0 - tolerance_fraction)), 3)
+    benchmark_cases = MODEL_BENCHMARKS[effective_model]
     warnings: List[str] = []
 
     if reference_key == "none":
@@ -60,6 +86,7 @@ def plan_vv(
 
     return {
         "verification_strategy": strategy,
+        "effective_model": effective_model,
         "mms_plan": {
             "manufacture_solution": reference_key == "analytic",
             "recommended_norms": ["L2", "Linf"],
@@ -72,8 +99,8 @@ def plan_vv(
             "levels": refinement_levels,
             "spacing_ratio": 2,
             "expected_order": expected_order,
-            "accept_observed_order_min": round(expected_order - tolerance_factor, 3),
-            "include_time_refinement": model_key in {"diffusion", "advection", "phase-field", "fluid", "general"},
+            "accept_observed_order_min": accept_observed_order_min,
+            "include_time_refinement": effective_model in TIME_DEPENDENT_MODELS,
         },
         "uncertainty_plan": {
             "propagate_inputs": risk_key in {"medium", "high"},

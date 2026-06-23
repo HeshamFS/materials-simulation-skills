@@ -237,6 +237,35 @@ class TestDerivedQuantitiesIO(unittest.TestCase):
         self.assertEqual(result["dx"], 1.0)
         self.assertEqual(result["dy"], 1.0)
 
+    def test_get_grid_spacing_explicit_precedence_over_domain(self):
+        """F2 regression: explicit dx must win over an Lx-derived spacing.
+
+        Previously dx=Lx/(nx-1) silently overwrote the explicit dx=0.1.
+        """
+        data = {"dx": 0.1, "dy": 0.1, "Lx": 1.0, "Ly": 1.0}
+        shape = [10, 10]  # 10 cells; node formula would give 1/9 = 0.111...
+        result = self.mod.get_grid_spacing(data, shape)
+        self.assertEqual(result["dx"], 0.1)
+        self.assertEqual(result["dy"], 0.1)
+
+    def test_get_grid_spacing_derives_when_no_explicit(self):
+        """When no explicit dx, derive node-centered from Lx."""
+        data = {"Lx": 1.0}
+        result = self.mod.get_grid_spacing(data, [11])  # 11 points -> 10 spans
+        self.assertAlmostEqual(result["dx"], 0.1)
+
+    def test_get_grid_spacing_warns_on_inconsistent(self):
+        """Inconsistent explicit dx vs domain size warns but keeps explicit."""
+        import contextlib
+        import io
+        data = {"dx": 0.1, "Lx": 5.0}
+        shape = [10]  # neither 0.1*10==5 nor 0.1*9==5
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            result = self.mod.get_grid_spacing(data, shape)
+        self.assertEqual(result["dx"], 0.1)
+        self.assertIn("inconsistent", stderr.getvalue().lower())
+
 
 if __name__ == "__main__":
     unittest.main()

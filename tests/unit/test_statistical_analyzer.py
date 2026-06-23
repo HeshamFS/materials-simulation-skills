@@ -4,10 +4,20 @@ import json
 import math
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 
 from tests.unit._utils import load_module
+
+SCRIPT_PATH = os.path.join(
+    "skills", "simulation-workflow", "post-processing", "scripts",
+    "statistical_analyzer.py",
+)
+FIXTURE = os.path.join(
+    "tests", "fixtures", "post-processing", "field_output.json"
+)
 
 
 class TestStatisticalAnalyzer(unittest.TestCase):
@@ -219,6 +229,17 @@ class TestStatisticalAnalyzerSecurity(unittest.TestCase):
         fn = self.mod.parse_region_condition("y>=1e-3")
         self.assertTrue(callable(fn))
 
+    def test_region_condition_rejects_non_coordinate_variable(self):
+        """Only x/y/z coordinate variables are allowed (F1)."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_region_condition("phi>0.5")
+        with self.assertRaises(ValueError):
+            self.mod.parse_region_condition("x>0.3 and foo<1")
+
+    def test_region_condition_rejects_empty(self):
+        with self.assertRaises(ValueError):
+            self.mod.parse_region_condition("   ")
+
     def test_region_condition_rejects_long_input(self):
         """Excessively long region conditions must be rejected."""
         with self.assertRaises(ValueError):
@@ -261,6 +282,100 @@ class TestStatisticalAnalyzerSecurity(unittest.TestCase):
                 self.mod.load_json_file(path)
         finally:
             os.unlink(path)
+
+
+class TestRegionFiltering(unittest.TestCase):
+    """Regression tests for F1: --region must actually filter (not return
+    whole-field statistics under a region label)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.mod = load_module(
+            "statistical_analyzer",
+            "skills/simulation-workflow/post-processing/scripts/statistical_analyzer.py",
+        )
+
+    def test_predicate_evaluates_coordinates(self):
+        pred = self.mod.parse_region_condition("x>0.3 and x<0.7")
+        self.assertTrue(pred({"x": 0.5, "y": 0.0}))
+        self.assertFalse(pred({"x": 0.1, "y": 0.0}))
+        self.assertFalse(pred({"x": 0.9, "y": 0.0}))
+
+    def test_predicate_or_join(self):
+        pred = self.mod.parse_region_condition("x<0.2 or x>0.8")
+        self.assertTrue(pred({"x": 0.1}))
+        self.assertTrue(pred({"x": 0.9}))
+        self.assertFalse(pred({"x": 0.5}))
+
+    def test_build_coordinate_grid_2d(self):
+        coords = self.mod.build_coordinate_grid([2, 3], {"dx": 0.5, "dy": 1.0})
+        self.assertEqual(len(coords), 6)
+        # flatten order is row-major: (j=0,i=0..2), (j=1,i=0..2)
+        self.assertEqual(coords[0], {"x": 0.0, "y": 0.0})
+        self.assertEqual(coords[2], {"x": 1.0, "y": 0.0})
+        self.assertEqual(coords[3], {"x": 0.0, "y": 1.0})
+
+    def test_get_grid_spacing_explicit_precedence(self):
+        # Explicit dx wins over Lx-derived spacing.
+        spacing = self.mod.get_grid_spacing({"dx": 0.1, "Lx": 1.0}, [10])
+        self.assertEqual(spacing["dx"], 0.1)
+
+    def test_regional_statistics_differ_from_whole_field(self):
+        """A region must produce a strict subset, changing the statistics."""
+        field = [[0.0, 0.0, 1.0, 1.0]]  # 1 row, 4 cols, dx between cells
+        spacing = {"dx": 1.0, "dy": 1.0}
+        coords = self.mod.build_coordinate_grid([1, 4], spacing)
+        pred = self.mod.parse_region_condition("x>1.5")
+        mask = [pred(c) for c in coords]
+        flat = self.mod.flatten_field(field)
+        values = [v for v, m in zip(flat, mask) if m]
+        self.assertEqual(values, [1.0, 1.0])
+        full = self.mod.compute_basic_statistics(flat)
+        region = self.mod.compute_basic_statistics(values)
+        self.assertNotEqual(full["mean"], region["mean"])
+        self.assertEqual(region["mean"], 1.0)
+
+
+class TestStatisticalAnalyzerCLI(unittest.TestCase):
+    """CLI-level regression tests against the real fixture."""
+
+    def _run(self, *args):
+        return subprocess.run(
+            [sys.executable, SCRIPT_PATH, *args],
+            capture_output=True, text=True,
+        )
+
+    def test_cli_region_filters_field(self):
+        """F1: region output count must be a strict subset of the full field."""
+        full = self._run("--input", FIXTURE, "--field", "phi", "--json")
+        self.assertEqual(full.returncode, 0, full.stderr)
+        full_count = json.loads(full.stdout)["basic_statistics"]["count"]
+
+        reg = self._run(
+            "--input", FIXTURE, "--field", "phi",
+            "--region", "x>0.3 and x<0.7", "--json",
+        )
+        self.assertEqual(reg.returncode, 0, reg.stderr)
+        out = json.loads(reg.stdout)
+        self.assertIn("region", out)
+        self.assertIn("cells_in_region", out["region"])
+        region_count = out["basic_statistics"]["count"]
+        self.assertLess(region_count, full_count)
+        self.assertEqual(region_count, out["region"]["cells_in_region"])
+
+    def test_cli_invalid_region_exits_2(self):
+        res = self._run(
+            "--input", FIXTURE, "--field", "phi",
+            "--region", "__import__('os')", "--json",
+        )
+        self.assertEqual(res.returncode, 2)
+
+    def test_cli_invalid_bins_exits_2(self):
+        res = self._run(
+            "--input", FIXTURE, "--field", "phi",
+            "--histogram", "--bins", "0", "--json",
+        )
+        self.assertEqual(res.returncode, 2)
 
 
 if __name__ == "__main__":

@@ -49,6 +49,10 @@ def compute_error_norm(
         if len(solution) != len(error):
             raise ValueError("solution length must match error length")
         scale = [max(min_scale, atol + rtol * abs(y)) for y in solution]
+        if any(s <= 0 for s in scale):
+            raise ValueError(
+                "scale must be positive; with min_scale=0 ensure atol>0 or rtol*|y|>0"
+            )
     else:
         if len(scale) != len(error):
             raise ValueError("scale length must match error length")

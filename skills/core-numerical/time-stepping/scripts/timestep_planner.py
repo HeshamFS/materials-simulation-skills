@@ -5,24 +5,29 @@ import math
 import sys
 from typing import Dict, List, Optional
 
+MAX_RAMP_STEPS = 1_000_000
+
 
 def compute_ramp(
     dt_start: float,
     dt_target: float,
     steps: int,
     kind: str,
+    limit: Optional[int] = None,
 ) -> List[float]:
     if steps <= 0:
         return []
+    # Only materialize the first `limit` entries to bound memory use.
+    n = steps if limit is None else min(steps, max(limit, 0))
     if kind == "linear":
         return [
-            dt_start + (dt_target - dt_start) * (i + 1) / steps for i in range(steps)
+            dt_start + (dt_target - dt_start) * (i + 1) / steps for i in range(n)
         ]
     if kind == "geometric":
         if dt_start <= 0 or dt_target <= 0:
             raise ValueError("dt_start and dt_target must be positive for geometric ramp")
         ratio = (dt_target / dt_start) ** (1.0 / steps)
-        return [dt_start * (ratio ** (i + 1)) for i in range(steps)]
+        return [dt_start * (ratio ** (i + 1)) for i in range(n)]
     raise ValueError("ramp_kind must be linear or geometric")
 
 
@@ -36,16 +41,36 @@ def plan_timestep(
     ramp_kind: str,
     preview_steps: int,
 ) -> Dict[str, object]:
+    for name, value in (("dt_target", dt_target), ("dt_limit", dt_limit), ("safety", safety)):
+        if not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite number")
+    for name, value in (("dt_min", dt_min), ("dt_max", dt_max)):
+        if value is not None and not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite number")
+
     if dt_target <= 0 or dt_limit <= 0:
         raise ValueError("dt_target and dt_limit must be positive")
     if safety <= 0:
         raise ValueError("safety must be positive")
+    if safety > 1.0:
+        raise ValueError(
+            "safety must be <= 1.0 (safety factor is a stability margin below the limit)"
+        )
     if dt_min is not None and dt_min <= 0:
         raise ValueError("dt_min must be positive")
     if dt_max is not None and dt_max <= 0:
         raise ValueError("dt_max must be positive")
     if dt_min is not None and dt_max is not None and dt_min > dt_max:
         raise ValueError("dt_min must be <= dt_max")
+
+    if ramp_steps < 0:
+        raise ValueError("ramp_steps must be non-negative")
+    if ramp_steps > MAX_RAMP_STEPS:
+        raise ValueError(f"ramp_steps must be <= {MAX_RAMP_STEPS}")
+    if preview_steps < 0:
+        raise ValueError("preview_steps must be non-negative")
+    if preview_steps > MAX_RAMP_STEPS:
+        raise ValueError(f"preview_steps must be <= {MAX_RAMP_STEPS}")
 
     dt_recommended = min(dt_target, dt_limit) * safety
     if dt_min is not None:
@@ -60,13 +85,16 @@ def plan_timestep(
         notes.append("Recommended dt hits minimum limit.")
     if dt_max is not None and dt_recommended == dt_max:
         notes.append("Recommended dt hits maximum limit.")
+    if dt_recommended > dt_limit:
+        notes.append("Recommended dt exceeds stability limit.")
 
     ramp_schedule = []
     if ramp_steps > 0:
         dt_start = dt_recommended / max(ramp_steps, 1)
-        ramp_schedule = compute_ramp(dt_start, dt_recommended, ramp_steps, ramp_kind)
-        if preview_steps > 0:
-            ramp_schedule = ramp_schedule[:preview_steps]
+        limit = preview_steps if preview_steps > 0 else None
+        ramp_schedule = compute_ramp(
+            dt_start, dt_recommended, ramp_steps, ramp_kind, limit=limit
+        )
 
     return {
         "dt_limit": dt_limit,

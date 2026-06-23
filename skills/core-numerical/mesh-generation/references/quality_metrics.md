@@ -60,6 +60,15 @@ Skewness = (θ_max - 60°) / (180° - 60°)
 Or: Skewness = 1 - (θ_min / 60°)
 ```
 
+> **Note on `scripts/mesh_quality.py`:** the bundled script works only from
+> axis-aligned edge spacings (`dx`, `dy`, `dz`), which describe orthogonal
+> Cartesian cells. Every interior angle of such a cell is exactly 90°, so its
+> true angular skewness is identically `0` regardless of aspect ratio. The
+> script therefore reports `skewness = 0.0` for these cells and reports cell
+> elongation separately as `aspect_ratio` / `size_anisotropy`. Computing a
+> non-zero skewness requires real cell-corner coordinates or interior angles
+> (e.g. from an unstructured mesh), which the script does not take as input.
+
 | Skewness | Quality | Notes |
 |----------|---------|-------|
 | 0 - 0.25 | Excellent | Ideal for any simulation |

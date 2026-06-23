@@ -70,6 +70,19 @@ The `statistical_analyzer.py` attempts to classify distributions:
 - Relative variation: max|x - mean| / |mean|
 - Threshold: typically 1e-6 for convergence
 
+**Two distinct "converged" tests (do not conflate them):**
+
+1. **Relative steady-state** (`time_series_analyzer.py --detect-steady-state`,
+   and the `report_generator.py` per-quantity `converged` flag): the signal has
+   *stopped changing* — `max|x - mean| / |mean| < tol` over the recent window
+   (report_generator uses `std/mean < 0.01`). This is the right test for
+   **physical quantities** (energy, mass, volume fraction) reaching a plateau.
+2. **Absolute threshold** (`time_series_analyzer.py --absolute-threshold`): the
+   final value is at or below an absolute tolerance (`|x_final| <= tol`). This is
+   the right test for **residual/error** quantities. A monotonically decreasing
+   residual can be excellently converged (test 2) while *not* steady by test 1,
+   and a residual plateau means a **stalled** solver, not steady state.
+
 ### Convergence Rate
 
 For sequences converging to a target:

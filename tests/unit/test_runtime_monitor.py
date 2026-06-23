@@ -175,6 +175,98 @@ class TestRuntimeMonitor(unittest.TestCase):
         self.assertEqual(stats["max"], 8.0)
         self.assertEqual(stats["last"], 3.0)
 
+    # --- F4: dt pattern regression ---
+    def test_dt_pattern_parses_adaptive_reduction(self):
+        """Regression (F4): 'dt reduced from 1e-3 to 5e-4' captures the 'to' value."""
+        _, dts = self.mod.parse_log(
+            "dt reduced from 1e-3 to 5e-4",
+            residual_pattern=r"residual[^0-9eE+\-]*([0-9][0-9eE+\.-]*)",
+            dt_pattern=self.mod.DEFAULT_DT_PATTERN,
+        )
+        self.assertEqual(dts, [5e-4])
+
+    def test_dt_pattern_ignores_width(self):
+        """Regression (F4): 'width 0.5 mm' must NOT be captured as dt."""
+        _, dts = self.mod.parse_log(
+            "width 0.5 mm",
+            residual_pattern=r"residual[^0-9eE+\-]*([0-9][0-9eE+\.-]*)",
+            dt_pattern=self.mod.DEFAULT_DT_PATTERN,
+        )
+        self.assertEqual(dts, [])
+
+    def test_dt_pattern_canonical_lines(self):
+        """Regression (F4): canonical log_patterns.md dt lines all parse."""
+        log = (
+            "[INFO] dt reduced from 1e-3 to 5e-4\n"
+            "[WARN] dt approaching minimum: 1.2e-10\n"
+            "DT=2.0\n"
+            "dt = 1e-5\n"
+        )
+        _, dts = self.mod.parse_log(
+            log,
+            residual_pattern=r"residual[^0-9eE+\-]*([0-9][0-9eE+\.-]*)",
+            dt_pattern=self.mod.DEFAULT_DT_PATTERN,
+        )
+        self.assertEqual(dts, [5e-4, 1.2e-10, 2.0, 1e-5])
+        result = self.mod.monitor(
+            residuals=[], dts=dts, residual_growth=10.0, dt_drop=100.0
+        )
+        # peak 2.0 -> 1.2e-10 is a collapse > 100x
+        self.assertTrue(any("Time step" in a for a in result["alerts"]))
+
+    # --- F5: direction-aware dt collapse ---
+    def test_dt_ramp_up_no_alert(self):
+        """Regression (F5): a healthy dt ramp-up does NOT trigger a collapse alert."""
+        result = self.mod.monitor(
+            residuals=[], dts=[1e-6, 1e-5, 1e-4, 1e-2],
+            residual_growth=10.0, dt_drop=100.0,
+        )
+        self.assertFalse(any("Time step" in a for a in result["alerts"]))
+
+    def test_dt_collapse_alerts(self):
+        """Regression (F5): an actual collapse from peak triggers an alert."""
+        result = self.mod.monitor(
+            residuals=[], dts=[1e-2, 1e-4, 1e-6],
+            residual_growth=10.0, dt_drop=100.0,
+        )
+        self.assertTrue(any("Time step" in a for a in result["alerts"]))
+
+    def test_dt_collapse_after_ramp(self):
+        """Regression (F5): ramp then collapse below running max alerts."""
+        result = self.mod.monitor(
+            residuals=[], dts=[1e-4, 1e-2, 1e-6],
+            residual_growth=10.0, dt_drop=100.0,
+        )
+        self.assertTrue(any("Time step" in a for a in result["alerts"]))
+
+    # --- F1: NaN/Inf detection in the runtime monitor ---
+    def test_scan_nan_inf_detects(self):
+        """Regression (F1): runtime monitor scans for NaN/Inf/overflow."""
+        self.assertTrue(self.mod.scan_nan_inf("[ERROR] Field contains NaN at step 1523"))
+        self.assertTrue(self.mod.scan_nan_inf("Solution overflow at t=0.02"))
+
+    def test_scan_nan_inf_ignores_domain_words(self):
+        """Regression (F1/F3): domain words do not trigger NaN/Inf detection."""
+        self.assertFalse(self.mod.scan_nan_inf("nanometer scale resolved"))
+        self.assertFalse(self.mod.scan_nan_inf("information logged; infrastructure ok"))
+
+    def test_monitor_emits_nan_alert(self):
+        """Regression (F1): has_nan_inf flag surfaces an alert."""
+        result = self.mod.monitor(
+            residuals=[1.0], dts=[1e-3],
+            residual_growth=10.0, dt_drop=100.0, has_nan_inf=True,
+        )
+        self.assertTrue(any("NaN" in a for a in result["alerts"]))
+
+    # --- F6: threshold validators ---
+    def test_positive_finite_float_rejects_bad(self):
+        """Regression (F6): non-finite/non-positive thresholds are rejected."""
+        import argparse
+        for bad in ["-5", "0", "nan", "inf", "abc"]:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                self.mod.positive_finite_float(bad)
+        self.assertEqual(self.mod.positive_finite_float("10.0"), 10.0)
+
 
 if __name__ == "__main__":
     unittest.main()

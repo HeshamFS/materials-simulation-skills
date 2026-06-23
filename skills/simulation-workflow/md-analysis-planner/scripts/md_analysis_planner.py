@@ -22,6 +22,24 @@ GOAL_MAP = {
 }
 
 
+# Ordering of analysis-plan statuses from most to least severe. A more-severe
+# status must never be silently demoted to a less-severe one (e.g. a VACF/VDOS
+# goal that is "blocked" because no velocities are stored must stay "blocked"
+# even when the timestep is also missing).
+SEVERITY = {"blocked": 3, "needs time axis": 2, "needs review": 1, "ready": 0}
+
+# Lightweight input caps so a planning helper never has to materialise pathological
+# input. These mirror the safeguards advertised in SKILL.md "## Security".
+MAX_GOALS = 64
+MAX_SYSTEM_LEN = 256
+MAX_FIELD_LEN = 256
+
+
+def _escalate(current: str, candidate: str) -> str:
+    """Return the more-severe of two statuses (never demote)."""
+    return max(current, candidate, key=lambda s: SEVERITY[s])
+
+
 def _split_goals(value: str) -> List[str]:
     return [item.strip().lower() for item in value.split(",") if item.strip()]
 
@@ -37,8 +55,17 @@ def plan_md_analysis(
 ) -> Dict:
     if not system.strip():
         raise ValueError("system must not be empty")
+    if len(system) > MAX_SYSTEM_LEN:
+        raise ValueError(f"system must be at most {MAX_SYSTEM_LEN} characters")
     if not goals:
         raise ValueError("at least one goal is required")
+    if len(goals) > MAX_GOALS:
+        raise ValueError(f"at most {MAX_GOALS} goals are allowed")
+    for goal in goals:
+        if len(goal) > MAX_FIELD_LEN:
+            raise ValueError(f"goal must be at most {MAX_FIELD_LEN} characters")
+    if len(trajectory_format) > MAX_FIELD_LEN:
+        raise ValueError(f"trajectory_format must be at most {MAX_FIELD_LEN} characters")
     if timestep_fs is not None and (not math.isfinite(timestep_fs) or timestep_fs <= 0):
         raise ValueError("timestep_fs must be a positive finite number")
 
@@ -53,15 +80,29 @@ def plan_md_analysis(
         method, requirements = GOAL_MAP[goal]
         status = "ready"
         if goal in {"vacf", "vdos"} and not has_velocities:
-            status = "blocked"
+            status = _escalate(status, "blocked")
             warnings.append(f"{goal} needs velocities or a defensible finite-difference velocity estimate.")
         if goal == "stress-strain" and not has_stress:
-            status = "blocked"
+            status = _escalate(status, "blocked")
             warnings.append("stress-strain analysis needs stress/virial output and strain history.")
-        if goal in {"diffusion", "msd"} and unwrap_needed:
-            warnings.append("Diffusion analysis requires unwrapped trajectories before fitting MSD.")
+        if goal in {"diffusion", "msd"}:
+            if unwrap_needed:
+                warnings.append("Diffusion analysis requires unwrapped trajectories before fitting MSD.")
+                # Performing the unwrap (as opposed to consuming already-unwrapped
+                # positions) needs the simulation cell and per-atom image flags.
+                required_data.update({"cell", "image flags"})
+            warnings.append(
+                "Verify the diffusive regime: MSD vs time should be linear "
+                "(log-log slope ~1) before fitting D = lim MSD/(2*d*t); "
+                "exclude ballistic and sub-diffusive transients."
+            )
+            warnings.append(
+                "Apply a finite-size correction to D (Yeh-Hummer 1/L): "
+                "D_0 = D_PBC + k_B*T*xi/(6*pi*eta*L), xi~=2.837 for a cubic box; "
+                "needs box length L and shear viscosity eta."
+            )
         if goal in {"diffusion", "msd", "vacf", "vdos", "equilibration"} and timestep_fs is None:
-            status = "needs time axis"
+            status = _escalate(status, "needs time axis")
             warnings.append(f"{goal} needs timestep or saved-frame spacing.")
         required_data.update(requirements)
         analyses.append({"goal": goal, "method": method, "status": status})
@@ -131,6 +172,20 @@ def main() -> int:
         print("Analysis plan:")
         for item in results["analysis_plan"]:
             print(f"- {item['goal']}: {item['method']} ({item['status']})")
+        if results["required_data"]:
+            print("Required data:")
+            for item in results["required_data"]:
+                print(f"- {item}")
+        print(f"PBC: {results['pbc_handling']['minimum_action']}")
+        if results["warnings"]:
+            # Safety-critical content: print to both stdout and stderr so it
+            # stays visible even when stdout is piped elsewhere.
+            print("Warnings:")
+            for warning in results["warnings"]:
+                print(f"- {warning}")
+            print("Warnings:", file=sys.stderr)
+            for warning in results["warnings"]:
+                print(f"- {warning}", file=sys.stderr)
     return 0
 
 

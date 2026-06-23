@@ -14,15 +14,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 5
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Simulation Validator
@@ -84,8 +83,8 @@ Has simulation finished?
 | Script | Output Fields |
 |--------|---------------|
 | `scripts/preflight_checker.py` | `report.status`, `report.blockers`, `report.warnings` |
-| `scripts/runtime_monitor.py` | `alerts`, `residual_stats`, `dt_stats` |
-| `scripts/result_validator.py` | `checks`, `confidence_score`, `failed_checks` |
+| `scripts/runtime_monitor.py` | `alerts`, `residual_stats`, `dt_stats` (alerts include NaN/Inf/overflow detection, residual growth, and dt collapse) |
+| `scripts/result_validator.py` | `checks`, `confidence_score`, `failed_checks`, `status` (`PASS` / `FAIL` / `INSUFFICIENT_DATA`); `confidence_score` is `null` when no check ran |
 | `scripts/failure_diagnoser.py` | `probable_causes`, `recommended_fixes` |
 
 ## Three-Stage Validation Protocol
@@ -96,6 +95,11 @@ Has simulation finished?
 2. **BLOCK status**: Stop immediately, fix all blocker issues
 3. **WARN status**: Review warnings, document accepted risks
 4. **PASS status**: Proceed to simulation
+
+> Note: `preflight_checker.py` validates required keys, numeric ranges,
+> output-directory access, and disk space. It does **not** evaluate numerical
+> stability (CFL / diffusion-Fourier). For explicit stability gating use
+> `skills/core-numerical/numerical-stability/scripts/cfl_checker.py`.
 
 ```bash
 python3 scripts/preflight_checker.py \
@@ -135,6 +139,9 @@ python3 scripts/result_validator.py \
     --json
 ```
 
+For variational / gradient-flow models (Allen-Cahn, Cahn-Hilliard), add
+`--variational` to enforce a strict monotone non-increasing energy check.
+
 ### Failure Diagnosis
 
 When validation fails:
@@ -169,7 +176,11 @@ python3 scripts/failure_diagnoser.py --log simulation.log --json
 | `Non-numeric value` | Parameter is not a number | Fix config file format |
 | `out of range` | Parameter outside bounds | Adjust parameter or bounds |
 | `Output directory not writable` | Permission issue | Check directory permissions |
-| `Insufficient disk space` | Disk nearly full | Free up space or reduce output |
+| `Insufficient disk space at <path>` | Disk nearly full on the output volume | Free up space or reduce output |
+| `Invalid parameter name` | `--required` name has disallowed characters | Use only letters, digits, `_`, `.`, `-` |
+| `range max ... must be greater than min` | Inverted/degenerate `--ranges` or bounds | Ensure max > min |
+| `must be a finite positive number` | `nan`/`inf`/negative threshold supplied | Pass a finite positive value |
+| `Log file too large` | Log exceeds the 500 MB parse cap | Truncate or pre-filter the log |
 
 ## Interpretation Guidance
 
@@ -185,10 +196,17 @@ python3 scripts/failure_diagnoser.py --log simulation.log --json
 
 | Score | Meaning |
 |-------|---------|
-| 1.0 | All validation checks passed |
+| 1.0 | All validation checks passed → proceed with confidence |
 | 0.75+ | Most checks passed, minor issues |
 | 0.5-0.75 | Significant issues, review carefully |
 | < 0.5 | Major problems, do not trust results |
+| `null` (status `INSUFFICIENT_DATA`) | No recognized metrics fields; **no check ran** — NOT a pass. Inspect the metrics file. |
+
+A requested bound (`--bound-min`/`--bound-max`) with no matching `field_min`/`field_max`
+in the metrics is reported as a failed `bounds_unverifiable` check, never a vacuous pass.
+For variational/gradient-flow runs, pass `--variational` (or set `"energy_variational": true`
+in the metrics) to enforce a strict monotone non-increasing energy check (`energy_monotone`);
+otherwise a weaker `energy_net_decrease` check is used, which does not detect mid-run spikes.
 
 ### Common Failure Patterns
 
@@ -202,18 +220,19 @@ python3 scripts/failure_diagnoser.py --log simulation.log --json
 ## Security
 
 ### Input Validation
-- Config file paths are validated for existence before parsing; non-existent paths produce clear errors
-- `--required` parameter names are validated against a safe-character allowlist
-- `--ranges` entries are parsed as `name:min:max` with finite numeric bounds enforced
-- `--min-free-gb` is validated as a finite positive number
+- Config file paths are validated for existence before parsing; non-existent paths produce clear errors (exit code 2)
+- `--required` parameter names are validated against a safe-character allowlist (`^[A-Za-z0-9_.-]+$`); names with shell metacharacters are rejected
+- `--ranges` entries are parsed as `name:min:max` with finite numeric bounds enforced and `max > min` required
+- `--min-free-gb` is validated as a finite positive number (negatives, zero, `nan`, `inf` rejected)
 - `--residual-growth` and `--dt-drop` thresholds are validated as finite positive numbers
-- `--bound-min`, `--bound-max`, and `--mass-tol` are validated as finite numbers with `bound-max > bound-min`
+- `--bound-min` and `--bound-max` are validated as finite numbers (`nan`/`inf` rejected), and `--bound-max > --bound-min` is enforced; `--mass-tol` is validated as a finite positive number
+- Invalid input exits with code 2 and an explanatory message
 
 ### File Access
-- `preflight_checker.py` reads a single user-specified config file (JSON/YAML) and checks disk space on the output directory
-- `runtime_monitor.py` reads a single log file specified by `--log`; log files are size-limited (500 MB max) before parsing
+- `preflight_checker.py` reads a single user-specified config file (JSON/YAML) and checks disk space on the volume hosting the resolved output directory
+- `runtime_monitor.py` reads a single log file specified by `--log`; log files are size-limited (500 MB max) and rejected before parsing if larger
 - `result_validator.py` reads a single metrics file (JSON) specified by `--metrics`
-- `failure_diagnoser.py` reads a single log file specified by `--log`
+- `failure_diagnoser.py` reads a single log file specified by `--log`; log files are size-limited (500 MB max) before parsing
 - No scripts write to the filesystem; all output goes to stdout
 
 ### Tool Restrictions
@@ -225,8 +244,8 @@ python3 scripts/failure_diagnoser.py --log simulation.log --json
 ### Safety Measures
 - No `eval()`, `exec()`, or dynamic code generation
 - All subprocess calls use explicit argument lists (no `shell=True`)
-- Log parsing uses pre-compiled regex patterns; user-supplied patterns are not accepted (patterns are hardcoded)
-- Phase names and diagnostic strings extracted from logs are sanitized (truncated, control characters stripped) before inclusion in output
+- `failure_diagnoser.py` uses hardcoded, pre-compiled diagnostic regex patterns; `runtime_monitor.py` accepts optional `--residual-pattern` / `--dt-pattern` overrides that are compiled with `re.compile` (no `eval`) and applied only to the user's own log
+- Diagnostic strings emitted in output are drawn from the skill's fixed cause/fix table, not interpolated from raw log content
 
 ## Limitations
 
@@ -241,5 +260,6 @@ python3 scripts/failure_diagnoser.py --log simulation.log --json
 
 ## Version History
 
+- **v1.2.0** (2026-06-23): Corrected diagnostic regexes (no false convergence/blow-up on healthy logs), direction-aware dt-collapse detection, NaN/Inf scan in runtime monitor, strict variational energy check, non-vacuous bounds/confidence, config-relative output-dir + correct-volume disk check, and implemented the documented input-validation/file-size safeguards
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, Windows compatibility
 - **v1.0.0**: Initial release with 4 validation scripts

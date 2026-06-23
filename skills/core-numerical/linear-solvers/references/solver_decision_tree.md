@@ -28,7 +28,8 @@ Check conditioning: estimate κ using power iteration or Lanczos
 ```
 START: Need to solve Ax = b
 │
-├─ Is n < 5000 and matrix dense?
+├─ Is the matrix dense and small enough to factor in memory
+│   (dense float64 storage n²·8 bytes < ~2 GB, i.e. n ≲ 16000)?
 │   └── YES → Use DIRECT solver
 │       ├── Symmetric PD → Cholesky (LLᵀ)
 │       ├── Symmetric indefinite → LDLᵀ (Bunch-Kaufman)
@@ -69,7 +70,7 @@ START: Need to solve Ax = b
 
 | Condition | Direct Recommended |
 |-----------|-------------------|
-| n < 5000 | Usually |
+| Dense and n²·8 bytes < ~2 GB (n ≲ 16000) | Usually |
 | Dense matrix | Yes |
 | Multiple RHS | Yes (factor once) |
 | Need exact solution | Yes |
@@ -106,12 +107,16 @@ START: Need to solve Ax = b
 ||e_k||_A ≤ 2 × ((√κ - 1)/(√κ + 1))^k × ||e_0||_A
 ```
 
-| Condition Number | Iterations (to 10⁻⁶) |
-|------------------|----------------------|
-| κ = 10 | ~6 |
-| κ = 100 | ~20 |
-| κ = 1000 | ~60 |
-| κ = 10⁶ | ~2000 |
+| Condition Number | Worst-case iterations (bound, tol=10⁻⁶) |
+|------------------|------------------------------------------|
+| κ = 10 | ~23 |
+| κ = 100 | ~73 |
+| κ = 1000 | ~230 |
+| κ = 10⁶ | ~7255 |
+
+These follow the worst-case bound above: solving 2ρᵏ ≤ tol with
+ρ = (√κ − 1)/(√κ + 1) gives k ≈ ½·√κ·ln(2/tol). Well-clustered spectra or a
+good preconditioner often converge in far fewer iterations.
 
 **Breakdown:** CG is breakdown-free for SPD matrices.
 

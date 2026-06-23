@@ -69,6 +69,44 @@ class TestMatrixCondition(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.mod.parse_norm("bad")
 
+    def test_status_ok_below_1e8(self):
+        """Regression (F4): cond ~1e7 reports status 'ok' (not ill-conditioned),
+        matching the SKILL.md interpretation table thresholds."""
+        matrix = np.diag([1.0, 1e-7])
+        result = self.mod.compute_condition(
+            matrix=matrix, norm=2.0, symmetry_tol=1e-8, skip_eigs=True
+        )
+        self.assertAlmostEqual(result["condition_number"], 1e7, delta=1e2)
+        self.assertEqual(result["status"], "ok")
+        self.assertIsNone(result["note"])
+
+    def test_status_poorly_conditioned(self):
+        matrix = np.diag([1.0, 1e-9])  # cond ~1e9
+        result = self.mod.compute_condition(
+            matrix=matrix, norm=2.0, symmetry_tol=1e-8, skip_eigs=True
+        )
+        self.assertEqual(result["status"], "poorly-conditioned")
+
+    def test_status_ill_conditioned(self):
+        matrix = np.diag([1.0, 1e-11])  # cond ~1e11
+        result = self.mod.compute_condition(
+            matrix=matrix, norm=2.0, symmetry_tol=1e-8, skip_eigs=True
+        )
+        self.assertEqual(result["status"], "ill-conditioned")
+
+    def test_dimension_limit_enforced(self):
+        """Security: matrices exceeding MAX_DIM per side must raise."""
+        original = self.mod.MAX_DIM
+        try:
+            self.mod.MAX_DIM = 2
+            matrix = np.eye(3)
+            with self.assertRaises(ValueError):
+                self.mod.compute_condition(
+                    matrix=matrix, norm=2.0, symmetry_tol=1e-8, skip_eigs=True
+                )
+        finally:
+            self.mod.MAX_DIM = original
+
 
 if __name__ == "__main__":
     unittest.main()

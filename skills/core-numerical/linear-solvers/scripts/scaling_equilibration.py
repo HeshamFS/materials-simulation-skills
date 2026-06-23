@@ -54,24 +54,44 @@ def compute_scaling(
 
     abs_matrix = np.abs(matrix)
     row_max = np.max(abs_matrix, axis=1)
-    col_max = np.max(abs_matrix, axis=0)
 
     zero_rows = [int(i) for i, v in enumerate(row_max) if v == 0]
-    zero_cols = [int(i) for i, v in enumerate(col_max) if v == 0]
 
-    row_scale = [1.0 / v if v > 0 else 1.0 for v in row_max]
-    col_scale = [1.0 / v if v > 0 else 1.0 for v in col_max]
+    # Row scaling: D_r = 1 / max_j |A_ij| (guard zero rows).
+    row_scale_arr = np.array([1.0 / v if v > 0 else 1.0 for v in row_max])
+
+    is_symmetric = bool(np.allclose(matrix, matrix.T, atol=symmetry_tol, rtol=0.0))
 
     symmetric_scale = None
-    is_symmetric = bool(np.allclose(matrix, matrix.T, atol=symmetry_tol, rtol=0.0))
     if symmetric:
+        # Symmetric scaling preserves symmetry: A' = D A D with D = 1/sqrt(row_max).
         symmetric_scale = [1.0 / np.sqrt(v) if v > 0 else 1.0 for v in row_max]
+        # For a symmetric two-sided scale the column scale equals the row scale.
+        col_scale_arr = row_scale_arr.copy()
+        col_max = np.max(abs_matrix, axis=0)
+    else:
+        # Safe Default Strategy (references/scaling_guidelines.md): scale rows
+        # first, then derive column scaling from the ROW-SCALED matrix so that
+        # applying both D_r and D_c actually equilibrates the system.
+        row_scaled = row_scale_arr[:, None] * abs_matrix
+        col_max = np.max(row_scaled, axis=0)
+        col_scale_arr = np.array([1.0 / v if v > 0 else 1.0 for v in col_max])
+
+    zero_cols = [int(i) for i, v in enumerate(col_max) if v == 0]
+
+    row_scale = [float(v) for v in row_scale_arr]
+    col_scale = [float(v) for v in col_scale_arr]
 
     notes: List[str] = []
     if zero_rows:
         notes.append("Zero rows detected; scaling set to 1 for those rows.")
     if zero_cols:
         notes.append("Zero cols detected; scaling set to 1 for those cols.")
+    if not symmetric:
+        notes.append(
+            "Nonsymmetric two-sided scaling: col_scale derived from the "
+            "row-scaled matrix (apply row_scale then col_scale to equilibrate)."
+        )
     if symmetric and not is_symmetric:
         notes.append("Matrix is not symmetric within tolerance; check inputs.")
 

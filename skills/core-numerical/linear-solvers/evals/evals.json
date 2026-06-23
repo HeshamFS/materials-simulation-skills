@@ -39,9 +39,9 @@
       "prompt": "My iterative solver for a saddle-point system from Stokes flow (velocity-pressure coupling) is completely failing. Any suggestions?",
       "expected_output": "Identifies saddle-point structure as root cause and recommends Schur complement or block preconditioning.",
       "assertions": [
-        "Uses solver_selector.py identifying the system as nonsymmetric/indefinite saddle-point",
+        "Uses solver_selector.py with --saddle-point to identify the block KKT structure",
         "Recommends Schur complement approach or Uzawa iteration",
-        "Suggests block preconditioner appropriate for velocity-pressure coupling",
+        "Suggests block preconditioner appropriate for velocity-pressure coupling (preconditioner_advisor.py --saddle-point)",
         "Notes standard CG/GMRES without block preconditioning will fail for saddle-point systems"
       ]
     }

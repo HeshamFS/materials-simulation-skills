@@ -13,23 +13,30 @@ from typing import Dict, List
 
 
 MAX_FILE_SIZE = 500 * 1024 * 1024
+MAX_ENTRIES = 1000
+MAX_FIELD_LEN = 4096
 SAFE_FIELD = re.compile(r"^[A-Za-z0-9_.:/@+-]+$")
 
 
-def _split_csv(value: str) -> List[str]:
+def _split_csv(value: str, name: str = "list") -> List[str]:
     if not value:
         return []
-    return [item.strip() for item in value.split(",") if item.strip()]
+    items = [item.strip() for item in value.split(",") if item.strip()]
+    if len(items) > MAX_ENTRIES:
+        raise ValueError(f"{name} has too many entries ({len(items)} > {MAX_ENTRIES})")
+    return items
 
 
 def _reject_control(value: str, name: str) -> None:
+    if len(value) > MAX_FIELD_LEN:
+        raise ValueError(f"{name} exceeds maximum length ({len(value)} > {MAX_FIELD_LEN})")
     if any(ord(ch) < 32 for ch in value):
         raise ValueError(f"{name} contains control characters")
 
 
 def parse_units(value: str) -> Dict[str, str]:
     units: Dict[str, str] = {}
-    for item in _split_csv(value):
+    for item in _split_csv(value, "units"):
         if "=" not in item:
             raise ValueError("units must use key=value entries")
         key, unit = [part.strip() for part in item.split("=", 1)]
@@ -77,6 +84,14 @@ def build_manifest(
     input_records = [file_record(path) for path in inputs]
     output_records = [file_record(path) for path in outputs]
     missing = [record["path"] for record in input_records + output_records if not record["exists"]]
+    existing_records = [
+        record for record in input_records + output_records if record["exists"]
+    ]
+    has_hashes = (
+        all("sha256" in record for record in existing_records)
+        if existing_records
+        else None
+    )
     manifest = {
         "project_name": project_name,
         "engine": engine,
@@ -94,9 +109,7 @@ def build_manifest(
             "has_outputs": bool(outputs),
             "has_units": bool(units),
             "has_engine_version": bool(engine_version),
-            "has_hashes_for_existing_files": all(
-                ("sha256" in record) for record in input_records + output_records if record["exists"]
-            ),
+            "has_hashes_for_existing_files": has_hashes,
         },
         "recommended_next_steps": [
             "add code commit or container image digest",
@@ -128,8 +141,8 @@ def main() -> int:
         manifest = build_manifest(
             project_name=args.project_name,
             engine=args.engine,
-            inputs=_split_csv(args.inputs),
-            outputs=_split_csv(args.outputs),
+            inputs=_split_csv(args.inputs, "inputs"),
+            outputs=_split_csv(args.outputs, "outputs"),
             units=parse_units(args.units),
             structure_id=args.structure_id,
             engine_version=args.engine_version,

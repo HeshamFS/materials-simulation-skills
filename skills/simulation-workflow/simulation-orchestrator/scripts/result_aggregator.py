@@ -4,13 +4,21 @@
 This script collects results from multiple simulation runs and provides
 summary statistics, identifies best/worst runs, and exports combined data.
 
+By default the aggregator MINIMIZES: best_run is the run with the lowest metric
+value (and summary.minimize is True). Pass --maximize when higher is better
+(e.g. yield, accuracy, throughput) to select the highest value instead.
+
 Usage:
-    python result_aggregator.py --campaign-dir ./sweep --metric objective_value
+    # minimize (default): best = lowest final_energy
+    python result_aggregator.py --campaign-dir ./sweep --metric final_energy
+    # maximize: best = highest yield
+    python result_aggregator.py --campaign-dir ./sweep --metric yield --maximize
 
 Output (JSON):
     {
-        "summary": {"count": 15, "completed": 12, "failed": 3},
-        "statistics": {"min": 0.1, "max": 0.9, "mean": 0.45, "std": 0.2},
+        "summary": {"total_jobs": 15, "completed": 12, "failed": 3,
+                    "metric": "final_energy", "minimize": true},
+        "statistics": {"min": 0.1, "max": 0.9, "mean": 0.45, "std": 0.2, "median": 0.4},
         "best_run": {"job_id": "job_0005", "value": 0.1, "params": {...}},
         "failed_runs": ["job_0003", "job_0008", "job_0012"]
     }

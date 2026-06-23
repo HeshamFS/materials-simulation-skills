@@ -167,6 +167,35 @@ class TestCampaignManager(unittest.TestCase):
         self.assertAlmostEqual(status["progress"], 1/3, places=4)
 
 
+    def test_init_output_fields(self):
+        """init result carries the documented keys (campaign_id, total_jobs path)."""
+        campaign = self.mod.init_campaign(self.sweep_dir, "python sim.py --config {config}")
+        # init JSON surfaces campaign_id, total_jobs (=len jobs), config_dir, command_template
+        self.assertIn("campaign_id", campaign)
+        self.assertEqual(len(campaign["jobs"]), 3)
+        self.assertIn("config_dir", campaign)
+        self.assertEqual(campaign["command_template"], "python sim.py --config {config}")
+        # init does NOT compute status/progress fields
+        self.assertNotIn("status", campaign)
+        self.assertNotIn("progress", campaign)
+
+    def test_status_output_fields(self):
+        """status output includes campaign_id, status, jobs, progress, total_jobs, created_at."""
+        self.mod.init_campaign(self.sweep_dir, "python sim.py --config {config}")
+        status = self.mod.get_campaign_status(self.sweep_dir)
+        for key in ("campaign_id", "status", "jobs", "progress", "total_jobs", "created_at"):
+            self.assertIn(key, status)
+
+    def test_action_choices_include_list(self):
+        """Regression (F4): the read-only list action works end-to-end."""
+        self.mod.init_campaign(self.sweep_dir, "python sim.py --config {config}")
+        jobs = self.mod.list_jobs(self.sweep_dir)
+        self.assertEqual(len(jobs), 3)
+        for job in jobs:
+            self.assertIn("job_id", job)
+            self.assertIn("status", job)
+            self.assertIn("config_file", job)
+
     def test_command_template_rejects_shell_chaining(self):
         """Test that dangerous shell operators in command template are rejected."""
         with self.assertRaises(ValueError):

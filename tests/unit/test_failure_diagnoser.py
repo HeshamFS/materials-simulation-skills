@@ -31,10 +31,55 @@ class TestFailureDiagnoser(unittest.TestCase):
         result = self.mod.diagnose("Solution diverging at iteration 5000")
         self.assertIn("Convergence failure", result["probable_causes"])
 
-    def test_detect_residual(self):
-        """Test residual issue detection."""
-        result = self.mod.diagnose("Residual not decreasing")
+    def test_detect_did_not_converge(self):
+        """Genuine convergence failure phrasing is detected."""
+        result = self.mod.diagnose("Newton: did not converge in 50 iterations")
         self.assertIn("Convergence failure", result["probable_causes"])
+
+    def test_detect_max_iterations(self):
+        """Max-iteration stagnation is detected as convergence failure."""
+        result = self.mod.diagnose("Linear solver: max iterations (1000) reached")
+        self.assertIn("Convergence failure", result["probable_causes"])
+
+    def test_bare_residual_is_not_convergence_failure(self):
+        """Regression (F2): the bare token 'residual' must NOT flag a failure.
+
+        It appears in virtually every healthy solver log; flagging it caused
+        successful runs to be diagnosed as 'Convergence failure'.
+        """
+        result = self.mod.diagnose("step 1 residual = 1e-8 converged successfully")
+        self.assertNotIn("Convergence failure", result["probable_causes"])
+        self.assertIn("Unknown", result["probable_causes"])
+
+    def test_success_log_is_unknown(self):
+        """Regression (F2): a fully successful run yields only 'Unknown'."""
+        log = (
+            "Timestep 100 | residual=1.27e-06\n"
+            "Simulation Complete\n"
+            "Mass conservation error: 1.00e-04\n"
+        )
+        result = self.mod.diagnose(log)
+        self.assertEqual(result["probable_causes"], ["Unknown"])
+
+    def test_domain_words_not_blowup(self):
+        """Regression (F3): materials-domain words must NOT trigger blow-up."""
+        for word in ["nanometer scale resolved", "infrastructure ready",
+                     "financial summary", "information logged", "infinitesimal step"]:
+            result = self.mod.diagnose(word)
+            self.assertNotIn(
+                "Numerical blow-up", result["probable_causes"],
+                msg=f"false blow-up on {word!r}",
+            )
+
+    def test_genuine_nan_variants_detected(self):
+        """Regression (F3): NaN, NaNs, infinity, overflow still detected."""
+        for word in ["NaN at step 10", "NaNs everywhere",
+                     "residual went to infinity", "Solution overflow"]:
+            result = self.mod.diagnose(word)
+            self.assertIn(
+                "Numerical blow-up", result["probable_causes"],
+                msg=f"missed blow-up on {word!r}",
+            )
 
     def test_detect_memory(self):
         """Test out of memory detection."""

@@ -71,7 +71,7 @@ def summarize_ontology(source: str) -> Dict:
     def _resolve_domain_range(value: Optional[str]) -> Optional[str]:
         if not value:
             return value
-        # Handle union domains like "SimulationCell | UnitCell"
+        # Handle union domains like "A | B"
         parts = [p.strip() for p in value.split("|")]
         resolved = [local_to_label.get(p, p) for p in parts]
         return " | ".join(resolved)

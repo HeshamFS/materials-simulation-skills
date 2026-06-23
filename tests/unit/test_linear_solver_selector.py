@@ -25,7 +25,8 @@ class TestLinearSolverSelector(unittest.TestCase):
         self.assertIn("CG", result["recommended"])
         self.assertTrue(any("IC/AMG" in note for note in result["notes"]))
 
-    def test_symmetric_indefinite(self):
+    def test_symmetric_indefinite_small_dense(self):
+        """Small dense symmetric-indefinite -> direct LDL^T (Bunch-Kaufman)."""
         result = self.mod.select_solver(
             symmetric=True,
             positive_definite=False,
@@ -36,7 +37,84 @@ class TestLinearSolverSelector(unittest.TestCase):
             complex_valued=False,
             memory_limited=False,
         )
+        self.assertIn("LDL^T (Bunch-Kaufman)", result["recommended"])
+        self.assertIn("MINRES", result["alternatives"])
+
+    def test_symmetric_indefinite_large_sparse(self):
+        """Large sparse symmetric-indefinite -> iterative MINRES."""
+        result = self.mod.select_solver(
+            symmetric=True,
+            positive_definite=False,
+            sparse=True,
+            size=500_000,
+            nearly_symmetric=False,
+            ill_conditioned=False,
+            complex_valued=False,
+            memory_limited=False,
+        )
         self.assertIn("MINRES", result["recommended"])
+
+    def test_dense_spd_infeasible_routes_to_cg(self):
+        """Regression (F3): a dense SPD matrix too large to factor in memory
+        must route to CG with a dense-storage note, not recommend Cholesky."""
+        result = self.mod.select_solver(
+            symmetric=True,
+            positive_definite=True,
+            sparse=False,
+            size=199_999,
+            nearly_symmetric=False,
+            ill_conditioned=False,
+            complex_valued=False,
+            memory_limited=False,
+        )
+        self.assertIn("CG", result["recommended"])
+        self.assertNotIn("Cholesky", result["recommended"])
+        self.assertTrue(any("GB" in note for note in result["notes"]))
+
+    def test_small_dense_spd_uses_cholesky(self):
+        """Small dense SPD still recommends a direct Cholesky factorization."""
+        result = self.mod.select_solver(
+            symmetric=True,
+            positive_definite=True,
+            sparse=False,
+            size=1000,
+            nearly_symmetric=False,
+            ill_conditioned=False,
+            complex_valued=False,
+            memory_limited=False,
+        )
+        self.assertIn("Cholesky", result["recommended"])
+
+    def test_small_dense_nonsymmetric_uses_lu(self):
+        """Small dense nonsymmetric -> direct LU with partial pivoting."""
+        result = self.mod.select_solver(
+            symmetric=False,
+            positive_definite=False,
+            sparse=False,
+            size=800,
+            nearly_symmetric=False,
+            ill_conditioned=False,
+            complex_valued=False,
+            memory_limited=False,
+        )
+        self.assertIn("LU (partial pivoting)", result["recommended"])
+
+    def test_saddle_point(self):
+        """Regression (F6): saddle-point structure routes to Schur/Uzawa with a
+        block-preconditioner warning."""
+        result = self.mod.select_solver(
+            symmetric=False,
+            positive_definite=False,
+            sparse=True,
+            size=50_000,
+            nearly_symmetric=False,
+            ill_conditioned=False,
+            complex_valued=False,
+            memory_limited=False,
+            saddle_point=True,
+        )
+        self.assertTrue(any("Schur" in r for r in result["recommended"]))
+        self.assertTrue(any("block" in note.lower() for note in result["notes"]))
 
     def test_nonsymmetric(self):
         result = self.mod.select_solver(

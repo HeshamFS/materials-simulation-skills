@@ -120,7 +120,8 @@ When reporting GCI results, include:
     Refinement ratio: r = 2.0
     Solution values: f1=1.0008, f2=1.0032, f3=1.0128
     Observed order: p = 2.00
-    GCI_fine = 0.027%
+    GCI_fine = 0.10%   (precise value 0.0999%)
+    GCI_coarse = 0.40%
     Richardson extrapolated value: 1.00000
     Asymptotic ratio: 1.000
     Conclusion: Solution is in asymptotic range; GCI is reliable.

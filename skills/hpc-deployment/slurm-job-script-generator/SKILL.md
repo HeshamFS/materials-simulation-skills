@@ -13,15 +13,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 5
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # SLURM Job Script Generator
@@ -72,11 +71,25 @@ Does the code use OpenMP / threading?
 - Follow your cluster’s documentation; some sites enforce one style.
 - SLURM `--mem` units are integer MB by default, or an integer with suffix `K/M/G/T` (and `--mem=0` commonly means “all memory on node”).
 
+### Launcher selection (avoid double-wrapping)
+
+- By default (`--launcher srun`) the generator prepends `srun --ntasks=N --cpus-per-task=T` to your run command so it inherits SLURM task placement.
+- **If your run command already starts with `srun`, `mpirun`, or `mpiexec`, pass `--launcher none`** so the generator does not double-wrap it. Wrapping `srun` around `mpirun` launches N independent copies of `mpirun` (each spawning its own MPI world); wrapping `srun` around `srun` is malformed.
+- As a safety net, the generator auto-detects a leading launcher (`srun`, `mpirun`, `mpiexec`, `mpiexec.hydra`, `orterun`, `aprun`, `jsrun`) and falls back to no-wrap, emitting a warning that recommends `--launcher none`.
+
+### GPU layout
+
+- Ranks-per-GPU = `total_ranks / (nodes * gpus_per_node)`. When `--gpus-per-node` is set the generator reports `results.derived.total_gpus` and `results.derived.ranks_per_gpu`.
+- Aim to map ranks evenly to devices. If `ntasks` is **not** divisible by the total number of GPUs, the generator emits a "task-to-GPU ratio is not an integer" warning; either adjust `ntasks`/GPUs or document intentional sharing (e.g. NVIDIA MPS).
+- Consider binding options such as `--gpu-bind=closest` or `--ntasks-per-gpu` (passed via your run command / `--srun-extra`). GPU and QoS policies are site-specific — confirm with your cluster docs.
+
 ## Script Outputs (JSON Fields)
 
 | Script | Key Outputs |
 |--------|-------------|
-| `scripts/slurm_script_generator.py` | `results.script`, `results.directives`, `results.derived`, `results.warnings` |
+| `scripts/slurm_script_generator.py` | `results.script`, `results.directives`, `results.derived`, `results.warnings`, `results.run_line` |
+
+`results.derived` reports `ntasks`, `ntasks_per_node`, `cpus_total_requested`, and (when applicable) `cores_per_node`, `cpus_per_node_requested`, `total_gpus`, and `ranks_per_gpu`. `results.warnings` may include CPU oversubscription, task-to-GPU ratio, and double-launcher warnings.
 
 ## Workflow
 
@@ -125,7 +138,7 @@ python3 skills/hpc-deployment/slurm-job-script-generator/scripts/slurm_script_ge
 1. Confirm partition/account and whether GPUs are needed.
 2. Generate a hybrid job script:
    ```bash
-   python3 scripts/slurm_script_generator.py --job-name run --time 02:00:00 --nodes 2 --ntasks-per-node 64 --cpus-per-task 2 -- -- ./simulate
+   python3 scripts/slurm_script_generator.py --job-name run --time 02:00:00 --nodes 2 --ntasks-per-node 64 --cpus-per-task 2 -- ./simulate
    ```
 3. Explain the mapping:
    - Total ranks = 128
@@ -140,16 +153,22 @@ python3 skills/hpc-deployment/slurm-job-script-generator/scripts/slurm_script_ge
 | `nodes must be positive` | Non-positive nodes | Provide `--nodes >= 1` |
 | `Provide either --mem or --mem-per-cpu, not both` | Conflicting memory directives | Choose one memory style |
 | `Provide a run command after --` | Missing launch command | Add `-- ./simulate ...` |
+| `--partition must match /^[A-Za-z0-9]...` | Partition/account/qos/constraint/reservation contains spaces or shell metacharacters | Use a plain identifier |
+| `module must match /^[A-Za-z0-9]...` | Module name contains shell metacharacters | Use e.g. `gcc/12`, `openmpi/4.1` |
+| `nodes must be <= 100000 (got ...)` | Integer request exceeds the sanity upper bound | Re-check the requested value |
 
 ## Security
 
 ### Input Validation
-- `--time` is validated against strict `HH:MM:SS` or `D-HH:MM:SS` format via regex
-- `--nodes`, `--ntasks`, `--ntasks-per-node`, `--cpus-per-task`, `--gpus` are validated as positive integers with upper bounds
-- `--mem` and `--mem-per-cpu` are validated against SLURM's accepted format (`<int>[K|M|G|T]`); providing both simultaneously is rejected
-- `--job-name` is validated against `[a-zA-Z0-9_.-]+` (no shell metacharacters)
-- `--partition` and `--account` are validated against safe-character allowlists
-- `--module` values are validated to prevent shell injection (no `;`, `|`, `&`, backticks, or `$`)
+- `--time` is validated against strict `HH:MM:SS` or `D-HH:MM:SS` format via regex (minutes/seconds in `[00,59]`)
+- `--nodes`, `--ntasks`, `--ntasks-per-node`, `--cpus-per-task`, `--gpus-per-node`, `--cores-per-node` are validated as positive integers with generous upper bounds (e.g. nodes ≤ 100000, ntasks ≤ 10000000, cpus-per-task ≤ 4096, gpus-per-node ≤ 64); the derived total `ntasks = nodes * ntasks-per-node` is also bounds-checked
+- `--mem` and `--mem-per-cpu` are validated against SLURM's accepted format (`^[0-9]+([KMGT])?$`); providing both simultaneously is rejected
+- `--job-name` is validated against `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$` (no spaces or shell metacharacters)
+- `--partition`, `--account`, `--qos`, `--constraint`, `--reservation`, and `--gpu-type` are validated against a safe-character allowlist `^[A-Za-z0-9][A-Za-z0-9._:,+-]{0,127}$` before being emitted into `#SBATCH` directives
+- `--module` values are validated against `^[A-Za-z0-9][A-Za-z0-9._/+-]{0,127}$` to prevent shell injection (no `;`, `|`, `&`, backticks, `$`, or whitespace)
+- `--env` keys must be valid shell identifiers (`^[A-Za-z_][A-Za-z0-9_]*$`); values are shell-quoted in the generated `export` lines
+- `--srun-extra` is tokenized with `shlex.split` and each token is re-quoted with `shlex.quote`, so it cannot inject shell syntax (`;`, `|`, `&`, `$`, ...) into the run line
+- Invalid input causes the CLI to print a message to stderr and exit with code `2`
 
 ### File Access
 - The script reads no external files; all inputs are provided via CLI arguments
@@ -165,9 +184,9 @@ python3 skills/hpc-deployment/slurm-job-script-generator/scripts/slurm_script_ge
 ### Safety Measures
 - No `eval()`, `exec()`, or dynamic code generation
 - All subprocess calls use explicit argument lists (no `shell=True`)
-- The run command (after `--`) is included verbatim in the generated script but is never executed by the skill itself
-- Module names are sanitized to prevent injection into `module load` directives
-- Generated scripts use `set -euo pipefail` for safe shell execution on the cluster
+- The run command (after `--`) is shell-quoted token-by-token into the generated script but is never executed by the skill itself
+- Module names, `--srun-extra` tokens, and identifier-style fields are sanitized/quoted to prevent injection into `module load`, the `srun` invocation, or `#SBATCH` directives
+- Generated scripts place all `#SBATCH` directives immediately after the shebang (before any executable command, so SLURM does not stop parsing them) and use `set -euo pipefail` for safe shell execution on the cluster
 
 ## Limitations
 
@@ -180,4 +199,6 @@ python3 skills/hpc-deployment/slurm-job-script-generator/scripts/slurm_script_ge
 
 ## Version History
 
+- **v1.2.0** (2026-06-23): Fixed critical directive-ordering bug (all `#SBATCH` lines now precede `set -euo pipefail`), avoided double-launcher wrapping when the run command already starts with `srun`/`mpirun`, added GPU task-to-GPU ratio warning and layout guidance, hardened input validation (integer upper bounds, partition/account/qos/constraint/reservation/gpu-type allowlists, module sanitization, `--srun-extra` quoting), escaped `%j` in `--help`, and corrected the Security and output documentation.
+- **v1.1.0** (2026-03-26): Optimized description for discovery, added eval suite, security review, standardized metadata, and CHANGELOG.
 - **v1.0.0** (2026-02-25): Initial SLURM job script generator

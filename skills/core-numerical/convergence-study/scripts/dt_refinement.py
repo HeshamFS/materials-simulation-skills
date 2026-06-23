@@ -47,6 +47,8 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
     """
     if len(timesteps) != len(values):
         raise ValueError("timesteps and values must have the same length")
+    if len(timesteps) > 10000:
+        raise ValueError("too many refinement levels (max 10000)")
     if len(timesteps) < 2:
         raise ValueError("At least 2 refinement levels required")
     for t in timesteps:
@@ -104,8 +106,8 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
         mean_order = sum(observed_orders) / len(observed_orders)
 
     # Check for pre-asymptotic behavior
-    in_asymptotic_range = True
     if len(observed_orders) >= 2:
+        in_asymptotic_range = True
         for i in range(len(observed_orders) - 1):
             p1 = observed_orders[i]
             p2 = observed_orders[i + 1]
@@ -114,8 +116,12 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
                 in_asymptotic_range = False
                 notes.append("Pre-asymptotic behavior detected: observed order varies >50%% between consecutive pairs")
                 break
+        # A non-positive observed order means the solution is not converging.
+        if mean_order is not None and mean_order <= 0:
+            in_asymptotic_range = False
     elif len(observed_orders) == 1:
-        in_asymptotic_range = True
+        # Single estimate: only "asymptotic" if the order is positive (converging).
+        in_asymptotic_range = mean_order is not None and mean_order > 0
     else:
         in_asymptotic_range = None
 
@@ -129,6 +135,14 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
 
     if mean_order is not None and mean_order > 0:
         richardson_extrapolated_value = f_fine + (f_fine - f_next) / (r ** mean_order - 1)
+    elif mean_order is not None and mean_order <= 0:
+        # Non-positive observed order: solution appears to be diverging.
+        # Do not fall back to expected order; an extrapolated value would be misleading.
+        richardson_extrapolated_value = None
+        notes.append(
+            "Observed order is non-positive -- solution appears to be diverging; "
+            "Richardson extrapolation is not meaningful and was not computed."
+        )
     elif expected_order is not None and expected_order > 0:
         richardson_extrapolated_value = f_fine + (f_fine - f_next) / (r ** expected_order - 1)
         notes.append("Richardson extrapolation used expected order (no observed order available)")

@@ -20,6 +20,24 @@ class TestTruncationError(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.mod.estimate_truncation_error(dx=0.0, accuracy=2, scale=1.0)
 
+    def test_non_finite_dx_rejected(self):
+        with self.assertRaises(ValueError):
+            self.mod.estimate_truncation_error(
+                dx=float("inf"), accuracy=2, scale=1.0
+            )
+
+    def test_non_finite_scale_rejected(self):
+        with self.assertRaises(ValueError):
+            self.mod.estimate_truncation_error(
+                dx=0.1, accuracy=2, scale=float("nan")
+            )
+
+    def test_dx_001_accuracy_2(self):
+        # Matches SKILL.md / eval 3: dx=0.001, accuracy=2 -> error ~1e-6.
+        result = self.mod.estimate_truncation_error(dx=0.001, accuracy=2, scale=1.0)
+        self.assertAlmostEqual(result["error_scale"], 1e-6, places=12)
+        self.assertEqual(result["reduction_if_halved"], 4)
+
 
 if __name__ == "__main__":
     unittest.main()

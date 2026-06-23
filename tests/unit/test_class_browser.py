@@ -124,6 +124,43 @@ class TestClassBrowser(unittest.TestCase):
         with self.assertRaises(ValueError):
             CLASS_BROWSER.browse_class(SAMPLE_SUMMARY)
 
+    def test_applicable_properties_spaceless_domain(self):
+        # A property whose domain is the spaceless canonical token must still
+        # match a spaced class label (consistent with property_lookup).
+        summary = {
+            "classes": {
+                "Unit Cell": {
+                    "iri": "http://example.org/UnitCell",
+                    "parent": None,
+                    "children": [],
+                    "description": None,
+                },
+            },
+            "object_properties": {},
+            "data_properties": {
+                "has basis": {
+                    "iri": "http://example.org/hasBasis",
+                    "domain": "UnitCell",
+                    "range_type": "string",
+                    "description": None,
+                },
+            },
+        }
+        result = CLASS_BROWSER.browse_class(summary, class_name="UnitCell")
+        data_names = [
+            p["name"] for p in result["properties"]["data_properties"]
+        ]
+        self.assertIn("has basis", data_names)
+
+    # --- Security hardening ---
+    def test_unsafe_search_rejected(self):
+        with self.assertRaises(ValueError):
+            CLASS_BROWSER.browse_class(SAMPLE_SUMMARY, search="foo;rm")
+
+    def test_overlong_class_rejected(self):
+        with self.assertRaises(ValueError):
+            CLASS_BROWSER.browse_class(SAMPLE_SUMMARY, class_name="a" * 200)
+
 
 if __name__ == "__main__":
     unittest.main()

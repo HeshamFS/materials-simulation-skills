@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # Security limits
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
+MAX_WINDOW = 10_000_000
 
 
 def _validate_file_size(filepath: str) -> None:
@@ -181,6 +182,49 @@ def compute_rate_of_change(
         rates.append(rate)
 
     return rates
+
+
+def detect_convergence_by_threshold(
+    values: List[float],
+    threshold: float,
+) -> Dict[str, Any]:
+    """Convergence test for residual/error quantities by absolute magnitude.
+
+    A residual is considered converged when its final value is at or below an
+    absolute ``threshold`` (e.g. ``residual <= 1e-6``). This is the physically
+    correct test for monotonically decreasing residuals, where the relative
+    'has it stopped changing' steady-state test would report not-reached even
+    for an excellently converged solver.
+    """
+    if not values:
+        return {
+            "reached": False,
+            "criterion": "absolute_threshold",
+            "threshold": threshold,
+            "final_value": None,
+            "index": None,
+        }
+
+    final = values[-1]
+    reached = abs(final) <= threshold
+
+    index = None
+    if reached:
+        # First index from which all subsequent values stay at/below threshold.
+        index = len(values) - 1
+        for i in range(len(values) - 1, -1, -1):
+            if abs(values[i]) <= threshold:
+                index = i
+            else:
+                break
+
+    return {
+        "reached": reached,
+        "criterion": "absolute_threshold",
+        "threshold": threshold,
+        "final_value": final,
+        "index": index,
+    }
 
 
 def detect_steady_state(
@@ -394,7 +438,15 @@ def main():
         "--tolerance",
         type=float,
         default=1e-6,
-        help="Tolerance for steady state detection (default: 1e-6)"
+        help="Relative tolerance for steady state detection (default: 1e-6)"
+    )
+    parser.add_argument(
+        "--absolute-threshold",
+        type=float,
+        default=None,
+        help="Absolute convergence threshold for residual/error quantities. "
+             "When set, reports convergence as final value <= threshold "
+             "(the physically correct test for monotonically decreasing residuals)."
     )
     parser.add_argument(
         "--include-smoothed",
@@ -410,6 +462,14 @@ def main():
     args = parser.parse_args()
 
     try:
+        # Validate --window as a positive integer with an upper bound
+        if args.window < 1 or args.window > MAX_WINDOW:
+            print(
+                f"Error: --window must be between 1 and {MAX_WINDOW} (got {args.window})",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
         # Load data
         if not os.path.exists(args.input):
             print(f"Error: File not found: {args.input}", file=sys.stderr)
@@ -454,6 +514,11 @@ def main():
                 values,
                 tolerance=args.tolerance,
                 window=args.window
+            )
+
+        if args.absolute_threshold is not None:
+            result["convergence_threshold"] = detect_convergence_by_threshold(
+                values, args.absolute_threshold
             )
 
         if args.include_smoothed:
@@ -506,6 +571,13 @@ def main():
                 else:
                     print(f"  Variation: {ss['relative_variation']:.2e}")
                     print(f"  (need < {ss['tolerance']:.2e})")
+
+            if "convergence_threshold" in result:
+                ct = result["convergence_threshold"]
+                print(f"\nConvergence (absolute threshold):")
+                print(f"  Converged: {ct['reached']}")
+                print(f"  Final value: {ct['final_value']:.6g}")
+                print(f"  Threshold: {ct['threshold']:.2e}")
 
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

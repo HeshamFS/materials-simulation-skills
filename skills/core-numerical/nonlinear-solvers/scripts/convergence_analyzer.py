@@ -7,6 +7,72 @@ import sys
 from typing import Any, Dict, List, Optional
 
 
+# Security limit: cap residual-list length to prevent memory exhaustion.
+MAX_LIST_LENGTH = 100_000
+
+
+def _estimate_order(residuals: List[float]) -> Optional[float]:
+    """Estimate the convergence order p from a residual sequence.
+
+    Uses the standard residual-ratio estimate (references/convergence_diagnostics.md):
+        p ~= log(r_{k+1}/r_k) / log(r_k/r_{k-1})
+    averaged over the last few usable triples. Returns None if there are not
+    enough strictly decreasing, positive residuals to form an estimate.
+    """
+    # Keep only the trailing positive residuals.
+    positive = [r for r in residuals if r > 1e-300]
+    if len(positive) < 3:
+        return None
+
+    orders: List[float] = []
+    # Use up to the last 5 residuals (4 ratios, 3 order estimates).
+    window = positive[-5:]
+    for i in range(2, len(window)):
+        r_prev, r_cur, r_next = window[i - 2], window[i - 1], window[i]
+        denom_ratio = r_cur / r_prev
+        numer_ratio = r_next / r_cur
+        # Order estimate is only meaningful when residuals are decreasing.
+        if 0.0 < denom_ratio < 1.0 and 0.0 < numer_ratio < 1.0:
+            log_denom = math.log(denom_ratio)
+            if abs(log_denom) > 1e-12:
+                p = math.log(numer_ratio) / log_denom
+                if math.isfinite(p):
+                    orders.append(p)
+
+    if not orders:
+        return None
+    return sum(orders) / len(orders)
+
+
+def _classify_order(residuals: List[float], avg_rate: float) -> str:
+    """Classify convergence type from the estimated order and average ratio.
+
+    Textbook definitions (references/convergence_diagnostics.md):
+      - linear:      r_{k+1}/r_k -> constant in (0, 1)        -> order p ~= 1
+      - superlinear: r_{k+1}/r_k -> 0 with ratios decreasing  -> 1 < p < 2
+      - quadratic:   r_{k+1} ~ C r_k^2                         -> order p ~= 2
+
+    A CONSTANT contraction ratio (even a small one like 0.1) is LINEAR, not
+    superlinear; superlinear requires the ratio to tend to zero.
+    """
+    p = _estimate_order(residuals)
+
+    if avg_rate >= 0.9:
+        return "sublinear"
+
+    if p is None:
+        # Not enough decreasing data to estimate order; fall back to rate only.
+        # Without evidence that ratios are shrinking, treat as (fast) linear.
+        return "linear"
+
+    if p >= 1.8:
+        return "quadratic"
+    if p > 1.2:
+        return "superlinear"
+    # p ~= 1: constant contraction ratio -> linear (annotate 'fast' downstream).
+    return "linear"
+
+
 def analyze_convergence(
     residuals: List[float],
     tolerance: float = 1e-10,
@@ -23,11 +89,20 @@ def analyze_convergence(
     if not residuals:
         raise ValueError("residuals must not be empty")
 
+    if len(residuals) > MAX_LIST_LENGTH:
+        raise ValueError(
+            f"residual list length ({len(residuals)}) exceeds limit "
+            f"({MAX_LIST_LENGTH})"
+        )
+
+    if any(not math.isfinite(r) for r in residuals):
+        raise ValueError("residuals must be finite")
+
     if any(r < 0 for r in residuals):
         raise ValueError("residuals must be non-negative")
 
-    if tolerance <= 0:
-        raise ValueError("tolerance must be positive")
+    if not math.isfinite(tolerance) or tolerance <= 0:
+        raise ValueError("tolerance must be a positive finite number")
 
     n = len(residuals)
     final_residual = residuals[-1]
@@ -88,39 +163,7 @@ def analyze_convergence(
         avg_rate = sum(rates) / len(rates)
         estimated_rate = avg_rate
 
-        # Try to detect quadratic convergence by looking at log-log behavior
-        # For quadratic: log(r_{k+1}) ≈ 2 * log(r_k)
-        if n >= 4 and all(r > 1e-30 for r in residuals):
-            log_residuals = [math.log10(r) for r in residuals if r > 0]
-            if len(log_residuals) >= 4:
-                # Check if log(r_{k+1}) / log(r_k) ≈ 2 for quadratic
-                log_ratios = []
-                for i in range(1, len(log_residuals)):
-                    if abs(log_residuals[i - 1]) > 0.1:
-                        log_ratios.append(log_residuals[i] / log_residuals[i - 1])
-
-                if log_ratios and all(1.5 < r < 2.5 for r in log_ratios[-3:]):
-                    convergence_type = "quadratic"
-                elif avg_rate < 0.3:
-                    convergence_type = "superlinear"
-                elif avg_rate < 0.9:
-                    convergence_type = "linear"
-                else:
-                    convergence_type = "sublinear"
-            else:
-                if avg_rate < 0.3:
-                    convergence_type = "superlinear"
-                elif avg_rate < 0.9:
-                    convergence_type = "linear"
-                else:
-                    convergence_type = "sublinear"
-        else:
-            if avg_rate < 0.3:
-                convergence_type = "superlinear"
-            elif avg_rate < 0.9:
-                convergence_type = "linear"
-            else:
-                convergence_type = "sublinear"
+        convergence_type = _classify_order(residuals, avg_rate)
 
     # Generate diagnosis and recommendation
     diagnosis_map = {
@@ -141,6 +184,14 @@ def analyze_convergence(
 
     diagnosis = diagnosis_map.get(convergence_type, "Unknown convergence behavior.")
     recommended_action = action_map.get(convergence_type, "Review solver configuration.")
+
+    # Annotate fast (but still linear) convergence: a small constant contraction
+    # ratio is fast-linear, not superlinear.
+    if convergence_type == "linear" and estimated_rate is not None and estimated_rate < 0.2:
+        diagnosis = (
+            "Fast linear convergence (small constant contraction ratio); "
+            "this is not superlinear, but the rate is good."
+        )
 
     if converged:
         recommended_action = "Solver converged successfully."
@@ -204,7 +255,7 @@ def main() -> None:
     }
 
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
         return
 
     print("Convergence analysis")

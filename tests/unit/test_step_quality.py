@@ -145,6 +145,31 @@ class TestStepQuality(unittest.TestCase):
         # Should handle gracefully
         self.assertIn("notes", result)
 
+    def test_negative_infinite_ratio_serialized_as_none(self):
+        """Regression (F3): -inf ratio must be sanitized to None for valid JSON."""
+        import json
+
+        result = self.mod.evaluate_step(
+            predicted_reduction=0.0,
+            actual_reduction=-0.5,
+            step_norm=0.1,
+            gradient_norm=1.0,
+        )
+        self.assertIsNone(result["ratio"])
+        self.assertEqual(result["step_quality"], "very_poor")
+        # Must serialize as strict (no NaN/Infinity tokens) JSON.
+        json.dumps(result, allow_nan=False)
+
+    def test_non_finite_actual_reduction_raises(self):
+        """Security: non-finite actual reduction raises ValueError."""
+        with self.assertRaises(ValueError):
+            self.mod.evaluate_step(
+                predicted_reduction=1.0,
+                actual_reduction=float("inf"),
+                step_norm=0.5,
+                gradient_norm=1.0,
+            )
+
     def test_invalid_predicted_reduction_raises(self):
         """Test that negative predicted reduction raises ValueError."""
         with self.assertRaises(ValueError):

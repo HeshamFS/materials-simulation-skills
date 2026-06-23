@@ -13,15 +13,14 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 4
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Mesh Generation
@@ -68,10 +67,19 @@ What is the smallest feature size?
 
 ## Script Outputs (JSON Fields)
 
-| Script | Key Outputs |
-|--------|-------------|
-| `scripts/grid_sizing.py` | `dx`, `nx`, `ny`, `nz`, `notes` |
-| `scripts/mesh_quality.py` | `aspect_ratio`, `skewness`, `quality_flags` |
+All scripts emit a top-level object with `inputs` (the echoed CLI values) and
+`results` (the computed fields below). Index as `result["results"]["..."]`.
+
+| Script | `results` Fields |
+|--------|------------------|
+| `scripts/grid_sizing.py` | `dx`, `counts` (list of per-dimension cell counts, length == `dims`), `notes` |
+| `scripts/mesh_quality.py` | `aspect_ratio`, `skewness`, `size_anisotropy`, `quality_flags`, `dims`, `notes` |
+
+`mesh_quality.py` describes axis-aligned (orthogonal Cartesian) cells defined
+purely by edge spacings. For such cells every interior angle is 90°, so the true
+angular `skewness` is always `0.0` and `high_skewness` is never flagged.
+Cell elongation is reported separately via `aspect_ratio` and the redundant
+convenience field `size_anisotropy` (= `1 - 1/aspect_ratio`).
 
 ## Workflow
 
@@ -107,20 +115,24 @@ What is the smallest feature size?
 # Compute grid sizing for 1D domain
 python3 scripts/grid_sizing.py --length 1.0 --resolution 200 --json
 
-# Check mesh quality
+# Check mesh quality (3D cell)
 python3 scripts/mesh_quality.py --dx 1.0 --dy 0.5 --dz 0.5 --json
 
-# High aspect ratio check
+# High aspect ratio check (2D cell; --dz omitted is treated as 2D)
 python3 scripts/mesh_quality.py --dx 1.0 --dy 0.1 --json
 ```
 
 ## Error Handling
 
-| Error | Cause | Resolution |
-|-------|-------|------------|
-| `length must be positive` | Invalid domain size | Use positive value |
-| `resolution must be > 1` | Insufficient points | Use at least 2 |
-| `dx, dy must be positive` | Invalid spacing | Use positive values |
+All validation errors are written to stderr and the script exits with code `2`.
+
+| Error message | Cause | Resolution |
+|---------------|-------|------------|
+| `length must be positive, got ...` | Non-positive domain size | Use a positive value |
+| `resolution must be positive, got ...` | Non-positive resolution (`resolution=1` is a valid single-cell mesh) | Use a positive integer |
+| `dims must be one of (1, 2, 3), got ...` | Unsupported dimension count | Use `1`, `2`, or `3` |
+| `<name> must be a finite positive number, got ...` | `dx`/`dy`/`dz` not finite or not positive | Use a finite positive value |
+| `<name> exceeds maximum (...), got ...` | Input above the resource-exhaustion bound | Use a smaller value |
 
 ## Interpretation Guidance
 
@@ -135,12 +147,24 @@ python3 scripts/mesh_quality.py --dx 1.0 --dy 0.1 --json
 
 ### Skewness
 
+Skewness is the angular deviation from the ideal cell shape
+(`max(|90° - θ_i|) / 90°` for quads/hexes — see `references/quality_metrics.md`).
+`mesh_quality.py` works from axis-aligned edge spacings, which describe
+orthogonal Cartesian cells whose interior angles are all exactly 90°; it
+therefore always reports `skewness = 0.0` for these cells. The thresholds below
+apply when a genuine skewness value is obtained from real cell-corner geometry
+(e.g. from an unstructured mesh), not from `dx/dy/dz` spacings.
+
 | Skewness | Quality | Impact |
 |----------|---------|--------|
 | 0 - 0.25 | Excellent | Optimal |
 | 0.25 - 0.50 | Good | Acceptable |
 | 0.50 - 0.80 | Fair | May affect accuracy |
 | > 0.80 | Poor | Likely problems |
+
+> Note: cell elongation is **not** skewness. An anisotropic but orthogonal cell
+> (e.g. a wall-aligned boundary-layer cell) has high `aspect_ratio` /
+> `size_anisotropy` but zero skewness, and is often perfectly acceptable.
 
 ### Resolution Guidelines
 
@@ -178,8 +202,9 @@ python3 scripts/mesh_quality.py --dx 1.0 --dy 0.1 --json
 ## Limitations
 
 - **2D/3D only**: No unstructured mesh generation
-- **Quality metrics**: Basic aspect ratio and skewness only
+- **Quality metrics**: Aspect ratio and size anisotropy from axis-aligned spacings only; skewness is reported as 0 for these orthogonal cells (true angular skewness requires real cell-corner geometry)
 - **No mesh generation**: Sizing recommendations only
+- **Isotropic per call**: `grid_sizing.py` takes a single `--length` and applies the resulting count to every dimension. For an anisotropic domain (e.g. 10 cm × 5 cm), run it once per differing edge length, or compute `dx` from physics and apply it per axis (e.g. `--length 0.10 --dx 5e-5`, then `--length 0.05 --dx 5e-5`).
 
 ## References
 
@@ -188,5 +213,6 @@ python3 scripts/mesh_quality.py --dx 1.0 --dy 0.1 --json
 
 ## Version History
 
+- **v1.2.0** (2026-06-23): Corrected skewness science (orthogonal cells now report skewness 0), added `size_anisotropy`, made `mesh_quality.py --dz` optional (2D cells), fixed grid_sizing off-by-one for resolution-derived counts, surfaced dx-override note, corrected output/error-handling docs
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 2 mesh quality scripts

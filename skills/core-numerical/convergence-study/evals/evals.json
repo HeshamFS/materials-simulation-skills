@@ -10,6 +10,38 @@
         "Reports observed convergence order close to 2.0",
         "Provides Richardson extrapolated value near 100 MPa",
         "States solution is in asymptotic convergence range"
+      ],
+      "script_checks": [
+        {
+          "description": "h-refinement observed order ~2 (asymptotic)",
+          "cmd": [
+            "scripts/h_refinement.py",
+            "--spacings",
+            "0.4,0.2,0.1,0.05",
+            "--values",
+            "98.5,99.6,99.9,99.975",
+            "--expected-order",
+            "2.0",
+            "--json"
+          ],
+          "assert": [
+            {
+              "path": "results.mean_order",
+              "op": "ge",
+              "value": 1.8
+            },
+            {
+              "path": "results.mean_order",
+              "op": "le",
+              "value": 2.1
+            },
+            {
+              "path": "results.in_asymptotic_range",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
       ]
     },
     {
@@ -32,17 +64,48 @@
         "Reports observed order, GCI_fine, and GCI_coarse values",
         "Evaluates asymptotic ratio and whether it is close to 1.0",
         "Notes ASME V&V 20 standard context and safety factor of 1.25"
+      ],
+      "script_checks": [
+        {
+          "description": "GCI three-mesh: order ~2.09, in asymptotic range",
+          "cmd": [
+            "scripts/gci_calculator.py",
+            "--spacings",
+            "0.04,0.02,0.01",
+            "--values",
+            "0.3412,0.3378,0.3370",
+            "--json"
+          ],
+          "assert": [
+            {
+              "path": "results.observed_order",
+              "op": "approx",
+              "value": 2.0875,
+              "abs_tol": 0.01
+            },
+            {
+              "path": "results.in_asymptotic_range",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "results.gci_fine",
+              "op": "lt",
+              "value": 0.01
+            }
+          ]
+        }
       ]
     },
     {
       "id": 4,
       "prompt": "My temporal convergence study with dt=0.04,0.02,0.01 gives values 2.12, 2.03, 2.0075 for a quantity that should converge at 2nd order. But the results look suspicious -- the order seems too high. Can you check?",
-      "expected_output": "Analysis showing observed order and whether it matches or exceeds expected 2nd order, with possible superconvergence flag.",
+      "expected_output": "Analysis showing the observed order is exactly 2.0 (PASS against the expected 2nd order), debunking the user's suspicion of superconvergence.",
       "assertions": [
         "Uses dt_refinement.py with --timesteps 0.04,0.02,0.01 --values 2.12,2.03,2.0075 --expected-order 2.0",
-        "Reports observed temporal convergence order",
-        "Addresses whether observed order exceeding expected order indicates superconvergence or cancellation",
-        "Recommends additional refinement levels to confirm the trend"
+        "Reports observed temporal convergence order of 2.0",
+        "Evaluates whether the order exceeds 2 and explicitly states it does not (no superconvergence/cancellation)",
+        "Concludes the observed order is exactly 2.0 (PASS), so the user's suspicion of superconvergence is not supported by the data"
       ]
     }
   ]

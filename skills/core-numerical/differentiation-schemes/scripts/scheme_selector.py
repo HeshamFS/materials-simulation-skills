@@ -34,8 +34,12 @@ def select_scheme(
             alternatives.append("High-order central FD")
         elif smooth:
             recommended.append("Central FD")
+            alternatives.append("Higher-order upwind (2nd/4th)")
             if accuracy >= 4:
                 alternatives.append("Compact FD")
+            notes.append(
+                "Run truncation_error.py to quantify the accuracy gain over 1st-order upwind."
+            )
         else:
             recommended.append("Upwind FD")
             alternatives.append("FV")

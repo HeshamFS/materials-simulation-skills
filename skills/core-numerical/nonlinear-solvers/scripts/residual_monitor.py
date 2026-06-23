@@ -2,8 +2,13 @@
 """Monitor residual patterns and detect failure modes."""
 import argparse
 import json
+import math
 import sys
 from typing import Any, Dict, List, Optional
+
+
+# Security limit: cap list lengths to prevent memory exhaustion.
+MAX_LIST_LENGTH = 100_000
 
 
 def monitor_residuals(
@@ -26,11 +31,35 @@ def monitor_residuals(
     if not residuals:
         raise ValueError("residuals must not be empty")
 
+    if len(residuals) > MAX_LIST_LENGTH:
+        raise ValueError(
+            f"residual list length ({len(residuals)}) exceeds limit "
+            f"({MAX_LIST_LENGTH})"
+        )
+
+    if any(not math.isfinite(r) for r in residuals):
+        raise ValueError("residuals must be finite")
+
     if any(r < 0 for r in residuals):
         raise ValueError("residuals must be non-negative")
 
-    if target_tolerance <= 0:
-        raise ValueError("target_tolerance must be positive")
+    if function_evals is not None and len(function_evals) > MAX_LIST_LENGTH:
+        raise ValueError(
+            f"function_evals list length ({len(function_evals)}) exceeds limit "
+            f"({MAX_LIST_LENGTH})"
+        )
+
+    if step_sizes is not None:
+        if len(step_sizes) > MAX_LIST_LENGTH:
+            raise ValueError(
+                f"step_sizes list length ({len(step_sizes)}) exceeds limit "
+                f"({MAX_LIST_LENGTH})"
+            )
+        if any(not math.isfinite(s) for s in step_sizes):
+            raise ValueError("step_sizes must be finite")
+
+    if not math.isfinite(target_tolerance) or target_tolerance <= 0:
+        raise ValueError("target_tolerance must be a positive finite number")
 
     n = len(residuals)
     patterns_detected: List[str] = []
@@ -57,7 +86,6 @@ def monitor_residuals(
         if total_function_evals > 0:
             # Orders of magnitude reduced per function eval
             if residual_reduction > 0 and residual_reduction < 1:
-                import math
                 log_reduction = -math.log10(residual_reduction)
                 efficiency = log_reduction / total_function_evals
             else:
@@ -233,7 +261,7 @@ def main() -> None:
     }
 
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
         return
 
     print("Residual monitoring")

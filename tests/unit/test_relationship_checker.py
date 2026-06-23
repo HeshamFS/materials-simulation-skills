@@ -137,6 +137,22 @@ class TestRelationshipChecker(unittest.TestCase):
         with self.assertRaises(ValueError):
             REL_CHECKER.check_relationships(SAMPLE_SUMMARY, "not a list")
 
+    def test_too_many_relationships_raises(self):
+        rels = [{"subject_class": "Computational Sample",
+                 "property": "has material",
+                 "object_class": "Material"}] * (REL_CHECKER.MAX_RELATIONSHIPS + 1)
+        with self.assertRaises(ValueError):
+            REL_CHECKER.check_relationships(SAMPLE_SUMMARY, rels)
+
+    def test_overlong_name_raises(self):
+        with self.assertRaises(ValueError):
+            REL_CHECKER.check_relationships(
+                SAMPLE_SUMMARY,
+                [{"subject_class": "X" * (REL_CHECKER.MAX_NAME_LEN + 1),
+                  "property": "has material",
+                  "object_class": "Material"}],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

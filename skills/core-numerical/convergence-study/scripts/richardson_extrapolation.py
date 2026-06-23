@@ -47,6 +47,8 @@ def compute_richardson_extrapolation(spacings, values, order):
     """
     if len(spacings) != len(values):
         raise ValueError("spacings and values must have the same length")
+    if len(spacings) > 10000:
+        raise ValueError("too many refinement levels (max 10000)")
     if len(spacings) < 2:
         raise ValueError("At least 2 refinement levels required")
     if order <= 0:

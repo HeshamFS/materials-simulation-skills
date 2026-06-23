@@ -8,10 +8,15 @@ from typing import Dict, Optional
 import numpy as np
 
 
+MAX_COEFFS = 10000
+
+
 def parse_coeffs(raw: str) -> np.ndarray:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("coeffs must be a comma-separated list")
+    if len(parts) > MAX_COEFFS:
+        raise ValueError(f"coeffs list exceeds maximum of {MAX_COEFFS} entries")
     return np.array([float(p) for p in parts], dtype=float)
 
 

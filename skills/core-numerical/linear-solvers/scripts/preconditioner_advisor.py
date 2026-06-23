@@ -27,6 +27,11 @@ def advise_preconditioner(
         suggested.extend(["Incomplete Cholesky (IC)", "AMG"])
     elif matrix_type == "symmetric-indefinite":
         suggested.extend(["Incomplete LDL^T", "AMG"])
+        notes.append(
+            "For MINRES the preconditioner must be SPD (e.g. SSOR, symmetric "
+            "block-diagonal, or AMG on the SPD part); an indefinite incomplete "
+            "LDL^T is not a valid MINRES preconditioner."
+        )
     else:
         suggested.extend(["ILU(0)/ILUT", "AMG"])
 

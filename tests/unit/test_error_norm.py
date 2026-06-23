@@ -1,7 +1,15 @@
 import math
+import subprocess
+import sys
 import unittest
+from pathlib import Path
 
 from tests.unit._utils import load_module
+
+_SCRIPT = (
+    Path(__file__).resolve().parents[2]
+    / "skills/core-numerical/numerical-integration/scripts/error_norm.py"
+)
 
 
 class TestErrorNorm(unittest.TestCase):
@@ -72,6 +80,21 @@ class TestErrorNorm(unittest.TestCase):
                 min_scale=0.0,
             )
 
+    def test_solution_scale_collapse_raises(self):
+        # Regression (F1): rtol=0, atol=0, default min_scale=0 makes every
+        # scale entry 0. Must raise a clean ValueError instead of an
+        # uncaught ZeroDivisionError.
+        with self.assertRaises(ValueError):
+            self.mod.compute_error_norm(
+                error=[0.01],
+                solution=[1.0],
+                scale=None,
+                rtol=0.0,
+                atol=0.0,
+                norm="rms",
+                min_scale=0.0,
+            )
+
     def test_min_scale(self):
         error = [0.0]
         solution = [0.0]
@@ -86,6 +109,36 @@ class TestErrorNorm(unittest.TestCase):
         )
         self.assertAlmostEqual(scale_min, 1e-3, places=12)
         self.assertAlmostEqual(scale_max, 1e-3, places=12)
+
+
+class TestErrorNormCliMessages(unittest.TestCase):
+    """Regression (F3): the exact strings documented in SKILL.md's Error
+    Handling table must actually be emitted by the script, and bad input must
+    exit 2."""
+
+    def _run(self, *args):
+        return subprocess.run(
+            [sys.executable, str(_SCRIPT), *args],
+            capture_output=True,
+            text=True,
+        )
+
+    def test_negative_rtol_message(self):
+        proc = self._run("--error", "0.01", "--solution", "1.0", "--rtol=-1e-3")
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("rtol must be a non-negative finite number", proc.stderr)
+
+    def test_negative_atol_message(self):
+        proc = self._run("--error", "0.01", "--solution", "1.0", "--atol=-1e-6")
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("atol must be a non-negative finite number", proc.stderr)
+
+    def test_scale_collapse_message(self):
+        proc = self._run(
+            "--error", "0.01", "--solution", "1.0", "--rtol", "0", "--atol", "0"
+        )
+        self.assertEqual(proc.returncode, 2)
+        self.assertIn("scale must be positive", proc.stderr)
 
 
 if __name__ == "__main__":

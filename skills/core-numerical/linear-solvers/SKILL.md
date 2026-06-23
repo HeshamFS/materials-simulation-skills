@@ -13,15 +13,14 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 4
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Linear Solvers
@@ -51,8 +50,9 @@ Provide a universal workflow to select a solver, assess conditioning, and diagno
 ### Solver Selection Flowchart
 
 ```
-Is matrix small (n < 5000) and dense?
-├── YES → Use direct solver (LU, Cholesky)
+Is matrix dense and small enough to factor in memory (dense float64
+storage n²·8 bytes < ~2 GB, i.e. n ≲ 16000)?
+├── YES → Use direct solver (Cholesky/LDLᵀ/LU by symmetry)
 └── NO → Is matrix symmetric?
     ├── YES → Is it positive definite?
     │   ├── YES → Use CG with AMG/IC preconditioner
@@ -67,7 +67,7 @@ Is matrix small (n < 5000) and dense?
 | Matrix Type | Solver | Preconditioner |
 |-------------|--------|----------------|
 | SPD, sparse | CG | AMG, IC |
-| Symmetric indefinite | MINRES | ILU |
+| Symmetric indefinite | MINRES | SPD preconditioner (SSOR, symmetric block-diagonal, or AMG on SPD part) |
 | Nonsymmetric | GMRES, BiCGSTAB | ILU, AMG |
 | Dense | LU, Cholesky | None |
 | Saddle point | Schur complement, Uzawa | Block preconditioner |
@@ -77,7 +77,7 @@ Is matrix small (n < 5000) and dense?
 | Script | Key Outputs |
 |--------|-------------|
 | `scripts/solver_selector.py` | `recommended`, `alternatives`, `notes` |
-| `scripts/convergence_diagnostics.py` | `rate`, `stagnation`, `recommended_action` |
+| `scripts/convergence_diagnostics.py` | `rate`, `asymptotic_rate`, `stagnation`, `recommended_action` |
 | `scripts/sparsity_stats.py` | `nnz`, `density`, `bandwidth`, `symmetry` |
 | `scripts/preconditioner_advisor.py` | `suggested`, `notes` |
 | `scripts/scaling_equilibration.py` | `row_scale`, `col_scale`, `notes` |
@@ -104,7 +104,7 @@ Is matrix small (n < 5000) and dense?
    ```
 2. Check for preconditioning advice:
    ```bash
-   python3 scripts/preconditioner_advisor.py --matrix-type nonsymmetric --sparse --stagnation --json
+   python3 scripts/preconditioner_advisor.py --matrix-type nonsymmetric --sparse --ill-conditioned --json
    ```
 3. Recommend: Increase restart parameter, try ILU(k) with higher k, or switch to AMG.
 
@@ -151,12 +151,18 @@ python3 scripts/residual_norms.py --residual 1,0.1,0.01 --rhs 1,0,0 --json
 
 ### Convergence Rate
 
-| Rate | Meaning | Action |
-|------|---------|--------|
+`convergence_diagnostics.py` reports two rates: `rate` (mean of all per-iteration
+residual ratios over the full history) and `asymptotic_rate` (mean over a short
+trailing window). The `stagnation` flag is driven by `asymptotic_rate` (> 0.95),
+because stagnation is a tail property — early fast drops can hide a flat tail.
+Read `asymptotic_rate` when judging the regime below:
+
+| Asymptotic rate | Meaning | Action |
+|-----------------|---------|--------|
 | < 0.1 | Excellent | Current setup optimal |
 | 0.1 - 0.5 | Good | Acceptable for most problems |
-| 0.5 - 0.9 | Slow | Consider better preconditioner |
-| > 0.9 | Stagnation | Change solver or preconditioner |
+| 0.5 - 0.95 | Slow | Consider better preconditioner |
+| > 0.95 | Stagnation | Change solver or preconditioner |
 
 ### Stagnation Diagnosis
 
@@ -172,8 +178,8 @@ python3 scripts/residual_norms.py --residual 1,0.1,0.01 --rhs 1,0,0 --json
 - All numeric inputs (residuals, tolerances, matrix entries) are validated as finite numbers
 - Comma-separated residual/vector inputs are capped at 100,000 entries
 - The `solver_selector.py` `--size` parameter is bounded at 10 billion
-- `--matrix-type` is validated against a fixed allowlist (`spd`, `symmetric`, `nonsymmetric`)
-- Boolean flags (`--symmetric`, `--positive-definite`, `--sparse`, `--stagnation`) are type-safe argparse flags
+- `--matrix-type` is validated against a fixed allowlist (`spd`, `symmetric-indefinite`, `nonsymmetric`)
+- Boolean flags (`--symmetric`, `--positive-definite`, `--sparse`, `--ill-conditioned`) are type-safe argparse flags
 
 ### File Access
 - `sparsity_stats.py` and `scaling_equilibration.py` read a single matrix file (`.npy` format) specified by `--matrix`
@@ -209,5 +215,6 @@ python3 scripts/residual_norms.py --residual 1,0.1,0.01 --rhs 1,0,0 --json
 
 ## Version History
 
+- **v1.2.0** (2026-06-23): Fixed asymptotic stagnation detection, dense-feasibility solver gating, saddle-point/small-dense direct-solver routing, equilibrating two-sided scaling, CG iteration-bound table, and doc/eval consistency
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 6 solver analysis scripts

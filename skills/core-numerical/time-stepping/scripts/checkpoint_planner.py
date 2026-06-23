@@ -12,6 +12,16 @@ def compute_interval(
     max_lost_time: float,
     mtbf: Optional[float],
 ) -> Dict[str, object]:
+    for name, value in (
+        ("run_time", run_time),
+        ("checkpoint_cost", checkpoint_cost),
+        ("max_lost_time", max_lost_time),
+    ):
+        if not math.isfinite(value):
+            raise ValueError(f"{name} must be a finite number")
+    if mtbf is not None and not math.isfinite(mtbf):
+        raise ValueError("mtbf must be a finite number")
+
     if run_time <= 0:
         raise ValueError("run_time must be positive")
     if checkpoint_cost <= 0:
@@ -20,6 +30,8 @@ def compute_interval(
         raise ValueError("max_lost_time must be positive")
     if mtbf is not None and mtbf <= 0:
         raise ValueError("mtbf must be positive")
+    if checkpoint_cost >= run_time:
+        raise ValueError("checkpoint-cost must be < run-time")
 
     if mtbf is not None:
         interval = math.sqrt(2.0 * mtbf * checkpoint_cost)
@@ -32,11 +44,19 @@ def compute_interval(
     checkpoints = int(math.floor(run_time / interval))
     overhead_fraction = (checkpoints * checkpoint_cost) / run_time
 
+    warnings = []
+    if overhead_fraction > 0.10:
+        warnings.append(
+            "Checkpoint overhead exceeds 10%; increase interval (max-lost-time) "
+            "or reduce checkpoint cost."
+        )
+
     return {
         "checkpoint_interval": interval,
         "checkpoints": checkpoints,
         "overhead_fraction": overhead_fraction,
         "method": method,
+        "warnings": warnings,
     }
 
 
@@ -100,6 +120,8 @@ def main() -> None:
     print(f"  checkpoints: {result['checkpoints']}")
     print(f"  overhead_fraction: {result['overhead_fraction']:.6g}")
     print(f"  method: {result['method']}")
+    for warning in result.get("warnings", []):
+        print(f"  warning: {warning}")
 
 
 if __name__ == "__main__":

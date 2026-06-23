@@ -86,6 +86,13 @@ class TestRichardsonExtrapolation(unittest.TestCase):
                 [0.4, 0.2, 0.1], [1.0, 2.0], order=2.0,
             )
 
+    def test_too_many_levels_rejected(self):
+        """F4 regression: >10000 entries should raise ValueError."""
+        big = [1.0] * 10001
+        with self.assertRaises(ValueError) as ctx:
+            self.mod.compute_richardson_extrapolation(big, big, order=2.0)
+        self.assertIn("too many", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

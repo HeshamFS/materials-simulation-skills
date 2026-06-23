@@ -31,6 +31,19 @@ class TestPreconditionerAdvisor(unittest.TestCase):
         )
         self.assertTrue(any("Schur" in s for s in result["suggested"]))
 
+    def test_symmetric_indefinite_minres_spd_note(self):
+        """Regression (F7): symmetric-indefinite advice must warn that a MINRES
+        preconditioner has to be SPD (indefinite LDL^T is not valid)."""
+        result = self.mod.advise_preconditioner(
+            matrix_type="symmetric-indefinite",
+            sparse=True,
+            ill_conditioned=False,
+            saddle_point=False,
+            symmetric=True,
+        )
+        self.assertIn("Incomplete LDL^T", result["suggested"])
+        self.assertTrue(any("SPD" in note for note in result["notes"]))
+
     def test_invalid_type(self):
         with self.assertRaises(ValueError):
             self.mod.advise_preconditioner(

@@ -129,7 +129,16 @@ CFL condition violated, reducing time step
 
 **Regex for Detection:**
 ```python
-dt_pattern = re.compile(r'dt[^0-9]*([0-9][0-9eE+\.-]*)', re.IGNORECASE)
+# `\bdt\b` anchors the token so words like "width" do not false-match, and
+# `\D*?` tolerates intervening words so "dt reduced from 1e-3 to 5e-4" parses.
+# This matches runtime_monitor.py's DEFAULT_DT_PATTERN.
+dt_pattern = re.compile(r'\bdt\b\D*?([0-9][0-9eE+.\-]*)', re.IGNORECASE)
+# Adaptive stepping: capture the POST-reduction ("to") value so successive
+# collapses register monotonically.
+dt_reduce_pattern = re.compile(
+    r'\bdt\b.*?reduc\w*\s+from\s+[0-9][0-9eE+.\-]*\s+to\s+([0-9][0-9eE+.\-]*)',
+    re.IGNORECASE,
+)
 dt_issue_pattern = re.compile(r'dt.{0,10}(reduc|too small|minimum)', re.IGNORECASE)
 ```
 
@@ -240,7 +249,11 @@ import re
 from typing import List, Tuple
 
 PATTERNS = [
-    (re.compile(r'nan|inf|overflow', re.I), 'Numerical blow-up', 'FATAL'),
+    # Left-boundary-anchored so domain words ("nanometer", "infrastructure",
+    # "information") do NOT false-match, while "NaN", "NaNs", "infinity",
+    # and "overflow" still do.
+    (re.compile(r'(?<![A-Za-z])(?:nan(?:s)?|inf(?:inity)?|overflow)(?![A-Za-z])', re.I),
+     'Numerical blow-up', 'FATAL'),
     (re.compile(r'diverg|explo', re.I), 'Divergence', 'CRITICAL'),
     (re.compile(r'out of memory|oom|bad_alloc', re.I), 'Memory exhaustion', 'FATAL'),
     (re.compile(r'disk.{0,10}full|no space', re.I), 'Disk full', 'FATAL'),

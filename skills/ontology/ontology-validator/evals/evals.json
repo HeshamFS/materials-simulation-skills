@@ -3,13 +3,13 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "Validate this CMSO annotation: {\"class\": \"Unit Cell\", \"properties\": {\"has Bravais lattice\": \"cF\", \"has lattice parameter a\": 3.615}}. Is the class valid and are the properties correct?",
-      "expected_output": "Agent runs schema_checker.py to validate the annotation against CMSO, checking that the class exists and property names are recognized.",
+      "prompt": "Validate this CMSO annotation: {\"class\": \"Unit Cell\", \"properties\": {\"has Bravais lattice\": \"cF\", \"has lattice parameter\": 3.615}}. Is the class valid and are the properties correct?",
+      "expected_output": "Agent runs schema_checker.py to validate the annotation against CMSO; the class exists and both property names are recognized, so results.valid is true with no errors.",
       "assertions": [
-        "Invokes scripts/schema_checker.py with --ontology cmso --annotation '{\"class\":\"Unit Cell\",\"properties\":{\"has Bravais lattice\":\"cF\",\"has lattice parameter a\":3.615}}' --json",
+        "Invokes scripts/schema_checker.py with --ontology cmso --annotation '{\"class\":\"Unit Cell\",\"properties\":{\"has Bravais lattice\":\"cF\",\"has lattice parameter\":3.615}}' --json",
         "Output includes results.valid boolean, results.class_valid, and results.properties_valid",
         "Validates that 'Unit Cell' is a recognized CMSO class",
-        "Validates that 'has Bravais lattice' and 'has lattice parameter a' are valid properties for Unit Cell"
+        "Confirms results.valid is true because 'has Bravais lattice' and 'has lattice parameter' are valid properties for Unit Cell"
       ]
     },
     {
@@ -37,23 +37,24 @@
     {
       "id": 4,
       "prompt": "I annotated my sample with class 'CrystalStructurr' and property 'has_unit_cell'. Validate this please.",
-      "expected_output": "Agent runs schema_checker.py and detects the misspelled class name and incorrectly formatted property name, flagging both as errors.",
+      "expected_output": "Agent runs schema_checker.py and detects the misspelled class name and incorrectly formatted property name, flagging both as errors with nearest-match suggestions.",
       "assertions": [
         "Invokes scripts/schema_checker.py with --ontology cmso --annotation '{\"class\":\"CrystalStructurr\",\"properties\":{\"has_unit_cell\":true}}' --json",
         "Detects 'CrystalStructurr' as an unknown class (typo for Crystal Structure)",
         "Detects 'has_unit_cell' as an unrecognized property (should be 'has unit cell')",
-        "Output results.valid is false with specific errors for both the class and property"
+        "Output results.valid is false with specific errors for both the class and property",
+        "The unknown_class error includes a suggestions array containing 'Crystal Structure' and the unknown_property error includes a suggestions array containing 'has unit cell'"
       ]
     },
     {
       "id": 5,
-      "prompt": "Check completeness for my Computational Sample annotation. I only provided 'has material'. What else do I need for a thorough annotation?",
-      "expected_output": "Agent runs completeness_checker.py to show what required and recommended properties are missing for Computational Sample beyond 'has material'.",
+      "prompt": "Check completeness for my Atomic Scale Sample annotation. I only provided 'has material'. What else do I need for a thorough annotation?",
+      "expected_output": "Agent runs completeness_checker.py to show what required and recommended properties are missing for Atomic Scale Sample beyond 'has material'; the required property 'has simulation cell' is absent so completeness_score is low (0.2).",
       "assertions": [
-        "Invokes scripts/completeness_checker.py with --ontology cmso --class 'Computational Sample' --provided 'has material' --json",
-        "Reports a low completeness_score since only one property is provided",
-        "Lists required_missing properties that must be added",
-        "Lists recommended_missing properties that would improve annotation quality"
+        "Invokes scripts/completeness_checker.py with --ontology cmso --class 'Atomic Scale Sample' --provided 'has material' --json",
+        "Reports a low completeness_score (0.2) since only one of the tracked properties is provided",
+        "Lists required_missing including 'has simulation cell' that must be added",
+        "Lists recommended_missing properties (has species, has attribute, has number of atoms) that would improve annotation quality"
       ]
     }
   ]

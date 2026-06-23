@@ -2,6 +2,7 @@
 """Evaluate Newton/quasi-Newton step quality for trust region decisions."""
 import argparse
 import json
+import math
 import sys
 from typing import Any, Dict, List, Optional
 
@@ -25,17 +26,29 @@ def evaluate_step(
     Returns:
         Dictionary with step quality assessment and recommendations
     """
+    if not math.isfinite(predicted_reduction):
+        raise ValueError("predicted_reduction must be finite")
     if predicted_reduction < 0:
         raise ValueError("predicted_reduction must be non-negative (model should predict decrease)")
 
+    if not math.isfinite(actual_reduction):
+        raise ValueError("actual_reduction must be finite")
+
+    if not math.isfinite(step_norm):
+        raise ValueError("step_norm must be finite")
     if step_norm < 0:
         raise ValueError("step_norm must be non-negative")
 
+    if not math.isfinite(gradient_norm):
+        raise ValueError("gradient_norm must be finite")
     if gradient_norm < 0:
         raise ValueError("gradient_norm must be non-negative")
 
-    if trust_radius is not None and trust_radius <= 0:
-        raise ValueError("trust_radius must be positive")
+    if trust_radius is not None:
+        if not math.isfinite(trust_radius):
+            raise ValueError("trust_radius must be finite")
+        if trust_radius <= 0:
+            raise ValueError("trust_radius must be positive")
 
     notes: List[str] = []
 
@@ -115,7 +128,10 @@ def evaluate_step(
         notes.append("Step achieved less than expected Cauchy decrease.")
 
     return {
-        "ratio": ratio if not isinstance(ratio, float) or ratio != float("inf") else None,
+        # Sanitize all non-finite ratios (+inf and -inf) symmetrically so the
+        # JSON output stays RFC-8259 compliant; the very_poor/poor classification
+        # and notes already carry the "objective increased" signal.
+        "ratio": ratio if math.isfinite(ratio) else None,
         "step_quality": step_quality,
         "accept_step": accept_step,
         "trust_radius_action": trust_radius_action,
@@ -190,7 +206,7 @@ def main() -> None:
     }
 
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))
         return
 
     print("Step quality evaluation")

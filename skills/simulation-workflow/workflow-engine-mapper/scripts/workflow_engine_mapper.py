@@ -9,9 +9,26 @@ import sys
 from typing import Dict, List
 
 
+MAX_RUNS = 1_000_000
+MAX_TASK_LEN = 2000
+MAX_FIELD_LEN = 100
+
+
 def _positive_int(value: int, name: str) -> int:
-    if not isinstance(value, int) or value <= 0:
+    if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{name} must be a positive integer")
+    if value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    if value > MAX_RUNS:
+        raise ValueError(f"{name} must not exceed {MAX_RUNS}")
+    return value
+
+
+def _bounded_text(value: str, name: str, max_len: int) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a string")
+    if len(value) > max_len:
+        raise ValueError(f"{name} must not exceed {max_len} characters")
     return value
 
 
@@ -25,6 +42,9 @@ def recommend_engine(
     preferred: str,
 ) -> Dict:
     _positive_int(runs, "runs")
+    _bounded_text(task, "task", MAX_TASK_LEN)
+    _bounded_text(code, "code", MAX_FIELD_LEN)
+    _bounded_text(preferred, "preferred", MAX_FIELD_LEN)
     if not task.strip():
         raise ValueError("task must not be empty")
     code_key = code.lower().strip()
@@ -46,15 +66,26 @@ def recommend_engine(
     else:
         engine = "jobflow"
 
-    dag_pattern = "linear"
-    if any(word in task.lower() for word in ["dos", "band", "phonon", "static"]):
-        dag_pattern = "relax -> static -> property branches"
-    if any(word in task.lower() for word in ["screen", "sweep", "campaign", "many", "batch"]):
+    task_lower = task.lower()
+    branch = any(word in task_lower for word in ["dos", "band", "phonon", "static"])
+    sweep = any(word in task_lower for word in ["screen", "sweep", "campaign", "many", "batch"])
+    if branch and sweep:
+        dag_pattern = "map over structures -> (relax -> static -> property branches) -> collect -> rank"
+    elif sweep:
         dag_pattern = "map over structures/parameters -> collect -> rank"
+    elif branch:
+        dag_pattern = "relax -> static -> property branches"
+    else:
+        dag_pattern = "linear"
     if needs_restart:
         dag_pattern += " with restart checkpoints"
 
     migration_triggers: List[str] = []
+    if engine == "one-off":
+        migration_triggers.append(
+            "migrate to a workflow engine once results will be compared, "
+            "published, screened, or resumed, or runs reach ~5+"
+        )
     if runs >= 20:
         migration_triggers.append("run count is high enough to need structured metadata")
     if needs_restart:

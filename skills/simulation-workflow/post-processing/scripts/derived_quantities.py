@@ -80,26 +80,54 @@ def get_field_shape(field: List) -> List[int]:
 
 
 def get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float]:
-    """Extract or compute grid spacing."""
-    spacing = {}
+    """Extract or compute grid spacing.
 
-    # Try to get from data
+    Explicit ``dx``/``dy``/``dz`` keys in the file take precedence. A domain
+    size ``Lx``/``Ly``/``Lz`` is only used to *derive* a spacing when the
+    corresponding explicit key is absent (node-centered: ``dx = Lx/(nx-1)``).
+    When both an explicit spacing and a domain size are present and they are
+    mutually inconsistent under both the cell-centered (``dx*nx == Lx``) and
+    node-centered (``dx*(nx-1) == Lx``) conventions, a warning is emitted to
+    stderr but the explicit value is kept.
+    """
+    spacing: Dict[str, float] = {}
+
+    # Explicit spacing wins.
     for key in ["dx", "dy", "dz"]:
-        if key in data:
-            spacing[key] = data[key]
+        if key in data and isinstance(data[key], (int, float)):
+            spacing[key] = float(data[key])
 
-    # Try to compute from domain size and shape
-    if "Lx" in data and len(shape) >= 1:
-        if shape[-1] > 1:
-            spacing["dx"] = data["Lx"] / (shape[-1] - 1)
-    if "Ly" in data and len(shape) >= 2:
-        if shape[-2] > 1:
-            spacing["dy"] = data["Ly"] / (shape[-2] - 1)
-    if "Lz" in data and len(shape) >= 3:
-        if shape[-3] > 1:
-            spacing["dz"] = data["Lz"] / (shape[-3] - 1)
+    # Derive from domain size only when no explicit spacing was provided, and
+    # warn if an explicit spacing conflicts with the stated domain size.
+    for length_key, space_key, axis in [
+        ("Lx", "dx", -1),
+        ("Ly", "dy", -2),
+        ("Lz", "dz", -3),
+    ]:
+        if length_key not in data:
+            continue
+        if len(shape) < abs(axis):
+            continue
+        n = shape[axis]
+        if n <= 1:
+            continue
+        L = data[length_key]
+        if space_key in spacing:
+            d = spacing[space_key]
+            node_ok = math.isclose(d * (n - 1), L, rel_tol=1e-6)
+            cell_ok = math.isclose(d * n, L, rel_tol=1e-6)
+            if not node_ok and not cell_ok:
+                print(
+                    f"WARNING: explicit {space_key}={d} is inconsistent with "
+                    f"{length_key}={L} for {n} points under both cell-centered "
+                    f"(d*n) and node-centered (d*(n-1)) conventions; "
+                    f"using explicit {space_key}={d}.",
+                    file=sys.stderr,
+                )
+        else:
+            spacing[space_key] = L / (n - 1)
 
-    # Default to 1.0 if not found
+    # Default to 1.0 if not found.
     spacing.setdefault("dx", 1.0)
     spacing.setdefault("dy", 1.0)
     spacing.setdefault("dz", 1.0)

@@ -95,6 +95,25 @@ class TestHRefinement(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.mod.compute_h_refinement([-0.1, 0.1], [1.0, 2.0])
 
+    def test_diverging_not_in_asymptotic_range(self):
+        """F6 regression: a diverging dataset (negative observed order) must NOT be
+        labelled in_asymptotic_range and must NOT be Richardson-extrapolated."""
+        result = self.mod.compute_h_refinement(
+            [0.4, 0.2, 0.1], [1.0, 1.1, 1.3], expected_order=2.0,
+        )
+        r = result["results"]
+        self.assertLess(r["mean_order"], 0)
+        self.assertFalse(r["in_asymptotic_range"])
+        self.assertIsNone(r["richardson_extrapolated_value"])
+        self.assertTrue(any("diverging" in n for n in r["notes"]))
+
+    def test_too_many_levels_rejected(self):
+        """F4 regression: >10000 entries should raise ValueError."""
+        big = [1.0] * 10001
+        with self.assertRaises(ValueError) as ctx:
+            self.mod.compute_h_refinement(big, big)
+        self.assertIn("too many", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

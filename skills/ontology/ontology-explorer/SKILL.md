@@ -4,8 +4,9 @@ description: >
   Parse, navigate, and query materials science ontology structures — browse
   class hierarchies, inspect individual classes and their properties, look up
   object and data property definitions with domain/range, search for ontology
-  terms by keyword, and parse or summarize raw OWL/XML files. Supports the
-  OCDO ecosystem (CMSO, ASMO, CDCO, PODO, PLDO, LDO). Use when exploring
+  terms by keyword, and parse or summarize raw OWL/XML files. Currently supports
+  CMSO and ASMO; the broader OCDO ecosystem (CDCO, PODO, PLDO, LDO) is planned.
+  Use when exploring
   what classes or properties an ontology provides, finding the right CMSO
   term for a crystal structure or simulation concept, understanding
   parent-child class relationships, or onboarding to an unfamiliar materials
@@ -14,15 +15,14 @@ description: >
 allowed-tools: Read, Bash
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 5
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Ontology Explorer
@@ -91,9 +91,26 @@ What do you need?
 ```
 User: I have an FCC copper simulation. What CMSO classes should I use to describe it?
 
-Agent: Let me explore the CMSO ontology to find the relevant classes.
+Agent: Let me explore the CMSO ontology to find the relevant classes. I'll run
+a few targeted searches and property lookups (the answer below is synthesized
+from several commands, per the Workflow section).
 
 [Runs: class_browser.py --ontology cmso --search "crystal" --json]
+  → Crystalline Material, Crystal Structure (among others)
+[Runs: class_browser.py --ontology cmso --search "sample" --json]
+  → Computational Sample, Atomic Scale Sample
+[Runs: class_browser.py --ontology cmso --search "unit cell" --json]
+  → Unit Cell
+[Runs: class_browser.py --ontology cmso --search "space group" --json]
+  → Space Group
+[Runs: class_browser.py --ontology cmso --search "element" --json]
+  → Chemical Element
+[Runs: property_lookup.py --ontology cmso --property "has material" --json]
+  → domain Computational Sample → range Material
+[Runs: property_lookup.py --ontology cmso --property "has structure" --json]
+  → domain Material → range Structure
+[Runs: property_lookup.py --ontology cmso --property "has unit cell" --json]
+  → domain Crystal Structure → range Unit Cell
 
 For an FCC copper simulation, the relevant CMSO classes are:
 
@@ -104,8 +121,9 @@ For an FCC copper simulation, the relevant CMSO classes are:
 - **Space Group**: FCC copper is space group 225 (Fm-3m)
 - **Chemical Element**: Cu
 
-The key relationships:
-  AtomicScaleSample → hasMaterial → CrystallineMaterial → hasStructure → CrystalStructure → hasUnitCell → UnitCell
+The key relationship chain (from the property domains/ranges above):
+  Computational Sample → has material → Material → has structure → Structure
+  → (Crystal Structure) → has unit cell → Unit Cell
 
 Shall I look up the specific properties for any of these classes?
 ```
@@ -158,7 +176,7 @@ python3 skills/ontology/ontology-explorer/scripts/ontology_summarizer.py \
 - **Class hierarchy**: root classes are the broadest concepts; leaf classes are the most specific. A class inherits all properties from its ancestors.
 - **Object properties**: show how classes relate to each other (domain → range). A property with domain `UnitCell` and range `Basis` means a unit cell *has a* basis.
 - **Data properties**: show what literal values a class carries. A property with domain `ChemicalElement` and range `xsd:string` means an element has a string-valued attribute.
-- **Union domains**: some properties apply to multiple classes (e.g., `hasVector` applies to both `SimulationCell` and `UnitCell`), shown as `SimulationCell | UnitCell`.
+- **Union domains**: a property can apply to more than one class. When it does, the domain is shown as the classes joined with a pipe, e.g. `A | B`. (The bundled CMSO/ASMO summaries currently contain no union-domain properties.)
 - **Search relevance**: 1.0 = label match, 0.5 = description match only.
 
 ## Security
@@ -207,4 +225,5 @@ python3 skills/ontology/ontology-explorer/scripts/ontology_summarizer.py \
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-06-23 | 1.2.0 | Fixed property_lookup `--class` to resolve canonical labels (spaceless names like `UnitCell` now match), made class/property domain matching consistent across tools, enforced documented security controls (safe-character pattern, length caps, search-result caps, HTTPS-only URLs), corrected union-domain doc example and eval assertions, scoped description to CMSO/ASMO. |
 | 2026-02-25 | 1.0 | Initial release with CMSO support |

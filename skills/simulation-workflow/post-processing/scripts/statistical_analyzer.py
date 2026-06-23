@@ -22,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 FIELD_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.-]*$")
 MAX_FIELD_NAME_LENGTH = 200
+MAX_BINS = 100_000
 
 
 def _validate_file_size(filepath: str) -> None:
@@ -306,43 +307,143 @@ def detect_distribution_type(
         return {"type": "multimodal", "confidence": 0.5, "peaks": len(peaks)}
 
 
-# Safe pattern for region conditions: only allows variable names, comparisons, numbers, and/or
-_SAFE_REGION_PATTERN = re.compile(
-    r"^[a-zA-Z_][a-zA-Z0-9_]*\s*[<>=!]+\s*[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?"
-    r"(\s+(and|or)\s+[a-zA-Z_][a-zA-Z0-9_]*\s*[<>=!]+\s*[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)*$"
+# Maximum region condition length (DoS guard)
+MAX_REGION_LENGTH = 500
+
+# Single comparison clause: <var> <op> <number>. Allowed variables: x, y, z only.
+_REGION_CLAUSE = re.compile(
+    r"^(?P<var>[xyz])\s*(?P<op><=|>=|<|>|==|!=)\s*"
+    r"(?P<num>[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)$"
 )
+
+_OPS = {
+    "<": lambda a, b: a < b,
+    "<=": lambda a, b: a <= b,
+    ">": lambda a, b: a > b,
+    ">=": lambda a, b: a >= b,
+    "==": lambda a, b: a == b,
+    "!=": lambda a, b: a != b,
+}
 
 
 def parse_region_condition(condition: str) -> callable:
-    """Parse simple region condition string like 'x>0.3 and x<0.7'.
+    """Parse a simple region condition like 'x>0.3 and x<0.7'.
 
-    Only allows safe patterns: variable comparisons with numbers joined by and/or.
-    Never uses eval() or exec().
+    Returns a predicate ``pred(coords)`` where ``coords`` is a dict mapping
+    'x'/'y'/'z' to floats. Only coordinate-variable comparisons against numeric
+    literals joined by ``and``/``or`` are allowed. Never uses eval() or exec().
+
+    Raises ValueError on disallowed syntax, empty input, or excessive length.
     """
-    if len(condition) > 500:
-        raise ValueError("Region condition too long (max 500 characters)")
-    if not _SAFE_REGION_PATTERN.match(condition.strip()):
+    if not isinstance(condition, str):
+        raise ValueError("Region condition must be a string")
+    stripped = condition.strip()
+    if not stripped:
+        raise ValueError("Region condition is empty")
+    if len(stripped) > MAX_REGION_LENGTH:
+        raise ValueError(
+            f"Region condition too long (max {MAX_REGION_LENGTH} characters)"
+        )
+
+    # Tokenise on the boolean keywords while preserving them.
+    tokens = re.split(r"\s+(and|or)\s+", stripped)
+    # tokens = [clause, op, clause, op, clause, ...]
+    if len(tokens) % 2 == 0:
         raise ValueError(
             f"Region condition contains disallowed syntax: {condition!r}. "
             "Only patterns like 'x>0.3 and x<0.7' are allowed."
         )
 
-    # Stub: full region filtering requires coordinate data
-    def always_true(*args):
-        return True
+    clauses = []  # list of (var, op_fn, num)
+    joiners = []  # list of 'and'/'or'
+    for i, tok in enumerate(tokens):
+        if i % 2 == 1:
+            joiners.append(tok)
+            continue
+        m = _REGION_CLAUSE.match(tok.strip())
+        if not m:
+            raise ValueError(
+                f"Region condition contains disallowed syntax: {tok.strip()!r}. "
+                "Only coordinate comparisons like 'x>0.3' (vars x,y,z) are allowed."
+            )
+        clauses.append((m.group("var"), _OPS[m.group("op")], float(m.group("num"))))
 
-    return always_true
+    def predicate(coords: Dict[str, float]) -> bool:
+        result = None
+        for idx, (var, op_fn, num) in enumerate(clauses):
+            val = coords.get(var)
+            clause_val = False if val is None else op_fn(val, num)
+            if result is None:
+                result = clause_val
+            elif joiners[idx - 1] == "and":
+                result = result and clause_val
+            else:  # 'or'
+                result = result or clause_val
+        return bool(result)
+
+    return predicate
+
+
+def build_coordinate_grid(
+    shape: List[int],
+    spacing: Dict[str, float]
+) -> List[Dict[str, float]]:
+    """Build a flat list of per-cell coordinate dicts matching flatten_field order.
+
+    Coordinates are cell-centered: coordinate i along an axis is ``i * d``.
+    Only 1D and 2D fields are supported (matching the rest of this script);
+    for higher dimensions an empty list is returned.
+    """
+    if len(shape) == 1:
+        dx = spacing.get("dx", 1.0)
+        return [{"x": i * dx} for i in range(shape[0])]
+    if len(shape) == 2:
+        ny, nx = shape
+        dx = spacing.get("dx", 1.0)
+        dy = spacing.get("dy", 1.0)
+        coords = []
+        for j in range(ny):
+            for i in range(nx):
+                coords.append({"x": i * dx, "y": j * dy})
+        return coords
+    return []
+
+
+def get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float]:
+    """Extract grid spacing, giving explicit dx/dy/dz precedence over domain size."""
+    spacing: Dict[str, float] = {}
+    for key in ["dx", "dy", "dz"]:
+        if key in data and isinstance(data[key], (int, float)):
+            spacing[key] = float(data[key])
+
+    if "dx" not in spacing and "Lx" in data and len(shape) >= 1 and shape[-1] > 1:
+        spacing["dx"] = data["Lx"] / (shape[-1] - 1)
+    if "dy" not in spacing and "Ly" in data and len(shape) >= 2 and shape[-2] > 1:
+        spacing["dy"] = data["Ly"] / (shape[-2] - 1)
+    if "dz" not in spacing and "Lz" in data and len(shape) >= 3 and shape[-3] > 1:
+        spacing["dz"] = data["Lz"] / (shape[-3] - 1)
+
+    spacing.setdefault("dx", 1.0)
+    spacing.setdefault("dy", 1.0)
+    spacing.setdefault("dz", 1.0)
+    return spacing
 
 
 def compute_regional_statistics(
     field: List,
     region_mask: Optional[List] = None
 ) -> Dict[str, Any]:
-    """Compute statistics for a region of the field."""
+    """Compute statistics for a region of the field.
+
+    ``region_mask`` may be a nested list parallel to ``field`` or a flat list of
+    booleans/0-1 in flatten_field order.
+    """
     flat = flatten_field(field)
 
-    if region_mask:
-        flat_mask = flatten_field(region_mask)
+    if region_mask is not None:
+        flat_mask = flatten_field(region_mask) if any(
+            isinstance(m, list) for m in region_mask
+        ) else list(region_mask)
         values = [v for v, m in zip(flat, flat_mask) if m]
     else:
         values = flat
@@ -447,6 +548,14 @@ def main():
             print(f"Error: File not found: {args.input}", file=sys.stderr)
             sys.exit(1)
 
+        # Validate --bins as a positive integer with an upper bound
+        if args.bins < 1 or args.bins > MAX_BINS:
+            print(
+                f"Error: --bins must be between 1 and {MAX_BINS} (got {args.bins})",
+                file=sys.stderr,
+            )
+            sys.exit(2)
+
         data = load_json_file(args.input)
 
         # Validate and get field data
@@ -457,11 +566,48 @@ def main():
             sys.exit(1)
 
         shape = get_field_shape(field)
-        values = flatten_field(field)
+        all_values = flatten_field(field)
 
-        if not values:
+        if not all_values:
             print(f"Error: No numeric values in field '{args.field}'", file=sys.stderr)
             sys.exit(1)
+
+        # Apply region filtering if requested. Statistics are computed on the
+        # filtered subset so the reported numbers describe the requested region,
+        # not the whole field.
+        region_info: Optional[Dict[str, Any]] = None
+        if args.region:
+            if len(shape) not in (1, 2):
+                print(
+                    "Error: --region is only supported for 1D and 2D fields "
+                    f"(field '{args.field}' has shape {shape})",
+                    file=sys.stderr,
+                )
+                sys.exit(2)
+            try:
+                predicate = parse_region_condition(args.region)
+            except ValueError as exc:
+                print(f"Error: {exc}", file=sys.stderr)
+                sys.exit(2)
+
+            spacing = get_grid_spacing(data, shape)
+            coords = build_coordinate_grid(shape, spacing)
+            mask = [predicate(c) for c in coords]
+            values = [v for v, m in zip(all_values, mask) if m]
+            region_info = {
+                "condition": args.region,
+                "spacing": {"dx": spacing["dx"], "dy": spacing["dy"]},
+                "cells_in_region": sum(1 for m in mask if m),
+                "cells_total": len(all_values),
+            }
+            if not values:
+                print(
+                    f"Error: Region '{args.region}' selects no cells",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+        else:
+            values = all_values
 
         # Compute statistics
         result = {
@@ -494,13 +640,9 @@ def main():
         if args.spatial:
             result["spatial_variation"] = analyze_spatial_variation(field)
 
-        # Regional statistics (if requested)
-        if args.region:
-            # Note: Full region parsing not implemented
-            result["region"] = {
-                "condition": args.region,
-                "note": "Region filtering requires coordinate data"
-            }
+        # Regional statistics metadata (statistics above already cover the region)
+        if region_info is not None:
+            result["region"] = region_info
 
         # Output
         if args.json:

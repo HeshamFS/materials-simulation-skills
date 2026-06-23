@@ -69,7 +69,7 @@ class TestCliEdgeCases(unittest.TestCase):
         ]
         result = self.run_cmd(cmd)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("dimensions must be positive", result.stderr)
+        self.assertIn("dimensions must be one of", result.stderr)
 
     def test_von_neumann_kmin_kmax(self):
         cmd = [

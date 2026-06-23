@@ -127,6 +127,54 @@ class TestGlobalizationAdvisor(unittest.TestCase):
         self.assertIn("parameters", result)
         self.assertIsInstance(result["parameters"], dict)
 
+    def test_far_from_solution_triggers_trust_region(self):
+        """Regression (F2): a distant initial guess must yield trust region."""
+        result = self.mod.advise_globalization(
+            problem_type="root-finding",
+            jacobian_quality="good",
+            previous_failures=0,
+            oscillating_residual=False,
+            step_rejection_rate=0.0,
+            far_from_solution=True,
+        )
+        self.assertEqual(result["strategy"], "trust-region")
+        self.assertIsNotNone(result["trust_region_type"])
+
+    def test_good_jacobian_without_far_flag_is_line_search(self):
+        """Regression (F2): without the flag, good Jacobian stays line search."""
+        result = self.mod.advise_globalization(
+            problem_type="root-finding",
+            jacobian_quality="good",
+            previous_failures=0,
+            oscillating_residual=False,
+            step_rejection_rate=0.0,
+            far_from_solution=False,
+        )
+        self.assertEqual(result["strategy"], "line-search")
+
+    def test_least_squares_trust_region_type_is_lm(self):
+        """Regression (F1): least-squares surfaces Levenberg-Marquardt as TR type."""
+        result = self.mod.advise_globalization(
+            problem_type="least-squares",
+            jacobian_quality="good",
+            previous_failures=0,
+            oscillating_residual=False,
+            step_rejection_rate=0.0,
+        )
+        self.assertEqual(result["strategy"], "trust-region")
+        self.assertEqual(result["trust_region_type"], "Levenberg-Marquardt")
+
+    def test_non_finite_step_rejection_rate_raises(self):
+        """Security: non-finite step rejection rate raises ValueError."""
+        with self.assertRaises(ValueError):
+            self.mod.advise_globalization(
+                problem_type="root-finding",
+                jacobian_quality="good",
+                previous_failures=0,
+                oscillating_residual=False,
+                step_rejection_rate=float("nan"),
+            )
+
     def test_invalid_problem_type_raises(self):
         """Test that invalid problem type raises ValueError."""
         with self.assertRaises(ValueError):

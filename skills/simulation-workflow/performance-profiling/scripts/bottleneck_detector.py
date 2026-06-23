@@ -5,11 +5,47 @@ Bottleneck Detector - Identify performance bottlenecks and recommend optimizatio
 import argparse
 import json
 import os
+import re
 import sys
 from typing import Dict, List, Optional
 
 # Security limits
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+
+# Keyword groups used both for per-type thresholds and recommendation routing.
+IO_KEYWORDS = ['io', 'i/o', 'write', 'output', 'save']
+ASSEMBLY_KEYWORDS = ['assembly', 'assemble', 'build']
+SOLVER_KEYWORDS = ['solve', 'linear', 'iteration', 'cg', 'gmres']
+
+# Per-type dominance thresholds (percentage of total runtime) matching the
+# documented decision rules in SKILL.md / references/profiling_guide.md.
+IO_THRESHOLD = 30.0
+DEFAULT_THRESHOLD = 50.0
+HIGH_SEVERITY_THRESHOLD = 70.0
+
+
+def _classify_phase(name: str) -> str:
+    """Classify a phase name into 'io', 'assembly', 'solver', or 'general'.
+
+    Normalizes the name by lowercasing and stripping non-alphanumerics so that
+    canonical names like 'I/O' (which lowercases to 'i/o') are matched as 'io'.
+    """
+    lowered = name.lower()
+    norm = re.sub(r'[^a-z0-9]', '', lowered)
+    if any(k in norm for k in ('io', 'write', 'output', 'save')):
+        return 'io'
+    if any(k in norm for k in ('assembly', 'assemble', 'build')):
+        return 'assembly'
+    if any(k in norm for k in ('solve', 'linear', 'iteration', 'cg', 'gmres')):
+        return 'solver'
+    return 'general'
+
+
+def _phase_threshold(category: str) -> float:
+    """Return the dominance threshold for a phase category."""
+    if category == 'io':
+        return IO_THRESHOLD
+    return DEFAULT_THRESHOLD
 
 
 def _load_json_safe(path: str, label: str) -> Dict:
@@ -68,37 +104,50 @@ def load_analysis_results(timing_path: str, scaling_path: Optional[str] = None,
     return results
 
 
-def detect_timing_bottlenecks(timing_data: Dict, threshold: float = 50.0) -> List[Dict]:
+def detect_timing_bottlenecks(timing_data: Dict, threshold: Optional[float] = None) -> List[Dict]:
     """
     Detect timing bottlenecks from timing analysis.
-    
+
+    Reads the timing_analyzer.py output schema, where the payload is nested
+    under a top-level 'results' key alongside 'inputs'. A bare payload (phases
+    at the top level) is also accepted for backward compatibility.
+
+    Per-type dominance thresholds are applied (matching the documented decision
+    rules): I/O phases are flagged above 30%, all other phases above 50%. If an
+    explicit ``threshold`` is provided it overrides the per-type defaults for
+    every phase.
+
     Args:
-        timing_data: Timing analysis results
-        threshold: Percentage threshold for bottleneck (default: 50%)
-    
+        timing_data: Timing analysis results (analyzer output dict)
+        threshold: Optional uniform percentage threshold override
+
     Returns:
         List of bottleneck dictionaries
     """
     bottlenecks = []
-    
-    if 'timing_data' not in timing_data:
-        return bottlenecks
-    
-    phases = timing_data['timing_data'].get('phases', [])
-    
+
+    # Resolve the payload: prefer the nested 'results' envelope, fall back to a
+    # bare payload that carries 'phases' directly.
+    payload = timing_data.get('results', timing_data)
+    phases = payload.get('phases', []) if isinstance(payload, dict) else []
+
     for phase in phases:
         percentage = phase.get('percentage', 0)
-        if percentage > threshold:
-            severity = 'high' if percentage > 70 else 'medium'
+        name = phase.get('name', '')
+        category = _classify_phase(name)
+        phase_threshold = threshold if threshold is not None else _phase_threshold(category)
+        if percentage > phase_threshold:
+            severity = 'high' if percentage > HIGH_SEVERITY_THRESHOLD else 'medium'
             bottlenecks.append({
                 'type': 'timing',
-                'phase': phase['name'],
+                'phase': name,
+                'category': category,
                 'severity': severity,
                 'metric': 'percentage',
                 'value': percentage,
-                'threshold': threshold
+                'threshold': phase_threshold
             })
-    
+
     return bottlenecks
 
 
@@ -114,11 +163,11 @@ def detect_scaling_bottlenecks(scaling_data: Dict, threshold: float = 0.70) -> L
         List of bottleneck dictionaries
     """
     bottlenecks = []
-    
-    if 'scaling_analysis' not in scaling_data:
+
+    # Resolve the payload from the scaling_analyzer.py output envelope.
+    analysis = scaling_data.get('results', scaling_data)
+    if not isinstance(analysis, dict):
         return bottlenecks
-    
-    analysis = scaling_data['scaling_analysis']
     avg_efficiency = analysis.get('average_efficiency', 1.0)
     
     if avg_efficiency < threshold:
@@ -146,12 +195,12 @@ def detect_memory_bottlenecks(memory_data: Dict, threshold: float = 0.80) -> Lis
         List of bottleneck dictionaries
     """
     bottlenecks = []
-    
-    if 'memory_profile' not in memory_data:
+
+    # Resolve the payload from the memory_profiler.py output envelope.
+    profile = memory_data.get('results', memory_data)
+    if not isinstance(profile, dict):
         return bottlenecks
-    
-    profile = memory_data['memory_profile']
-    
+
     # Check if warnings exist (indicates high memory usage)
     if profile.get('warnings'):
         total_memory = profile.get('total_memory_gb', 0)
@@ -192,10 +241,13 @@ def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict
     # Process timing bottlenecks
     for bottleneck in bottlenecks:
         if bottleneck['type'] == 'timing':
-            phase = bottleneck['phase'].lower()
-            
+            # Use the category recorded by detect_timing_bottlenecks (which
+            # normalizes 'I/O' -> 'io'); fall back to re-classifying for
+            # bottlenecks built without a category.
+            category = bottleneck.get('category') or _classify_phase(bottleneck['phase'])
+
             # Solver-related bottlenecks
-            if any(keyword in phase for keyword in ['solve', 'linear', 'iteration', 'cg', 'gmres']):
+            if category == 'solver':
                 recommendations.append({
                     'priority': 'high',
                     'category': 'solver',
@@ -209,7 +261,7 @@ def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict
                 })
             
             # Assembly bottlenecks
-            elif any(keyword in phase for keyword in ['assembly', 'assemble', 'build']):
+            elif category == 'assembly':
                 recommendations.append({
                     'priority': 'high',
                     'category': 'assembly',
@@ -223,7 +275,7 @@ def generate_recommendations(bottlenecks: List[Dict], timing_data: Optional[Dict
                 })
             
             # I/O bottlenecks
-            elif any(keyword in phase for keyword in ['io', 'write', 'output', 'save']):
+            elif category == 'io':
                 recommendations.append({
                     'priority': 'medium',
                     'category': 'io',

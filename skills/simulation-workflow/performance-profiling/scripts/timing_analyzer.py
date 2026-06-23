@@ -14,6 +14,14 @@ MAX_LOG_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 MAX_PATTERN_LENGTH = 500
 MAX_PHASE_NAME_LENGTH = 200
 
+# Built-in formats suggested to the user when a custom --pattern matches nothing.
+SUGGESTED_PATTERNS = [
+    "Phase: <name>, Time: <t>s",
+    "<name> took <t> s",
+    "[<name>]: <t> s",
+    "Time for <name>: <t>",
+]
+
 
 def _validate_regex_pattern(pattern: str) -> None:
     """Validate a user-supplied regex pattern for safety."""
@@ -174,34 +182,49 @@ def main():
     try:
         # Parse log file
         entries = parse_timing_log(args.log, args.pattern)
-        
+
         # Aggregate timings
         aggregated = aggregate_timings(entries)
-        
+
         # Identify slowest phases
         slowest = identify_slowest_phases(aggregated)
-        
+
         # Calculate total time
         total_time = sum(data['total_time'] for data in aggregated.values())
-        
+
+        # If the user supplied a custom pattern but nothing matched, surface a
+        # hint pointing to the built-in formats so they can recover.
+        no_match_hint = None
+        if args.pattern and not entries:
+            no_match_hint = (
+                "No entries matched your --pattern. Built-in formats you can try "
+                "(omit --pattern to use them): "
+                + "; ".join(f"'{p}'" for p in SUGGESTED_PATTERNS)
+            )
+            print(f"Warning: {no_match_hint}", file=sys.stderr)
+
         # Format output
         if args.json:
+            results = {
+                'phases': [
+                    {
+                        'name': phase,
+                        **aggregated[phase]
+                    }
+                    for phase in aggregated
+                ],
+                'total_time': total_time,
+                'slowest_phase': slowest[0] if slowest else None
+            }
+            if no_match_hint is not None:
+                results['message'] = no_match_hint
+                results['suggested_patterns'] = SUGGESTED_PATTERNS
             output = {
                 'inputs': {
                     'log_file': args.log,
                     'pattern': args.pattern or 'default'
                 },
-                'results': {
-                    'phases': [
-                        {
-                            'name': phase,
-                            **aggregated[phase]
-                        }
-                        for phase in aggregated
-                    ],
-                    'total_time': total_time,
-                    'slowest_phase': slowest[0] if slowest else None
-                }
+                'results': results
             }
             print(json.dumps(output, indent=2))
         else:

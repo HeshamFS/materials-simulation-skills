@@ -22,7 +22,11 @@ class TestOptimizerSelector(unittest.TestCase):
         self.assertIn("Bayesian", result["recommended"][0])
 
     def test_medium_dim_cmaes(self):
-        """Test medium dimension recommends CMA-ES."""
+        """Test medium dimension over budget cap recommends CMA-ES.
+
+        dim=10 is within the BO dimension cutoff, but budget=200 > 100 routes
+        this to CMA-ES (BO requires both dim <= 10 AND budget <= 100).
+        """
         result = self.mod.select_optimizer(10, 200, "low", False)
         self.assertIn("CMA-ES", result["recommended"][0])
 
@@ -36,9 +40,19 @@ class TestOptimizerSelector(unittest.TestCase):
         result = self.mod.select_optimizer(5, 100, "low", False)
         self.assertIn("Bayesian", result["recommended"][0])
 
-    def test_boundary_dim_6(self):
-        """Test boundary at dim=6 (should be CMA-ES)."""
-        result = self.mod.select_optimizer(6, 100, "low", False)
+    def test_boundary_dim_6_bayesian(self):
+        """Regression (F4): dim=6 within budget is Bayesian (cutoff is dim<=10)."""
+        result = self.mod.select_optimizer(6, 50, "low", False)
+        self.assertIn("Bayesian", result["recommended"][0])
+
+    def test_boundary_dim_10_bayesian(self):
+        """Regression (F4): dim=10 budget<=100 routes to Bayesian Optimization."""
+        result = self.mod.select_optimizer(10, 100, "low", False)
+        self.assertIn("Bayesian", result["recommended"][0])
+
+    def test_boundary_dim_11_cmaes(self):
+        """Regression (F4): dim=11 exceeds the BO cutoff and routes to CMA-ES."""
+        result = self.mod.select_optimizer(11, 100, "low", False)
         self.assertIn("CMA-ES", result["recommended"][0])
 
     def test_boundary_dim_20(self):

@@ -1,4 +1,5 @@
 import unittest
+import warnings
 
 from tests.unit._utils import load_module
 
@@ -70,6 +71,55 @@ class TestDoeGenerator(unittest.TestCase):
         has_corner = any(s[0] == 1.0 and s[1] == 1.0 for s in samples)
         self.assertTrue(has_origin)
         self.assertTrue(has_corner)
+
+    def test_factorial_levels_explicit(self):
+        """Regression (F6): --levels yields exactly levels**dim samples."""
+        result = self.mod.generate_doe(2, None, "factorial", 0, levels=4)
+        self.assertEqual(result["coverage"]["count"], 16)
+        self.assertEqual(result["coverage"]["levels"], 4)
+        # No spurious budget-mismatch note when levels are explicit.
+        self.assertNotIn("note", result)
+
+    def test_factorial_levels_three_dims(self):
+        """Regression (F6): levels**dim = 3**3 = 27 samples."""
+        result = self.mod.generate_doe(3, None, "factorial", 0, levels=3)
+        self.assertEqual(result["coverage"]["count"], 27)
+        self.assertEqual(result["coverage"]["levels"], 3)
+
+    def test_factorial_budget_perfect_power_no_note(self):
+        """Regression (F6): a perfect-power budget is honored silently."""
+        result = self.mod.generate_doe(2, 16, "factorial", 0)
+        self.assertEqual(result["coverage"]["count"], 16)
+        self.assertEqual(result["coverage"]["levels"], 4)
+        self.assertNotIn("note", result)
+
+    def test_factorial_budget_non_power_warns(self):
+        """Regression (F6): a non-perfect-power budget produces a note and the
+        realized count differs from the requested budget (no longer silent)."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = self.mod.generate_doe(2, 20, "factorial", 0)
+        self.assertEqual(result["coverage"]["count"], 16)
+        self.assertEqual(result["requested_budget"], 20)
+        self.assertIn("note", result)
+        self.assertIn("realized", result["note"])
+        self.assertTrue(any("realized" in str(w.message) for w in caught))
+
+    def test_factorial_levels_too_small(self):
+        """Regression (F6): levels < 2 is rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.generate_doe(2, None, "factorial", 0, levels=1)
+
+    def test_factorial_levels_exceeds_max(self):
+        """Regression (F6): an oversized factorial design is rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.generate_doe(10, None, "factorial", 0, levels=1000)
+
+    def test_factorial_no_budget_no_levels_errors(self):
+        """Regression (F6): factorial without budget or levels is rejected."""
+        with self.assertRaises(ValueError) as ctx:
+            self.mod.generate_doe(2, None, "factorial", 0)
+        self.assertIn("budget must be positive", str(ctx.exception))
 
     def test_invalid_method(self):
         """Test invalid method raises ValueError."""

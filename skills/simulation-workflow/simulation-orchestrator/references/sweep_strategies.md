@@ -131,6 +131,32 @@ valid = [c for c in configs if is_valid(c)]
 - Rejection sampling
 - Constrained LHS algorithms
 
+## How Swept Values Are Merged Into the Base Config
+
+`sweep_generator.py` writes each swept parameter into a deep copy of the base
+config using the parameter name as a key path:
+
+- A **bare name** (e.g. `kappa`) sets/overwrites a **top-level** key:
+  `config["kappa"] = value`.
+- A **dot-notation name** (e.g. `parameters.kappa`) targets a **nested** key.
+  The generator walks/creates the dict path and assigns there:
+  `config["parameters"]["kappa"] = value`. This mirrors the dot-notation reads
+  used by `result_aggregator.py`.
+
+**The swept key path must match where your solver reads the value.** If your
+base config nests a parameter under `parameters.kappa` but you sweep the bare
+name `kappa`, the generator writes a *new* top-level `kappa` and leaves
+`parameters.kappa` at its base value for every run — the sweep would be
+scientifically meaningless. In that case sweep `parameters.kappa` instead:
+
+```bash
+# Base config: {"parameters": {"kappa": 0.5}}  -> sweep the nested key
+--params "parameters.kappa:0.1:1.0:4" --method linspace
+```
+
+Parameter names are validated against
+`[a-zA-Z_][a-zA-Z0-9_]*(.[a-zA-Z_][a-zA-Z0-9_]*)*`; anything else is rejected.
+
 ## Reproducibility Checklist
 
 - [ ] Set random seed for LHS: `--seed 42`

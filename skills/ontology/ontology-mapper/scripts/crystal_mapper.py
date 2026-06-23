@@ -91,6 +91,16 @@ BRAVAIS_ALIASES = {
     "ap": "aP",
 }
 
+# The 14 canonical Bravais lattice Pearson symbols (the resolved/output form).
+VALID_BRAVAIS_SYMBOLS = {
+    "cP", "cI", "cF",
+    "tP", "tI",
+    "oP", "oC", "oI", "oF",
+    "hP", "hR",
+    "mP", "mC",
+    "aP",
+}
+
 # Default output config (generic labels, no ontology-specific names)
 _DEFAULT_CRYSTAL_OUTPUT = {
     "base_classes": [
@@ -223,6 +233,7 @@ def map_crystal(
     gamma: Optional[float] = None,
     ontology: Optional[str] = None,
     crystal_output: Optional[Dict] = None,
+    strict_bravais: bool = True,
 ) -> Dict:
     """Map crystal structure parameters to ontology terms.
 
@@ -270,10 +281,35 @@ def map_crystal(
     if space_group is not None and not 1 <= space_group <= 230:
         raise ValueError("space_group must be between 1 and 230")
 
-    # Resolve Bravais lattice alias
+    # Resolve Bravais lattice alias, validating against the fixed set of
+    # recognized lattice symbols (aliases plus the 14 canonical Pearson codes).
     resolved_bravais = None
+    unrecognized_bravais_warning = None
     if bravais:
-        resolved_bravais = BRAVAIS_ALIASES.get(bravais.lower(), bravais)
+        if not isinstance(bravais, str):
+            raise ValueError("bravais must be a string")
+        key = bravais.lower()
+        if key in BRAVAIS_ALIASES:
+            resolved_bravais = BRAVAIS_ALIASES[key]
+        elif bravais in VALID_BRAVAIS_SYMBOLS:
+            resolved_bravais = bravais
+        elif strict_bravais:
+            recognized = ", ".join(sorted(VALID_BRAVAIS_SYMBOLS))
+            raise ValueError(
+                f"Unrecognized Bravais lattice '{bravais}'. "
+                f"Use a common name (FCC, BCC, HCP, ...) or a Pearson "
+                f"symbol ({recognized})"
+            )
+        else:
+            # Tolerant path (e.g. free-text sample 'structure' field): pass the
+            # value through unmapped and surface a warning instead of crashing
+            # the whole annotation. The strict CLI path still rejects it.
+            resolved_bravais = None
+            unrecognized_bravais_warning = (
+                f"Unrecognized Bravais lattice '{bravais}'; left unmapped. "
+                f"Use a common name (FCC, BCC, HCP, ...) or a Pearson symbol "
+                f"to map it to a lattice term."
+            )
 
     # Infer crystal system from space group
     inferred_system = None
@@ -289,6 +325,8 @@ def map_crystal(
         validation_warnings = _validate_lattice(
             effective_system, a, b, c, alpha, beta, gamma,
         )
+    if unrecognized_bravais_warning:
+        validation_warnings.append(unrecognized_bravais_warning)
 
     # Check system/space-group consistency
     if system and inferred_system and system != inferred_system:

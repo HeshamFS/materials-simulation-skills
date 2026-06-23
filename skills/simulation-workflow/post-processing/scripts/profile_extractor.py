@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # Security limits
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 FIELD_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.-]*$")
+MAX_POINTS = 10_000_000
 
 
 def _validate_file_size(filepath: str) -> None:
@@ -429,6 +430,19 @@ def main():
         print("Error: Either --axis or both --start and --end required",
               file=sys.stderr)
         sys.exit(1)
+
+    # Validate field name against the safe pattern.
+    if not FIELD_NAME_PATTERN.match(args.field):
+        print(f"Error: Invalid field name: {args.field!r}", file=sys.stderr)
+        sys.exit(2)
+
+    # Validate --points as a positive integer with an upper bound.
+    if args.points < 1 or args.points > MAX_POINTS:
+        print(
+            f"Error: --points must be between 1 and {MAX_POINTS} (got {args.points})",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     try:
         # Load data

@@ -19,8 +19,8 @@
       "assertions": [
         "Invokes scripts/runtime_monitor.py with --log simulation.log --residual-growth 10.0 --dt-drop 100.0 --json",
         "Output includes alerts, residual_stats, and dt_stats fields",
-        "Checks for NaN/Inf values, residual growth, and adaptive dt collapse",
-        "Reports whether the simulation appears healthy or shows warning signs"
+        "Emits alerts for NaN/Inf/overflow detection, residual growth, and adaptive dt collapse (the three checks runtime_monitor performs)",
+        "Reports whether the simulation appears healthy (empty alerts) or shows warning signs"
       ]
     },
     {
@@ -48,12 +48,12 @@
     {
       "id": 5,
       "prompt": "Run a full validation pipeline: preflight check on config.json (require dt, dx, kappa, M with dt range 1e-6 to 1e-2), then diagnose the crash log at run.log to figure out why it blew up.",
-      "expected_output": "Agent runs both preflight_checker.py and failure_diagnoser.py to combine pre-launch validation with post-crash diagnosis, revealing whether the config had issues that caused the failure.",
+      "expected_output": "Agent runs both preflight_checker.py and failure_diagnoser.py, combining pre-launch validation (report.status with any blockers) with post-crash diagnosis (probable_causes / recommended_fixes), and notes any consistency between the two without claiming the config caused the failure.",
       "assertions": [
         "Invokes scripts/preflight_checker.py with --config config.json --required dt,dx,kappa,M --ranges 'dt:1e-6:1e-2' --json",
         "Invokes scripts/failure_diagnoser.py with --log run.log --json",
-        "Correlates preflight warnings with crash diagnosis (e.g., out-of-range dt causing blow-up)",
-        "Provides a unified analysis connecting configuration issues to the observed failure"
+        "Surfaces preflight report.status (PASS/WARN/BLOCK) and any blockers, e.g. a dt-out-of-range blocker when dt falls outside 1e-6 to 1e-2",
+        "Surfaces failure_diagnoser probable_causes and recommended_fixes from the crash log (e.g. a numerical blow-up cause and a reduce-dt fix)"
       ]
     }
   ]

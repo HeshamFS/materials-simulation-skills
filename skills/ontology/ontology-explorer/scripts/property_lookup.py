@@ -8,6 +8,65 @@ import re
 import sys
 from typing import Dict, List, Optional
 
+# Safe-character pattern for --class / --property / --search inputs.
+# Allows letters, digits, whitespace, and a few punctuation marks common in
+# ontology labels (hyphen, slash, underscore, parentheses). Bounded length.
+_SAFE_NAME_RE = re.compile(r"^[\w \-/()]{1,128}$")
+_MAX_SEARCH_LEN = 128
+# Cap on the number of search results returned, to prevent output flooding.
+_MAX_RESULTS = 200
+
+
+def _validate_name(value: Optional[str], field: str) -> None:
+    """Reject inputs that exceed the length cap or contain unsafe characters."""
+    if value is None:
+        return
+    if len(value) > _MAX_SEARCH_LEN:
+        raise ValueError(
+            f"{field} is too long (max {_MAX_SEARCH_LEN} characters)"
+        )
+    if not _SAFE_NAME_RE.match(value):
+        raise ValueError(
+            f"{field} contains unsupported characters; allowed: "
+            "letters, digits, space, and - / _ ( )"
+        )
+
+
+def _norm(value: str) -> str:
+    """Normalize a label/domain token: drop spaces and lowercase."""
+    return value.replace(" ", "").lower()
+
+
+def _resolve_class_label(summary: Dict, class_name: str) -> Optional[str]:
+    """Resolve a user-supplied class name to its canonical label.
+
+    Resolution order mirrors class_browser.browse_class: exact match, then
+    case-insensitive, then space-normalized case-insensitive.
+    """
+    classes = summary.get("classes", {})
+    if class_name in classes:
+        return class_name
+    for name in classes:
+        if name.lower() == class_name.lower():
+            return name
+    normalized = _norm(class_name)
+    for name in classes:
+        if _norm(name) == normalized:
+            return name
+    return None
+
+
+def _domain_matches(canonical_label: str, domain: Optional[str]) -> bool:
+    """Return True if canonical class label is one of the domain's classes.
+
+    Domains may be a single class or a union like "A | B". Matching is done
+    by normalizing both sides identically (space-insensitive, case-insensitive).
+    """
+    if not domain:
+        return False
+    target = _norm(canonical_label)
+    return any(_norm(part.strip()) == target for part in domain.split("|"))
+
 
 def _load_summary(ontology: Optional[str] = None,
                   summary_file: Optional[str] = None) -> Dict:
@@ -79,6 +138,10 @@ def lookup_property(
             "Provide --property, --class, or --search"
         )
 
+    _validate_name(property_name, "--property")
+    _validate_name(class_name, "--class")
+    _validate_name(search, "--search")
+
     obj_props = summary.get("object_properties", {})
     data_props = summary.get("data_properties", {})
     result: Dict = {}
@@ -121,15 +184,24 @@ def lookup_property(
         result["property_info"] = found
 
     if class_name:
+        # Resolve the user-supplied class name to its canonical label so that
+        # "UnitCell" and "Unit Cell" behave identically (consistent with
+        # class_browser.py). If the summary carries no class index (e.g. a
+        # minimal hand-built summary), fall back to the raw input.
+        canonical = _resolve_class_label(summary, class_name)
+        if canonical is None and summary.get("classes"):
+            available = sorted(summary["classes"].keys())
+            raise ValueError(
+                f"Class '{class_name}' not found. "
+                f"Available: {', '.join(available[:20])}"
+                + ("..." if len(available) > 20 else "")
+            )
+        match_label = canonical if canonical is not None else class_name
+
         class_props: List[Dict] = []
         if prop_type in ("all", "object"):
             for name, info in obj_props.items():
-                domain = info.get("domain", "")
-                if domain and (
-                    class_name in domain
-                    or class_name.replace(" ", "") in domain
-                    or class_name.lower() in domain.lower()
-                ):
+                if _domain_matches(match_label, info.get("domain")):
                     class_props.append({
                         "name": name,
                         "type": "object",
@@ -139,12 +211,7 @@ def lookup_property(
                     })
         if prop_type in ("all", "data"):
             for name, info in data_props.items():
-                domain = info.get("domain", "")
-                if domain and (
-                    class_name in domain
-                    or class_name.replace(" ", "") in domain
-                    or class_name.lower() in domain.lower()
-                ):
+                if _domain_matches(match_label, info.get("domain")):
                     class_props.append({
                         "name": name,
                         "type": "data",
@@ -154,7 +221,7 @@ def lookup_property(
                     })
         class_props.sort(key=lambda p: (p["type"], p["name"]))
         result["class_properties"] = class_props
-        result["class_name"] = class_name
+        result["class_name"] = match_label
 
     if search:
         pattern = re.compile(re.escape(search), re.IGNORECASE)
@@ -184,7 +251,7 @@ def lookup_property(
                         "description": info.get("description"),
                     })
         matches.sort(key=lambda m: (m["type"], m["name"]))
-        result["search_results"] = matches
+        result["search_results"] = matches[:_MAX_RESULTS]
 
     return result
 

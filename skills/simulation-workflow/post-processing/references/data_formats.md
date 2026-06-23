@@ -67,17 +67,35 @@ x,phi,concentration
 
 All scripts support `--json` flag for machine-readable output.
 
-### Standard JSON Output Structure
+### JSON Output Structure
+
+Output envelopes are **not uniform** across scripts. Most scripts emit a flat
+top-level object that includes a `source_file` key plus script-specific result
+keys (field statistics such as `min`/`max`/`mean`/`count` appear at the top
+level, not nested under a `data` object). For example, `field_extractor.py`:
 
 ```json
 {
-    "script": "script_name",
-    "source_file": "input_file.json",
     "field": "phi",
-    "result_key": "result_value",
-    "metadata": {}
+    "found": true,
+    "shape": [10, 10],
+    "min": 0.0,
+    "max": 1.0,
+    "mean": 0.33,
+    "count": 100,
+    "source_file": "results/field_0100.json",
+    "timestep_info": {"timestep": 100, "time": 0.5}
 }
 ```
+
+Exceptions:
+
+- `derived_quantities.py` wraps its payload in an
+  `{ "inputs": {...}, "results": {...} }` envelope.
+- `report_generator.py` emits top-level `report_version` and `generator`
+  keys plus the requested report sections.
+
+No script emits top-level `script`, `version`, or `input_file` keys.
 
 ### CSV Export
 
@@ -99,10 +117,16 @@ For tabular results, use `--export-csv` where available:
 
 Scripts attempt to extract grid information from:
 
-1. **Explicit fields:** `dx`, `dy`, `dz`, `nx`, `ny`, `nz`
-2. **Domain fields:** `Lx`, `Ly`, `Lz` (computed: `dx = Lx / (nx - 1)`)
-3. **Bounds object:** `{"bounds": {"x": [0, 1], "y": [0, 1]}}`
-4. **Default:** `dx = dy = dz = 1.0` if not found
+1. **Explicit fields:** `dx`, `dy`, `dz` (these take precedence)
+2. **Domain fields:** `Lx`, `Ly`, `Lz` — used only to *derive* a spacing when
+   the corresponding explicit `dx`/`dy`/`dz` is absent
+   (node-centered: `dx = Lx / (nx - 1)`)
+3. **Default:** `dx = dy = dz = 1.0` if not found
+
+When both an explicit spacing and a domain size are present but inconsistent
+under both the cell-centered (`dx*nx == Lx`) and node-centered
+(`dx*(nx-1) == Lx`) conventions, `derived_quantities.py` keeps the explicit
+spacing and prints a warning to stderr.
 
 ## Data Validation
 

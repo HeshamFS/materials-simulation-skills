@@ -15,10 +15,10 @@
     {
       "id": 2,
       "prompt": "I need to choose between line search and trust region for a nonlinear FEM elasticity problem. The Jacobian is well-conditioned but my initial guess might be far from the solution.",
-      "expected_output": "Recommends trust region for robustness with poor initial guess.",
+      "expected_output": "Recommends trust region for robustness with poor initial guess (strategy=trust-region).",
       "assertions": [
-        "Uses globalization_advisor.py with --problem-type root-finding --jacobian-quality good",
-        "Recommends trust region for better robustness with distant initial guess",
+        "Uses globalization_advisor.py with --problem-type root-finding --jacobian-quality good --far-from-solution",
+        "Output reports strategy=trust-region (the --far-from-solution flag is the decisive factor for the distant initial guess)",
         "Explains that trust region controls step size more conservatively than line search",
         "Uses step_quality.py to demonstrate how trust region evaluates step acceptance"
       ]
@@ -37,12 +37,33 @@
     {
       "id": 4,
       "prompt": "I'm fitting experimental stress-strain data to a hyperelastic model. 200 data points, 6 material parameters, analytic Jacobian available. Which nonlinear solver should I use?",
-      "expected_output": "Recommends Levenberg-Marquardt for nonlinear least-squares with trust region.",
+      "expected_output": "Recommends Levenberg-Marquardt for nonlinear least-squares with trust region; Gauss-Newton as alternative.",
       "assertions": [
-        "Uses solver_selector.py identifying this as a least-squares problem with small size",
-        "Recommends Levenberg-Marquardt as primary choice for nonlinear least-squares",
-        "Notes Gauss-Newton as alternative given the analytic Jacobian",
-        "Suggests trust region globalization for robustness"
+        "Uses solver_selector.py with --problem-type least-squares and a small --size (e.g. 6 parameters)",
+        "Output recommends Levenberg-Marquardt as the primary choice for nonlinear least-squares",
+        "Output lists Gauss-Newton in alternatives (given the analytic Jacobian)",
+        "Uses globalization_advisor.py --problem-type least-squares, which reports trust_region_type=Levenberg-Marquardt"
+      ],
+      "script_checks": [
+        {
+          "description": "Least-squares fit -> Levenberg-Marquardt",
+          "cmd": [
+            "scripts/solver_selector.py",
+            "--problem-type",
+            "least-squares",
+            "--size",
+            "20",
+            "--jacobian-available",
+            "--json"
+          ],
+          "assert": [
+            {
+              "path": "results.recommended.0",
+              "op": "contains",
+              "value": "Levenberg"
+            }
+          ]
+        }
       ]
     },
     {

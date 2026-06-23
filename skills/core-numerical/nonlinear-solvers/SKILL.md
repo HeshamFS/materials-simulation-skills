@@ -14,15 +14,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 5
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Nonlinear Solvers
@@ -126,6 +125,9 @@ Is Jacobian available and cheap?
 # Select solver for large unconstrained optimization
 python3 scripts/solver_selector.py --size 50000 --smooth --memory-limited --json
 
+# Select solver for a small nonlinear least-squares (data-fitting) problem
+python3 scripts/solver_selector.py --problem-type least-squares --size 6 --jacobian-available --smooth --json
+
 # Analyze convergence from residual history
 python3 scripts/convergence_analyzer.py --residuals 1,0.1,0.01,0.001,0.0001 --tolerance 1e-6 --json
 
@@ -134,6 +136,9 @@ python3 scripts/jacobian_diagnostics.py --matrix jacobian.txt --json
 
 # Get globalization recommendation
 python3 scripts/globalization_advisor.py --problem-type optimization --jacobian-quality good --json
+
+# Globalization for a distant initial guess (favors trust region)
+python3 scripts/globalization_advisor.py --problem-type root-finding --jacobian-quality good --far-from-solution --json
 
 # Monitor residual patterns
 python3 scripts/residual_monitor.py --residuals 1,0.8,0.9,0.7,0.75,0.6 --target-tolerance 1e-8 --json
@@ -147,9 +152,14 @@ python3 scripts/step_quality.py --predicted-reduction 0.5 --actual-reduction 0.4
 | Error | Cause | Resolution |
 |-------|-------|------------|
 | `problem_size must be positive` | Invalid size | Check problem dimension |
+| `problem_size (...) exceeds maximum (...)` | Size above 10 billion cap | Re-check the unit/value |
 | `constraint_type must be one of...` | Unknown constraint | Use: none, bound, equality, inequality |
+| `problem_type must be one of...` | Unknown problem type | Use: root-finding, optimization, least-squares |
 | `residuals must be non-negative` | Invalid residual data | Check residual computation |
+| `residuals must be finite` | NaN/Inf in residual data | Sanitize residual history |
+| `residual list length (...) exceeds limit (...)` | More than 100,000 entries | Downsample the history |
 | `Matrix file not found` | Invalid path | Verify Jacobian file exists |
+| `Matrix file exceeds size limit ...` | Matrix file too large | Use a smaller / sparser matrix |
 
 ## Interpretation Guidance
 
@@ -157,10 +167,10 @@ python3 scripts/step_quality.py --predicted-reduction 0.5 --actual-reduction 0.4
 
 | Type | Meaning | Action |
 |------|---------|--------|
-| quadratic | Optimal Newton | Continue, near solution |
-| superlinear | Quasi-Newton working | Monitor for stagnation |
-| linear | Acceptable | May improve with preconditioner |
-| sublinear | Too slow | Change method or formulation |
+| quadratic | Optimal Newton (order p ≈ 2) | Continue, near solution |
+| superlinear | Ratios shrinking toward 0 (1 < p < 2); quasi-Newton working | Monitor for stagnation |
+| linear | Constant contraction ratio (p ≈ 1); a small constant ratio is fast-linear, not superlinear | May improve with preconditioner |
+| sublinear | Too slow (ratio → 1) | Change method or formulation |
 | stagnated | No progress | Check Jacobian, preconditioner |
 | diverged | Increasing residual | Add globalization, check Jacobian |
 
@@ -226,4 +236,6 @@ python3 scripts/step_quality.py --predicted-reduction 0.5 --actual-reduction 0.4
 
 ## Version History
 
-- **v1.0.0** : Initial release with 6 analysis scripts
+- **v1.2.0** (2026-06-23): Added `--problem-type` to `solver_selector.py` with a nonlinear least-squares path (Levenberg-Marquardt / Gauss-Newton); reordered solver selection so problem size dominates high-accuracy and routes large/expensive-Jacobian problems to Newton-Krylov; added `--far-from-solution` to `globalization_advisor.py` and surfaced Levenberg-Marquardt as the trust-region type for least-squares; corrected convergence classification so constant-ratio sequences are linear (not superlinear); RFC-8259-safe JSON (no `-Infinity`); input-validation hardening
+- **v1.1.0** (2026-03-26): Optimized agent-discovery description, evaluation suite, security review docs, standardized metadata block, CHANGELOG
+- **v1.0.0**: Initial release with 6 analysis scripts

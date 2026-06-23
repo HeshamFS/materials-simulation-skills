@@ -130,6 +130,48 @@ def _classify_material(sample: Dict, rules: Dict) -> str:
     return default
 
 
+_MAX_SAMPLE_KEYS = 100
+_MAX_STR_VALUE_LEN = 500
+
+
+def _validate_against_summary(annotations: List[Dict], summary: Dict) -> None:
+    """Flag emitted classes/properties that do not exist in the ontology.
+
+    The ``summary`` dict (as produced by ontology_summarizer.py) is the
+    authoritative list of classes and properties for the loaded ontology.
+    Any emitted class absent from ``summary['classes']`` or property absent
+    from both property tables is annotated in place with a
+    ``validation_warning`` key and its confidence is dropped to 0.0, mirroring
+    concept_mapper's behavior of refusing to vouch for unresolvable terms.
+
+    A summary without a populated ``classes`` table (e.g. a bare/synthetic
+    summary) disables validation so generic/test usage is unaffected.
+    """
+    classes = summary.get("classes") or {}
+    if not classes:
+        return
+    obj_props = summary.get("object_properties") or {}
+    data_props = summary.get("data_properties") or {}
+    known_props = set(obj_props) | set(data_props)
+
+    for ann in annotations:
+        if ann.get("type") == "warning":
+            continue
+        # Validate the most specific class label emitted for this annotation.
+        cls = ann.get("subclass") or ann.get("class")
+        if cls is not None and cls not in classes:
+            ann["validation_warning"] = (
+                f"class '{cls}' is not defined in the loaded ontology"
+            )
+            ann["confidence"] = 0.0
+        prop = ann.get("property")
+        if prop is not None and prop not in known_props:
+            existing = ann.get("validation_warning")
+            msg = f"property '{prop}' is not defined in the loaded ontology"
+            ann["validation_warning"] = f"{existing}; {msg}" if existing else msg
+            ann["confidence"] = 0.0
+
+
 def annotate_sample(
     summary: Dict,
     sample: Dict,
@@ -137,10 +179,17 @@ def annotate_sample(
 ) -> Dict:
     """Produce ontology annotations for a material sample description.
 
+    Every emitted class/property is validated against ``summary`` (the
+    authoritative ontology vocabulary). Terms not present in the ontology are
+    flagged with a ``validation_warning`` and confidence 0.0 instead of being
+    emitted silently, so e.g. running ``--ontology asmo`` on a crystalline
+    sample no longer yields unresolvable CMSO-style crystal terms.
+
     Parameters
     ----------
     summary : dict
-        Ontology summary.
+        Ontology summary. Used both for context and to validate that every
+        emitted class/property actually exists in the ontology.
     sample : dict
         Sample description with keys like: material, structure, lattice_a,
         lattice_b, lattice_c, alpha, beta, gamma, space_group, elements, etc.
@@ -156,10 +205,21 @@ def annotate_sample(
     Raises
     ------
     ValueError
-        If sample is empty or not a dict.
+        If sample is empty, not a dict, or exceeds size limits.
     """
     if not isinstance(sample, dict) or not sample:
         raise ValueError("Sample must be a non-empty dict")
+
+    if len(sample) > _MAX_SAMPLE_KEYS:
+        raise ValueError(f"Sample has too many keys (max {_MAX_SAMPLE_KEYS})")
+    for key, value in sample.items():
+        if not isinstance(key, str):
+            raise ValueError("Sample keys must be strings")
+        if isinstance(value, str) and len(value) > _MAX_STR_VALUE_LEN:
+            raise ValueError(
+                f"Sample value for '{key}' exceeds maximum length of "
+                f"{_MAX_STR_VALUE_LEN} characters"
+            )
 
     if mappings is None:
         mappings = {}
@@ -207,6 +267,11 @@ def annotate_sample(
             beta=sample.get("beta"),
             gamma=sample.get("gamma"),
             crystal_output=crystal_output,
+            # The sample 'structure' field is free text (e.g. "rocksalt",
+            # "perovskite") that need not be one of the 14 Bravais lattices.
+            # Tolerate unrecognized values (warn, don't crash); the strict
+            # --bravais CLI path still validates.
+            strict_bravais=False,
         )
 
         # Route properties to classes using config
@@ -274,12 +339,22 @@ def annotate_sample(
     if sample.get("lattice_a") is None and not is_amorphous:
         suggested.append("lattice_a (lattice parameter a in angstroms)")
 
+    # Validate every emitted term against the loaded ontology. Terms not in
+    # the ontology are flagged in place and their confidence dropped to 0.0.
+    _validate_against_summary(annotations, summary)
+    invalid_terms = sorted({
+        ann["validation_warning"]
+        for ann in annotations
+        if "validation_warning" in ann
+    })
+
     return {
         "annotations": annotations,
         "sample_type": sample_type,
         "material_type": material_type,
         "unmapped_fields": unmapped_fields,
         "suggested_properties": suggested,
+        "validation_warnings": invalid_terms,
     }
 
 
@@ -347,10 +422,20 @@ def main() -> None:
             if ann.get("type") == "warning":
                 print(f"  WARNING: {ann['message']}")
             elif "property" in ann:
-                print(f"  {ann['class']}.{ann['property']} = {ann['value']}")
+                line = f"  {ann['class']}.{ann['property']} = {ann['value']}"
+                if ann.get("validation_warning"):
+                    line += f"  [!] {ann['validation_warning']}"
+                print(line)
             else:
                 cls = ann.get("subclass") or ann.get("class")
-                print(f"  Class: {cls}")
+                line = f"  Class: {cls}"
+                if ann.get("validation_warning"):
+                    line += f"  [!] {ann['validation_warning']}"
+                print(line)
+        if result["validation_warnings"]:
+            print("Validation warnings (terms not in ontology):")
+            for w in result["validation_warnings"]:
+                print(f"  - {w}")
         if result["unmapped_fields"]:
             print(f"Unmapped: {', '.join(result['unmapped_fields'])}")
         if result["suggested_properties"]:

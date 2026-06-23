@@ -4,12 +4,40 @@
     {
       "id": 1,
       "prompt": "I'm running an explicit finite difference heat equation solver with dx=0.01m, dt=0.001s, thermal diffusivity 1e-5 m2/s. Will this blow up?",
-      "expected_output": "Fourier number analysis showing the simulation is stable with Fo=0.1 < 0.5 limit.",
+      "expected_output": "Fourier number analysis showing the simulation is stable with Fo=1e-4 (0.0001) << 0.5 limit.",
       "assertions": [
-        "Computes Fourier number correctly (Fo = alpha*dt/dx^2 = 0.1)",
+        "Computes Fourier number correctly (Fo = alpha*dt/dx^2 = 1e-4)",
         "States the explicit stability limit (Fo <= 0.5 for 1D diffusion)",
         "Concludes the simulation is stable",
         "References or uses cfl_checker.py"
+      ],
+      "script_checks": [
+        {
+          "description": "Stable heat eqn: Fo=1e-4 << 0.5",
+          "cmd": [
+            "scripts/cfl_checker.py",
+            "--dx",
+            "0.01",
+            "--dt",
+            "0.001",
+            "--diffusivity",
+            "1e-5",
+            "--json"
+          ],
+          "assert": [
+            {
+              "path": "metrics.fourier",
+              "op": "approx",
+              "value": 0.0001,
+              "rel_tol": 0.001
+            },
+            {
+              "path": "stable",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
       ]
     },
     {
@@ -21,6 +49,34 @@
         "Identifies CFL >> 1 as divergence cause",
         "Recommends dt < 0.0002s or implicit scheme",
         "Suggests cfl_checker.py for formal analysis"
+      ],
+      "script_checks": [
+        {
+          "description": "Diverging CFD: CFL=50 >> 1",
+          "cmd": [
+            "scripts/cfl_checker.py",
+            "--dx",
+            "0.002",
+            "--dt",
+            "0.01",
+            "--velocity",
+            "10",
+            "--json"
+          ],
+          "assert": [
+            {
+              "path": "metrics.cfl",
+              "op": "approx",
+              "value": 50.0,
+              "rel_tol": 1e-06
+            },
+            {
+              "path": "stable",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
       ]
     },
     {

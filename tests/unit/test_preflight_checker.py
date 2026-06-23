@@ -212,6 +212,89 @@ class TestPreflightChecker(unittest.TestCase):
         )
         self.assertNotEqual(report["status"], "BLOCK")
 
+    # --- F6: input-validation regression ---
+    def test_parse_list_rejects_injection(self):
+        """Regression (F6): names outside the allowlist are rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_list("dt;rm -rf,$(whoami)")
+        with self.assertRaises(ValueError):
+            self.mod.parse_list("dt dx")  # space not allowed
+        # Valid names still parse, including dotted/hyphenated.
+        self.assertEqual(self.mod.parse_list("dt,dx,kappa"), ["dt", "dx", "kappa"])
+        self.assertEqual(self.mod.parse_list("a.b,c-d,e_f"), ["a.b", "c-d", "e_f"])
+
+    def test_parse_ranges_rejects_inverted(self):
+        """Regression (F6): max <= min is rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_ranges("dt:1.0:0.0")
+        with self.assertRaises(ValueError):
+            self.mod.parse_ranges("dt:1.0:1.0")  # equal not allowed
+
+    def test_parse_ranges_rejects_nonfinite(self):
+        """Regression (F6): non-finite range bounds are rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_ranges("dt:0:inf")
+        with self.assertRaises(ValueError):
+            self.mod.parse_ranges("dt:nan:1.0")
+
+    def test_positive_finite_float_validator(self):
+        """Regression (F6): min-free-gb validator rejects bad values."""
+        import argparse
+        for bad in ["-5", "0", "nan", "inf"]:
+            with self.assertRaises(argparse.ArgumentTypeError):
+                self.mod.positive_finite_float(bad)
+        self.assertEqual(self.mod.positive_finite_float("2.0"), 2.0)
+
+    # --- F10: output-dir / disk resolution regression ---
+    def test_output_dir_resolved_config_relative(self):
+        """Regression (F10): config output_dir is resolved relative to the config dir."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out = os.path.join(tmpdir, "output")
+            os.makedirs(out)
+            # output_dir is relative ("output"); config_dir is tmpdir.
+            report = self.mod.preflight_check(
+                config={"output_dir": "output"},
+                required=[],
+                ranges={},
+                output_dir=None,
+                min_free_gb=0.0,
+                config_dir=tmpdir,
+            )
+            # Resolves to an existing dir -> no "does not exist" warning.
+            self.assertFalse(
+                any("does not exist" in w for w in report["warnings"])
+            )
+
+    def test_output_dir_config_relative_missing(self):
+        """Regression (F10): a config-relative dir that is absent warns correctly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            report = self.mod.preflight_check(
+                config={"output_dir": "missing_subdir"},
+                required=[],
+                ranges={},
+                output_dir=None,
+                min_free_gb=0.0,
+                config_dir=tmpdir,
+            )
+            self.assertTrue(
+                any("does not exist" in w for w in report["warnings"])
+            )
+
+    def test_disk_message_names_path(self):
+        """Regression (F10): disk blocker message names the probed path."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            report = self.mod.preflight_check(
+                config={},
+                required=[],
+                ranges={},
+                output_dir=tmpdir,
+                min_free_gb=1e12,  # impossibly large -> blocker
+                config_dir=tmpdir,
+            )
+            self.assertTrue(
+                any("Insufficient disk space at" in b for b in report["blockers"])
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

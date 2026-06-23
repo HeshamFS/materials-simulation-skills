@@ -203,5 +203,48 @@ class TestProfileExtractorIO(unittest.TestCase):
         self.assertEqual(info["Lx"], 1.0)
 
 
+class TestProfileExtractorCLISecurity(unittest.TestCase):
+    """Security-hardening regression: --points bound and field-name validation
+    must reject bad input with exit code 2 (matches SKILL.md Security claims)."""
+
+    SCRIPT = os.path.join(
+        "skills", "simulation-workflow", "post-processing", "scripts",
+        "profile_extractor.py",
+    )
+    FIXTURE = os.path.join(
+        "tests", "fixtures", "post-processing", "field_output.json"
+    )
+
+    def _run(self, *args):
+        import subprocess
+        import sys
+        return subprocess.run(
+            [sys.executable, self.SCRIPT, *args],
+            capture_output=True, text=True,
+        )
+
+    def test_invalid_points_exits_2(self):
+        res = self._run(
+            "--input", self.FIXTURE, "--field", "phi",
+            "--start", "0,0.5,0", "--end", "1,0.5,0", "--points", "0", "--json",
+        )
+        self.assertEqual(res.returncode, 2)
+
+    def test_invalid_field_name_exits_2(self):
+        res = self._run(
+            "--input", self.FIXTURE, "--field", "../etc/passwd",
+            "--start", "0,0.5,0", "--end", "1,0.5,0", "--json",
+        )
+        self.assertEqual(res.returncode, 2)
+
+    def test_valid_profile_ok(self):
+        res = self._run(
+            "--input", self.FIXTURE, "--field", "phi",
+            "--start", "0,0.5,0", "--end", "1,0.5,0", "--points", "5", "--json",
+        )
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertEqual(json.loads(res.stdout)["points"], 5)
+
+
 if __name__ == "__main__":
     unittest.main()

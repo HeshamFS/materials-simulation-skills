@@ -37,13 +37,24 @@ def fornberg_coefficients(x: List[float], x0: float, m: int) -> List[float]:
     return [c[i][m] for i in range(n)]
 
 
+MAX_ORDER = 6
+MAX_ACCURACY = 8
+MAX_OFFSETS = 51
+
+
 def stencil_offsets(order: int, accuracy: int, scheme: str) -> List[int]:
     if order <= 0:
         raise ValueError("order must be positive")
+    if order > MAX_ORDER:
+        raise ValueError(f"order must be <= {MAX_ORDER}")
     if accuracy <= 0:
         raise ValueError("accuracy must be positive")
+    if accuracy > MAX_ACCURACY:
+        raise ValueError(f"accuracy must be <= {MAX_ACCURACY}")
     if scheme not in {"central", "forward", "backward"}:
         raise ValueError("scheme must be central, forward, or backward")
+    if scheme == "central" and accuracy % 2 != 0:
+        raise ValueError("accuracy must be even for central")
 
     if scheme == "central":
         points = order + accuracy if order % 2 == 1 else order + accuracy - 1
@@ -65,12 +76,18 @@ def generate_stencil(
     dx: float,
     offsets: Optional[List[int]],
 ) -> Dict[str, object]:
-    if dx <= 0:
+    if not math.isfinite(dx) or dx <= 0:
         raise ValueError("dx must be positive")
     if offsets is None:
         offsets = stencil_offsets(order, accuracy, scheme)
     if not offsets:
         raise ValueError("offsets must be non-empty")
+    if len(offsets) > MAX_OFFSETS:
+        raise ValueError(f"offsets list too long (max {MAX_OFFSETS})")
+    if len(set(offsets)) != len(offsets):
+        raise ValueError("offsets must be distinct")
+    if order >= len(offsets):
+        raise ValueError("number of offsets must exceed derivative order")
 
     x = [float(o) * dx for o in offsets]
     coeffs = fornberg_coefficients(x, 0.0, order)
@@ -84,9 +101,13 @@ def generate_stencil(
 
 
 def parse_offsets(raw: str) -> List[int]:
+    if len(raw) > 512:
+        raise ValueError("offset list string too long")
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("offset list must be a comma-separated list")
+    if len(parts) > MAX_OFFSETS:
+        raise ValueError(f"offsets list too long (max {MAX_OFFSETS})")
     return [int(p) for p in parts]
 
 

@@ -12,9 +12,8 @@
     "t_end": 1.0,
     "output_interval": 0.1
   },
-  "parameters": {
-    "kappa": 0.5,
-    "mobility": 1.0,
-    "tolerance": 1e-6
-  }
+  "dt": 0.001,
+  "kappa": 0.5,
+  "mobility": 1.0,
+  "tolerance": 1e-6
 }

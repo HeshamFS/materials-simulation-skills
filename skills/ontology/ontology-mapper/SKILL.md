@@ -15,15 +15,14 @@ description: >
 allowed-tools: Read, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: low
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
-  eval_cases: 5
-  last_reviewed: "2026-03-26"
+  last_evaluated: "2026-06-23"
+  eval_cases: 6
+  last_reviewed: "2026-06-23"
 ---
 
 # Ontology Mapper
@@ -65,13 +64,24 @@ What do you need to map?
     └── concept_mapper.py --ontology <name> --terms "term1,term2,term3"
 ```
 
+> **Ontology scope — crystal/sample annotation is CMSO-only.** `crystal_mapper.py`
+> and `sample_annotator.py` emit crystal-structure vocabulary (Crystalline Material,
+> Crystal Structure, Unit Cell, Space Group, lattice properties). This vocabulary is
+> defined by **CMSO**. **ASMO is a simulation-methods ontology and does not define any
+> crystal/sample classes** — so for ASMO use the concept-mapping path
+> (`concept_mapper.py`, which resolves terms like DFT, NPT, timestep, PBE to real ASMO
+> classes) only. If `sample_annotator.py`/`crystal_mapper.py` is run with an ontology
+> whose summary lacks the required classes (e.g. `--ontology asmo`), each unresolvable
+> term is flagged in `results.validation_warnings` and given `confidence: 0.0` rather
+> than silently emitting an invalid term.
+
 ## Script Outputs (JSON Fields)
 
 | Script | Key Outputs |
 |--------|-------------|
 | `scripts/concept_mapper.py` | `results.matches`, `results.unmatched`, `results.suggestions` |
 | `scripts/crystal_mapper.py` | `results.ontology_classes`, `results.ontology_properties`, `results.effective_system`, `results.bravais_lattice`, `results.validation_warnings` |
-| `scripts/sample_annotator.py` | `results.annotations`, `results.sample_type`, `results.material_type`, `results.unmapped_fields`, `results.suggested_properties` |
+| `scripts/sample_annotator.py` | `results.annotations`, `results.sample_type`, `results.material_type`, `results.unmapped_fields`, `results.suggested_properties`, `results.validation_warnings` |
 
 ## Workflow
 
@@ -133,11 +143,11 @@ python3 skills/ontology/ontology-mapper/scripts/sample_annotator.py \
 
 ## Adding a New Ontology
 
-To support a new ontology (e.g., ASMO), create a `<name>_mappings.json` in `references/`:
+To support a new ontology, create a `<name>_mappings.json` in `references/`:
 
 ```json
 {
-  "ontology": "asmo",
+  "ontology": "myonto",
   "synonyms": { "simulation method": "Simulation Method", ... },
   "property_synonyms": { "timestep": "has timestep", ... },
   "material_type_rules": { "keyword_rules": [...], "default": "Material" },
@@ -147,7 +157,16 @@ To support a new ontology (e.g., ASMO), create a `<name>_mappings.json` in `refe
 }
 ```
 
-Then add `"mappings_file": "asmo_mappings.json"` to the ontology's entry in `ontology_registry.json`. No code changes needed.
+Then add `"mappings_file": "myonto_mappings.json"` to the ontology's entry in `ontology_registry.json`. No code changes needed.
+
+**Only include the `sample_schema`, `crystal_output`, `material_type_rules` and
+`annotation_routing` blocks if every class/property they name actually exists in that
+ontology's summary.** `sample_annotator.py` validates emitted terms against the loaded
+summary and flags any that are undefined (`results.validation_warnings`, `confidence: 0.0`).
+For example, `asmo_mappings.json` deliberately ships **only** `synonyms` and
+`property_synonyms` because ASMO is a simulation-methods ontology with no crystal/sample
+vocabulary — its concept terms (DFT, NPT, timestep, PBE) all resolve, but a crystal/sample
+config would emit unresolvable terms.
 
 ## Error Handling
 
@@ -155,12 +174,18 @@ Then add `"mappings_file": "asmo_mappings.json"` to the ontology's entry in `ont
 |-------|-------|------------|
 | `space_group must be between 1 and 230` | Invalid space group number | Use a valid space group number |
 | `a must be positive` | Non-positive lattice parameter | Provide positive values in angstroms |
+| `Unrecognized Bravais lattice '<x>'` | Bravais symbol/name not in the recognized set | Use a common name (FCC, BCC, HCP) or a Pearson symbol (cF, cI, hP, ...) |
+| `Term exceeds maximum length of 200 characters` | A `--term`/`--terms` entry is too long | Shorten the term |
+| `Too many terms (max 100)` | More than 100 terms supplied | Split into smaller batches |
 | `Sample must be a non-empty dict` | Empty or missing sample data | Provide a valid JSON sample dict |
-| Validation warnings | Lattice parameters inconsistent with crystal system | Check that a=b=c for cubic, etc. |
+| `Sample has too many keys (max 100)` | Oversized sample dict | Reduce the number of sample keys |
+| Validation warnings (lattice) | Lattice parameters inconsistent with crystal system | Check that a=b=c for cubic, etc. |
+| `results.validation_warnings` (terms) | Emitted class/property not defined in the chosen ontology (e.g. crystal terms for ASMO) | Use CMSO for crystal/sample annotation; use ASMO only for concept mapping |
 
 ## Interpretation Guidance
 
-- **Confidence scores**: 1.0 = exact match, 0.9 = synonym match, 0.7 = substring match, 0.5 = description match
+- **Confidence scores**: 1.0 = exact label match, 0.9 = synonym-table match, 0.7 = substring match, 0.5 = description match. Note: the per-ontology synonym table is consulted *before* exact-label matching, so a term that is both a synonym key and a class label (e.g. `space group`, `unit cell`, `atom`) is reported as a 0.9 synonym match even though it coincides exactly with a class label — the matched class and IRI are still correct.
+- **`sample_annotator.py` validation warnings**: every emitted class/property is checked against the loaded ontology summary. Terms not defined in that ontology are flagged in `results.validation_warnings` (and the corresponding annotation gets a `validation_warning` field with `confidence: 0.0`). This is how the annotator signals that a crystal/sample term cannot resolve to an IRI in the chosen ontology (e.g. running `--ontology asmo` on a crystalline sample — see below).
 - **Validation warnings**: indicate potential mistakes (e.g., specifying a!=b for cubic). These are warnings, not errors — the mapping still proceeds.
 - **Unmapped fields**: input keys that the annotator doesn't recognize. These may need manual mapping.
 - **Suggested properties**: additional ontology properties that would make the annotation more complete.
@@ -206,10 +231,12 @@ Then add `"mappings_file": "asmo_mappings.json"` to the ontology's entry in `ont
 - [Element Data](references/element_data.json) — periodic table data
 - [CMSO Mappings](references/cmso_mappings.json) — CMSO-specific synonym tables and annotation config
 - [CMSO Guide](../ontology-explorer/references/cmso_guide.md) — CMSO ontology overview
+- [Ontology Explorer](../ontology-explorer/) — sibling skill; `scripts/class_browser.py --ontology <name> --search <term>` browses classes when a concept is unmatched
 
 ## Version History
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-06-23 | 1.2 | Validate emitted terms against the loaded ontology (ASMO crystal/sample terms now flagged, not silently emitted); document ASMO is concept-mapping only; clarify synonym-vs-exact confidence precedence; self-contained class_browser suggestion; harden input validation (term/sample size caps, Bravais allowlist) |
 | 2026-02-25 | 1.1 | Refactored for multi-ontology support: externalized CMSO-specific knowledge to config |
 | 2026-02-25 | 1.0 | Initial release with CMSO mapping support |

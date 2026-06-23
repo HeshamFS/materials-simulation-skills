@@ -15,15 +15,14 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.1.2"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 5
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Post-Processing Skill
@@ -42,6 +41,12 @@ Before running post-processing scripts, collect:
    - Path to simulation output files (JSON, CSV, HDF5, VTK)
    - Time step/snapshot indices of interest
    - Field names to extract
+
+   > **Read field names from the file, never assume them.** Before extracting,
+   > open the output file (or run `field_extractor.py --input <file> --list
+   > --json`) and use only the field names that actually appear under `fields`.
+   > Do not invent fields such as `temperature` if they are not present, and do
+   > not assume a grid size — read the real `shape`/`count` from the data.
 
 2. **Analysis Type**
    - Field extraction (spatial data at specific times)
@@ -115,12 +120,19 @@ python scripts/time_series_analyzer.py \
     --window 10 \
     --json
 
-# Detect steady state
+# Detect steady state (relative-variation test; best for physical quantities)
 python scripts/time_series_analyzer.py \
     --input results/history.json \
     --quantity residual \
     --detect-steady-state \
     --tolerance 1e-6 \
+    --json
+
+# Convergence by absolute threshold (physically correct test for residuals)
+python scripts/time_series_analyzer.py \
+    --input results/history.json \
+    --quantity residual \
+    --absolute-threshold 1e-6 \
     --json
 ```
 
@@ -158,7 +170,10 @@ python scripts/statistical_analyzer.py \
     --field concentration \
     --json
 
-# Statistics in specific region
+# Statistics in a specific spatial region (1D/2D fields only).
+# Coordinates are derived from the field shape and grid spacing
+# (explicit dx/dy, or Lx/Ly via dx = Lx/(nx-1)); only the variables
+# x, y, z compared against numbers, joined by and/or, are allowed.
 python scripts/statistical_analyzer.py \
     --input results/field_0100.json \
     --field phi \
@@ -302,10 +317,32 @@ python scripts/report_generator.py \
 ## Interpretation Guidelines
 
 ### Time Series Analysis
-- **Monotonic decrease** in energy: System approaching equilibrium
-- **Oscillations** in residual: May indicate time step too large
-- **Plateau** in quantities: Steady state reached
-- **Sudden jumps**: Possible numerical instability
+
+Interpret convergence differently depending on the quantity type, because the
+two signals the analyzer reports (`convergence.{rate,type}` and
+`steady_state.reached`) answer different questions and can legitimately
+disagree.
+
+**Residual / error quantities** (e.g. `residual`, `error`):
+- Judge convergence by **absolute magnitude vs a tolerance**: a residual at or
+  below the target tolerance (e.g. `1e-6`) is converged. Use
+  `--absolute-threshold <tol>` to get the `convergence_threshold` block, which
+  is the physically correct test for residuals.
+- The relative `--detect-steady-state` test answers "has the residual stopped
+  changing?", not "has it converged?". For a still-decreasing residual,
+  `steady_state.reached = false` is **expected and not a failure**.
+- A **plateau** of a residual means a **stalled** solver
+  (`convergence.type = "stalled"`), not steady state.
+- **Reconcile the signals**: if `convergence.type` is `fast`/`linear` and the
+  final residual is small (or `convergence_threshold.reached = true`), report
+  the run as **converged** even when `steady_state.reached = false`.
+
+**Physical quantities** (e.g. `energy`, `volume_fraction`, `mass`,
+`interface_area`):
+- **Monotonic decrease** in energy: system approaching equilibrium.
+- **Plateau** (`steady_state.reached = true`): steady state reached.
+- **Oscillations**: may indicate the time step is too large.
+- **Sudden jumps**: possible numerical instability.
 
 ### Statistical Analysis
 - **Bimodal distribution** of order parameter: Two-phase mixture
@@ -322,33 +359,48 @@ python scripts/report_generator.py \
 
 ## Output Format
 
-All scripts support `--json` flag for machine-readable output:
+All scripts support the `--json` flag for machine-readable output. Most
+scripts emit a **flat** top-level object whose keys depend on the script. For
+example, `field_extractor.py --include-data` on a single field emits:
 
 ```json
 {
-    "script": "field_extractor",
-    "version": "1.0.0",
-    "input_file": "results/field_0100.json",
     "field": "concentration",
-    "data": {
-        "shape": [100, 100],
-        "min": 0.1,
-        "max": 0.9,
-        "mean": 0.5
-    },
-    "values": [[...], [...]]
+    "found": true,
+    "data": [[0.1, 0.9], [0.3, 0.6]],
+    "shape": [2, 2],
+    "min": 0.1,
+    "max": 0.9,
+    "mean": 0.475,
+    "count": 4,
+    "source_file": "results/field_0100.json",
+    "timestep_info": {"timestep": 100, "time": 1.5}
 }
 ```
+
+Notes on envelope shapes (they are not uniform across scripts):
+
+- `field_extractor.py`, `statistical_analyzer.py`, `time_series_analyzer.py`,
+  `profile_extractor.py`, and `comparison_tool.py` emit a flat object with a
+  `source_file` key plus script-specific result keys.
+- `derived_quantities.py` wraps its payload in an `{ "inputs": {...},
+  "results": {...} }` envelope.
+- `report_generator.py` emits top-level `report_version` and `generator`
+  keys plus the requested report sections.
+
+No script emits top-level `script`, `version`, or `input_file` keys, and
+field statistics (`min`/`max`/`mean`/`count`) appear at the top level, not
+nested under a `data` object.
 
 ## Security
 
 ### Input Validation
 - User-provided field names are validated against `[a-zA-Z_][a-zA-Z0-9_.-]*` to prevent injection via crafted field names
-- `statistical_analyzer.py` validates `--region` conditions against a strict regex allowlist (variable comparisons with numbers only)
-- `profile_extractor.py` validates point coordinates as finite numbers with max 3 dimensions
-- `--metric` values in `comparison_tool.py` are validated against a fixed allowlist (`l2_error`, `rmse`, `max_difference`)
-- `--sections` in `report_generator.py` are validated against known section names
-- `--bins`, `--points`, and `--window` are validated as positive integers with upper bounds
+- `statistical_analyzer.py` validates `--region` conditions against a strict allowlist before use: only the coordinate variables `x`, `y`, `z` compared (`< <= > >= == !=`) against numeric literals and joined by `and`/`or` are accepted; anything else exits with code 2. The parsed condition is applied as a real coordinate mask (no `eval`/`exec`), so the reported statistics describe the requested region
+- `profile_extractor.py` validates the field name against the same pattern and point coordinates as finite numbers with max 3 dimensions
+- `--metric` values in `comparison_tool.py` are validated against a fixed allowlist (`l1_error`, `l2_error`, `linf_error`, `rmse`, `mae`, `max_difference`, `correlation`, `r_squared`); unknown metrics return an error
+- `--sections` in `report_generator.py` are validated against the known section names (`summary`, `statistics`, `convergence`, `validation`, `files`, `parameters`, `all`); unknown sections exit with code 2
+- `--bins` (statistical_analyzer), `--points` (profile_extractor), and `--window` (time_series_analyzer) are validated as positive integers with upper bounds; out-of-range values exit with code 2
 
 ### File Access
 - All JSON and CSV loading functions reject files exceeding 500 MB before parsing
@@ -386,4 +438,22 @@ For detailed information, see:
 
 ## Version History
 
-- v1.0.0 (2024-12-24): Initial release
+See `CHANGELOG.md` for the authoritative record.
+
+- v1.1.2 (2026-06-23): Made the eval suite self-contained and discriminating —
+  copied the real fixtures into `evals/files/` (only `phi`/`concentration` fields
+  on a 10x10 grid; residual series ending at 5e-6), rewrote every eval prompt to
+  reference those exact files, and added deterministic `script_checks` pinning the
+  verified script outputs (including the correct verdict that the 1e-6 absolute
+  residual threshold is NOT reached). Added guidance to read field names from the
+  output file rather than assuming them.
+- v1.1.1 (2026-06-23): Implemented real coordinate-based `--region` filtering in
+  `statistical_analyzer.py`; fixed `report_generator.py` to read nested
+  `fields.*.values` output; gave explicit `dx`/`dy`/`dz` precedence in
+  `derived_quantities.py` grid spacing; added an `--absolute-threshold`
+  convergence mode and residual-vs-physical interpretation guidance; corrected
+  the Output Format example and version metadata; added `--bins`/`--window`
+  bounds validation.
+- v1.1.0 (2026-03-26): Optimized description, evaluation suite, security review,
+  standardized metadata, CHANGELOG.
+- v1.0.0 (2026-02-25): Initial release.

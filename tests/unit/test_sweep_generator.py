@@ -207,6 +207,107 @@ class TestSweepGenerator(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.mod.parse_param_spec("dt:0.01:0.01:5")
 
+    def test_linspace_endpoint_inclusive_values(self):
+        """linspace must use step=(stop-start)/(count-1), endpoint-inclusive."""
+        values = self.mod.linspace(1e-4, 1e-2, 5)
+        expected = [0.0001, 0.002575, 0.00505, 0.007525, 0.01]
+        self.assertEqual(len(values), 5)
+        for got, exp in zip(values, expected):
+            self.assertAlmostEqual(got, exp, places=10)
+
+    def test_merge_config_dot_notation_nested(self):
+        """merge_config must write dot-notation keys into nested locations."""
+        base = {"parameters": {"kappa": 0.5, "mobility": 1.0}}
+        merged = self.mod.merge_config(base, {"parameters.kappa": 0.9})
+        # Nested value updated, sibling preserved
+        self.assertAlmostEqual(merged["parameters"]["kappa"], 0.9)
+        self.assertAlmostEqual(merged["parameters"]["mobility"], 1.0)
+        # No spurious duplicate top-level key
+        self.assertNotIn("kappa", merged)
+        # Base untouched (deep copy)
+        self.assertAlmostEqual(base["parameters"]["kappa"], 0.5)
+
+    def test_merge_config_creates_missing_nested_path(self):
+        """Dot-notation override creates intermediate dicts when absent."""
+        base = {"solver": "CG"}
+        merged = self.mod.merge_config(base, {"a.b.c": 3.0})
+        self.assertAlmostEqual(merged["a"]["b"]["c"], 3.0)
+
+    def test_nested_sweep_overrides_nested_key_regression(self):
+        """Regression (F2): sweeping parameters.kappa overrides the nested value,
+        not a new top-level key."""
+        nested_base = os.path.join(self.temp_dir, "nested.json")
+        with open(nested_base, "w") as f:
+            json.dump({"parameters": {"kappa": 0.5}}, f)
+        output_dir = os.path.join(self.temp_dir, "nested_sweep")
+        self.mod.generate_sweep(
+            base_config_path=nested_base,
+            params_str="parameters.kappa:0.1:1.0:3",
+            method="linspace",
+            output_dir=output_dir,
+        )
+        with open(os.path.join(output_dir, "config_0002.json")) as f:
+            cfg = json.load(f)
+        self.assertAlmostEqual(cfg["parameters"]["kappa"], 1.0)
+        self.assertNotIn("kappa", cfg)  # no duplicate top-level key
+
+    def test_parse_param_spec_rejects_invalid_name(self):
+        """Parameter names with unsafe characters are rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_param_spec("dt;rm:0.1:1.0:3")
+        with self.assertRaises(ValueError):
+            self.mod.parse_param_spec("../etc:0.1:1.0:3")
+
+    def test_parse_param_spec_accepts_dotted_name(self):
+        """Dot-notation parameter names are accepted."""
+        name, fmin, fmax, count = self.mod.parse_param_spec("parameters.kappa:0.1:1.0:4")
+        self.assertEqual(name, "parameters.kappa")
+        self.assertEqual(count, 4)
+
+    def test_parse_param_spec_rejects_nonfinite_bounds(self):
+        """NaN/Inf bounds are rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_param_spec("dt:nan:1.0:3")
+        with self.assertRaises(ValueError):
+            self.mod.parse_param_spec("dt:0.1:inf:3")
+
+    def test_parse_param_spec_rejects_nonpositive_count(self):
+        """Counts must be positive integers."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_param_spec("dt:0.1:1.0:0")
+        with self.assertRaises(ValueError):
+            self.mod.parse_param_spec("dt:0.1:1.0:-2")
+
+    def test_parse_param_spec_rejects_count_over_cap(self):
+        """Counts above MAX_COUNT are rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.parse_param_spec(f"dt:0.1:1.0:{self.mod.MAX_COUNT + 1}")
+
+    def test_parse_params_rejects_too_many(self):
+        """More than MAX_PARAM_SPECS parameters are rejected."""
+        specs = ",".join(f"p{i}:0.1:1.0:2" for i in range(self.mod.MAX_PARAM_SPECS + 1))
+        with self.assertRaises(ValueError):
+            self.mod.parse_params(specs)
+
+    def test_generate_sweep_rejects_bad_samples(self):
+        """LHS --samples must be positive and within the upper bound."""
+        with self.assertRaises(ValueError):
+            self.mod.generate_sweep(
+                base_config_path=self.base_config_path,
+                params_str="dt:0.001:0.01",
+                method="lhs",
+                output_dir=os.path.join(self.temp_dir, "lhs_bad0"),
+                samples=0,
+            )
+        with self.assertRaises(ValueError):
+            self.mod.generate_sweep(
+                base_config_path=self.base_config_path,
+                params_str="dt:0.001:0.01",
+                method="lhs",
+                output_dir=os.path.join(self.temp_dir, "lhs_big"),
+                samples=self.mod.MAX_SAMPLES + 1,
+            )
+
     def test_config_content(self):
         """Test generated config file content."""
         output_dir = os.path.join(self.temp_dir, "sweep_content")

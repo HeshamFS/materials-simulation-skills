@@ -7,7 +7,7 @@
       "expected_output": "Agent runs concept_mapper.py to find CMSO classes and properties matching 'space group', returning matches with confidence scores.",
       "assertions": [
         "Invokes scripts/concept_mapper.py with --ontology cmso --term 'space group' --json",
-        "Output includes results.matches with confidence scores (1.0 for exact, 0.9 for synonym)",
+        "Output includes results.matches with a confidence score; because the synonym table is consulted before exact-label matching, 'space group' is reported as a 0.9 synonym_class match (not 1.0), and the matched class/IRI are still correct",
         "Returns the matching CMSO class (Space Group) and related properties",
         "Reports any unmatched terms or alternative suggestions"
       ]
@@ -41,8 +41,8 @@
       "assertions": [
         "Invokes scripts/concept_mapper.py with --ontology cmso --terms 'FCC,copper,lattice constant,unit cell,grain boundary' --json",
         "Output includes results.matches for successfully mapped terms",
-        "Reports results.unmatched for any terms not found in CMSO (e.g., grain boundary may not exist)",
-        "Provides results.suggestions for unmatched terms to guide the user"
+        "Reports results.unmatched for any terms not found in CMSO (e.g., 'copper' has no CMSO class; 'grain boundary' maps to the Crystal Defect class)",
+        "Provides results.suggestions for unmatched terms (a runnable class_browser.py command including --ontology) to guide the user"
       ]
     },
     {
@@ -54,6 +54,17 @@
         "Output includes generic crystal system identification (hexagonal)",
         "Maps HCP to the appropriate Bravais lattice symbol (hP)",
         "Validates that a != c for hexagonal system (no validation warning expected since 3.21 != 5.21)"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Annotate this crystalline sample for the ASMO ontology: {\"material\": \"copper\", \"structure\": \"FCC\", \"lattice_a\": 3.615, \"space_group\": 225}",
+      "expected_output": "Agent runs sample_annotator.py with --ontology asmo and surfaces that ASMO does not define crystal/sample vocabulary: the emitted crystal terms are flagged in results.validation_warnings rather than presented as valid ASMO annotations.",
+      "assertions": [
+        "Invokes scripts/sample_annotator.py with --ontology asmo --sample '{\"material\":\"copper\",\"structure\":\"FCC\",\"lattice_a\":3.615,\"space_group\":225}' --json",
+        "Output includes a non-empty results.validation_warnings list noting that classes/properties such as 'Crystal Structure', 'Unit Cell', 'Space Group' (or their properties) are not defined in the loaded ontology",
+        "Crystal/sample annotations for ASMO carry confidence 0.0 and a validation_warning field (they do not resolve to ASMO IRIs)",
+        "Agent advises using --ontology cmso for crystalline sample annotation, reserving ASMO for the concept-mapping path"
       ]
     }
   ]

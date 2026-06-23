@@ -15,7 +15,7 @@
     {
       "id": 2,
       "prompt": "My adaptive RK45 solver keeps rejecting steps. Error norm is around 1.2 with dt=1e-3 and the method is order 4. What should the next dt be?",
-      "expected_output": "Step should be rejected and dt reduced based on PI or I controller formula.",
+      "expected_output": "Step should be rejected and dt reduced based on the P or PI controller formula.",
       "assertions": [
         "Uses adaptive_step_controller.py with --dt 1e-3 --error-norm 1.2 --order 4",
         "Reports step should be rejected since error norm > 1.0",

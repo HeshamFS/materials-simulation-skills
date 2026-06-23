@@ -3,10 +3,17 @@
 import json
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
 
 from tests.unit._utils import load_module
+
+SCRIPT_PATH = os.path.join(
+    "skills", "simulation-workflow", "post-processing", "scripts",
+    "report_generator.py",
+)
 
 
 class TestReportGenerator(unittest.TestCase):
@@ -121,6 +128,41 @@ class TestReportGenerator(unittest.TestCase):
         self.assertIn("phi", result["final_state"])
         self.assertEqual(result["final_state"]["phi"]["min"], 0.0)
         self.assertEqual(result["final_state"]["phi"]["max"], 1.0)
+
+    def test_analyze_field_files_nested_format(self):
+        """F3 regression: nested {'fields': {'phi': {'values': [[...]]}}} layout
+        must be discovered and summarized (not silently empty)."""
+        self._create_field_file("field_final.json", {
+            "timestep": 100,
+            "time": 0.5,
+            "dx": 0.1,
+            "dy": 0.1,
+            "fields": {
+                "phi": {"values": [[0.0, 0.5], [1.0, 0.5]]},
+                "concentration": {"values": [[0.1, 0.2], [0.3, 0.4]]},
+            },
+        })
+
+        result = self.mod.analyze_field_files(
+            self.results_dir, ["field_final.json"]
+        )
+
+        self.assertIn("phi", result["final_state"])
+        self.assertIn("concentration", result["final_state"])
+        # Scalar metadata must NOT be treated as a field.
+        self.assertNotIn("timestep", result["final_state"])
+        self.assertNotIn("dx", result["final_state"])
+        self.assertEqual(result["final_state"]["phi"]["min"], 0.0)
+        self.assertEqual(result["final_state"]["phi"]["max"], 1.0)
+        self.assertEqual(result["final_state"]["phi"]["count"], 4)
+
+    def test_resolve_field_values(self):
+        self.assertEqual(
+            self.mod.resolve_field_values({"values": [[1, 2]]}), [[1, 2]]
+        )
+        self.assertEqual(self.mod.resolve_field_values([1, 2, 3]), [1, 2, 3])
+        self.assertIsNone(self.mod.resolve_field_values({"meta": 1}))
+        self.assertIsNone(self.mod.resolve_field_values(42))
 
     def test_analyze_history_files_empty(self):
         """Test analyzing empty history list."""
@@ -293,6 +335,50 @@ class TestReportGenerator(unittest.TestCase):
         self.assertIn("SIMULATION ANALYSIS REPORT", text)
         self.assertIn("/test", text)
         self.assertIn("Files found: 5", text)
+
+
+class TestReportGeneratorCLI(unittest.TestCase):
+    """F3 regression: CLI --sections statistics on the nested-format fixture
+    must report the final-state fields (this was previously empty)."""
+
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.results_dir = os.path.join(self.temp_dir, "results")
+        os.makedirs(self.results_dir)
+        # Copy the skill's nested-format fixture as a field file.
+        fixture = os.path.join(
+            "tests", "fixtures", "post-processing", "field_output.json"
+        )
+        with open(fixture) as f:
+            data = json.load(f)
+        with open(os.path.join(self.results_dir, "field_final.json"), "w") as f:
+            json.dump(data, f)
+
+    def tearDown(self):
+        shutil.rmtree(self.temp_dir)
+
+    def test_cli_statistics_section_nested(self):
+        res = subprocess.run(
+            [sys.executable, SCRIPT_PATH,
+             "--input", self.results_dir,
+             "--sections", "statistics", "--json"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(res.returncode, 0, res.stderr)
+        out = json.loads(res.stdout)
+        fields = out["statistics"].get("final_state_fields")
+        self.assertIsNotNone(fields)
+        self.assertIn("phi", fields)
+        self.assertIn("concentration", fields)
+
+    def test_cli_unknown_section_exits_2(self):
+        res = subprocess.run(
+            [sys.executable, SCRIPT_PATH,
+             "--input", self.results_dir,
+             "--sections", "summary,bogus", "--json"],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(res.returncode, 2)
 
 
 if __name__ == "__main__":

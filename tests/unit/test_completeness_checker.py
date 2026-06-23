@@ -116,5 +116,70 @@ class TestCompletenessChecker(unittest.TestCase):
         self.assertIn("has space group", result["recommended_missing"])
 
 
+# Summary exercising subclass / substring relationships for F1 regression.
+SUBCLASS_SUMMARY = {
+    "classes": {
+        "Material": {"parent": None, "children": ["Crystalline Material"]},
+        "Crystalline Material": {"parent": "Material", "children": []},
+        "Unit": {"parent": None, "children": []},
+        "Unit Cell": {"parent": None, "children": []},
+    },
+    "object_properties": {
+        "has structure": {"domain": "Material", "range": "Structure"},
+        "has crystallographic defect": {
+            "domain": "Crystalline Material", "range": "Crystal Defect",
+        },
+        "has Bravais lattice": {"domain": "Unit Cell", "range": "string"},
+    },
+    "data_properties": {},
+}
+
+
+class TestSubclassDomainMatching(unittest.TestCase):
+    def test_bare_material_excludes_subclass_property(self):
+        # F1: "Material" (substring of "Crystalline Material") must NOT be
+        # credited with the subclass-only "has crystallographic defect".
+        result = COMPLETENESS.check_completeness(
+            SUBCLASS_SUMMARY, {}, "Material", [],
+        )
+        self.assertIn("has structure", result["recommended_missing"])
+        self.assertNotIn(
+            "has crystallographic defect", result["recommended_missing"]
+        )
+
+    def test_unit_excludes_unit_cell_property(self):
+        # F1: "Unit" must NOT inherit "Unit Cell" properties via substring.
+        result = COMPLETENESS.check_completeness(
+            SUBCLASS_SUMMARY, {}, "Unit", [],
+        )
+        self.assertEqual(result["recommended_missing"], [])
+
+    def test_subclass_inherits_parent_property(self):
+        # "Crystalline Material" IS-A "Material" so it gets both properties.
+        result = COMPLETENESS.check_completeness(
+            SUBCLASS_SUMMARY, {}, "Crystalline Material", [],
+        )
+        self.assertIn("has structure", result["recommended_missing"])
+        self.assertIn(
+            "has crystallographic defect", result["recommended_missing"]
+        )
+
+
+class TestCompletenessSecurity(unittest.TestCase):
+    def test_too_many_provided_raises(self):
+        with self.assertRaises(ValueError):
+            COMPLETENESS.check_completeness(
+                SAMPLE_SUMMARY, CONSTRAINTS, "Crystal Structure",
+                ["p"] * (COMPLETENESS.MAX_PROVIDED + 1),
+            )
+
+    def test_overlong_class_name_raises(self):
+        with self.assertRaises(ValueError):
+            COMPLETENESS.check_completeness(
+                SAMPLE_SUMMARY, CONSTRAINTS,
+                "X" * (COMPLETENESS.MAX_NAME_LEN + 1), [],
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

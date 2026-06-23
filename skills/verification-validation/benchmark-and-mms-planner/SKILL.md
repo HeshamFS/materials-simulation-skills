@@ -9,15 +9,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.0.0"
+  version: "1.1.1"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 3
-  last_reviewed: "2026-05-18"
+  last_reviewed: "2026-06-23"
 ---
 
 # Benchmark And MMS Planner
@@ -55,11 +54,15 @@ Design a verification and validation plan before trusting simulation results. Th
 `scripts/benchmark_mms_planner.py` emits `inputs` and `results` with:
 
 - `verification_strategy`
+- `effective_model` — the resolved model family actually used; unknown families fall back to `general`.
 - `mms_plan`
 - `benchmark_cases`
-- `refinement_protocol`
+- `refinement_protocol` (`dimension`, `levels`, `spacing_ratio`, `expected_order`, `accept_observed_order_min`, `include_time_refinement`)
+- `uncertainty_plan` (`propagate_inputs`, `report_error_bars`, `separate_discretization_and_model_error`) — propagation/error-bar guidance driven by risk level and reference type.
 - `acceptance_criteria`
 - `warnings`
+
+The `accept_observed_order_min` is an **engineering screening heuristic**, not a certified bound: it is the formal `expected_order` reduced by a fractional tolerance (10% for high risk, 20% otherwise) and floored at first-order convergence (`1.0`). The relative band keeps strictness consistent across formal orders. See `references/vv_patterns.md`.
 
 ## Workflow
 
@@ -91,7 +94,9 @@ This skill plans verification work; it does not run the solver or prove that a p
 ## Security
 
 - Inputs are scalar strings and finite numeric values only.
-- The script does not execute external solvers.
+- String inputs (`model`, `quantity`) are capped at 256 characters; oversized inputs are rejected with exit code 2.
+- `dimension` must be 1, 2, or 3; `expected_order` must be a positive, finite number; `risk` and `reference` must be drawn from their fixed allowlists. Invalid input exits with code 2.
+- The script does not execute external solvers, import pickled data, or read input files.
 - File writes are not performed.
 - The skill uses `Bash` only to run its bundled script.
 
@@ -101,4 +106,14 @@ This skill plans verification work; it does not run the solver or prove that a p
 
 ## Version History
 
+- 1.1.1: Make the eval suite discriminating by adding deterministic `script_checks`
+  that pin the planner's specific output (resolved `verification_strategy`, the
+  relative `accept_observed_order_min` band, refinement `levels`,
+  `include_time_refinement`, `uncertainty_plan` flags, model-specific benchmark
+  cases, and the exact warning strings) for each of the three cases.
+- 1.1.0: Resolve unknown model families to `general` once so benchmark selection and the
+  time-refinement decision agree (transient unlisted PDEs no longer skip time refinement);
+  echo the resolved family as `effective_model`. Replace the fixed absolute observed-order
+  offset with a relative tolerance floored at first order. Document `uncertainty_plan`,
+  `effective_model`, and the acceptance heuristic. Add 256-character caps on string inputs.
 - 1.0.0: Initial benchmark and MMS planning skill.

@@ -12,15 +12,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.0"
+  version: "1.2.0"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-    - gemini-cli
-    - vs-code-copilot
+  last_evaluated: "2026-06-23"
   eval_cases: 4
-  last_reviewed: "2026-03-26"
+  last_reviewed: "2026-06-23"
 ---
 
 # Time Stepping
@@ -71,9 +70,11 @@ Need ramping for startup?
 
 | Script | Key Outputs |
 |--------|-------------|
-| `scripts/timestep_planner.py` | `dt_limit`, `dt_recommended`, `ramp_schedule` |
+| `scripts/timestep_planner.py` | `dt_limit`, `dt_recommended`, `ramp_schedule`, `notes` |
 | `scripts/output_schedule.py` | `output_times`, `interval`, `count` |
-| `scripts/checkpoint_planner.py` | `checkpoint_interval`, `checkpoints`, `overhead_fraction` |
+| `scripts/checkpoint_planner.py` | `checkpoint_interval`, `checkpoints`, `overhead_fraction`, `warnings` |
+
+`output_schedule.py` `count` is endpoint-inclusive: it includes both `t_start` and `t_end`, so `count = number_of_intervals + 1` (e.g. `t=0..5` at `0.05` spacing yields 101 frames for 100 intervals).
 
 ## Workflow
 
@@ -92,7 +93,7 @@ Need ramping for startup?
    ```bash
    python3 scripts/checkpoint_planner.py --run-time 36000 --checkpoint-cost 120 --max-lost-time 1800 --json
    ```
-2. Interpret: Checkpoint every 30 minutes, overhead ~0.7%, max 30 min lost work on crash.
+2. Interpret: Checkpoint every 30 minutes, overhead ~6.7% (Acceptable per the interpretation table), max 30 min lost work on crash.
 
 ## Pre-Run Checklist
 
@@ -145,8 +146,9 @@ python3 scripts/checkpoint_planner.py --run-time 36000 --checkpoint-cost 120 --m
 ## Security
 
 ### Input Validation
-- All numeric parameters (`dt-target`, `dt-limit`, `safety`, `t-start`, `t-end`, `interval`, `run-time`, `checkpoint-cost`, `max-lost-time`) are validated as finite positive numbers
-- `ramp-steps` is validated as a non-negative integer with an upper bound
+- All numeric parameters (`dt-target`, `dt-limit`, `safety`, `t-start`, `t-end`, `interval`, `run-time`, `checkpoint-cost`, `max-lost-time`) are validated as finite positive numbers (non-finite values such as `inf`/`nan` are rejected)
+- `safety` is bounded to `<= 1.0` (a safety factor is a stability margin at or below the limit; values above 1.0 are rejected)
+- `ramp-steps` and `preview-steps` are validated as non-negative integers with an upper bound of 1,000,000; only the previewed slice of the ramp is materialized to bound memory use
 - Time range consistency is enforced (`t-end` must exceed `t-start`; `checkpoint-cost` must be less than `run-time`)
 
 ### File Access
@@ -178,5 +180,6 @@ python3 scripts/checkpoint_planner.py --run-time 36000 --checkpoint-cost 120 --m
 
 ## Version History
 
+- **v1.2.0** (2026-06-23): Corrected overhead/frame-count docs and evals, removed output-time float drift, hardened input validation (checkpoint-cost < run-time, safety <= 1.0, bounded ramp/preview steps, finite checks)
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 3 planning scripts

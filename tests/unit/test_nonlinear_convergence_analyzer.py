@@ -66,6 +66,35 @@ class TestNonlinearConvergenceAnalyzer(unittest.TestCase):
         result = self.mod.analyze_convergence(residuals, tolerance=1e-10)
         self.assertEqual(result["convergence_type"], "sublinear")
 
+    def test_constant_ratio_is_linear_not_superlinear(self):
+        """Regression (F6): a constant contraction ratio (0.1) is linear, not superlinear."""
+        residuals = [1.0, 0.1, 0.01, 0.001, 1e-4, 1e-5]
+        result = self.mod.analyze_convergence(residuals, tolerance=1e-10)
+        self.assertEqual(result["convergence_type"], "linear")
+        self.assertNotEqual(result["convergence_type"], "superlinear")
+
+    def test_genuine_quadratic_classified_quadratic(self):
+        """Regression (F6): a genuinely quadratic sequence is classified quadratic."""
+        residuals = [0.1, 0.01, 1e-4, 1e-8, 1e-16]
+        result = self.mod.analyze_convergence(residuals, tolerance=1e-20)
+        self.assertEqual(result["convergence_type"], "quadratic")
+
+    def test_shrinking_ratios_classified_superlinear(self):
+        """Regression (F6): ratios trending to zero (1<p<2) are superlinear."""
+        residuals = [1.0, 0.5, 0.15, 0.02, 0.001, 2e-5]
+        result = self.mod.analyze_convergence(residuals, tolerance=1e-20)
+        self.assertEqual(result["convergence_type"], "superlinear")
+
+    def test_residuals_above_cap_raises(self):
+        """Security: residual list above 100,000 entries is rejected."""
+        with self.assertRaises(ValueError):
+            self.mod.analyze_convergence([0.5] * 100_001, tolerance=1e-10)
+
+    def test_non_finite_residual_raises(self):
+        """Security: NaN/Inf in residuals raises ValueError."""
+        with self.assertRaises(ValueError):
+            self.mod.analyze_convergence([1.0, float("inf"), 0.1], tolerance=1e-10)
+
     def test_empty_residuals_raises(self):
         """Test that empty residuals raises ValueError."""
         with self.assertRaises(ValueError):

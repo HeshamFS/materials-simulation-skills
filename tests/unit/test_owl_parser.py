@@ -127,6 +127,11 @@ class TestOwlParser(unittest.TestCase):
         text = json.dumps(self.result)
         self.assertNotIn("NaN", text)
 
+    def test_http_url_rejected(self):
+        """Plain http:// sources must be rejected (HTTPS-only policy)."""
+        with self.assertRaises(ValueError):
+            OWL_PARSER.parse_owl("http://example.org/insecure.owl")
+
 
 if __name__ == "__main__":
     unittest.main()

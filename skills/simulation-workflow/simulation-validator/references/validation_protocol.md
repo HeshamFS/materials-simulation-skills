@@ -8,7 +8,9 @@ This document defines the complete validation protocol for materials simulations
 
 ## Stage 1: Pre-flight Checks
 
-Run before simulation starts. Any BLOCKER prevents simulation launch.
+Run before simulation starts. Any BLOCKER reported by `preflight_checker.py`
+prevents simulation launch. Note that the stability checks in sect 1.2 are
+advisory and are **not** evaluated by `preflight_checker.py` (see the note there).
 
 ### 1.1 Configuration Validation
 
@@ -19,9 +21,19 @@ Run before simulation starts. Any BLOCKER prevents simulation launch.
 | Parameter ranges valid | Values within physical bounds | BLOCKER |
 | Units consistent | All parameters use compatible units | WARNING |
 
-### 1.2 Stability Checks
+### 1.2 Stability Checks (ADVISORY — not performed by preflight_checker.py)
 
-| Check | Criteria | Severity |
+> **Important:** `preflight_checker.py` does **not** evaluate the stability
+> conditions below. It only checks required-key presence, numeric ranges,
+> output-directory accessibility, and free disk space. A `PASS` from
+> `preflight_checker.py` therefore does **not** mean CFL/diffusion stability
+> was verified. To compute these explicitly, use
+> `skills/core-numerical/numerical-stability/scripts/cfl_checker.py`
+> (computes `CFL = v*dt/dx`, `Fo = D*dt/dx^2` with limit `1/(2*dim)`, and a
+> recommended `dt`). The severities below are the criteria you should enforce
+> with that tool, not gates applied here.
+
+| Check | Criteria | Severity (advisory) |
 |-------|----------|----------|
 | CFL condition | `dt <= dx / v_max` for explicit schemes | BLOCKER |
 | Diffusion stability | `dt <= dx^2 / (2 * D * dim)` | BLOCKER |
@@ -113,8 +125,17 @@ Run after simulation completes. Failed checks invalidate results.
 | Check | Criteria | Action if Failed |
 |-------|----------|------------------|
 | Mass conserved | Drift < tolerance | Results invalid |
-| Energy behavior | Monotonic if variational | Review physics |
+| Energy behavior | Monotone non-increasing if variational/dissipative | Review physics |
 | Momentum conserved | Drift < tolerance | Results invalid |
+
+> **Energy check semantics (`result_validator.py`):** by default the tool runs a
+> weak `energy_net_decrease` check (`energies[-1] <= energies[0]`), which does
+> **not** detect a mid-run energy spike. For variational / gradient-flow runs
+> (Allen-Cahn, Cahn-Hilliard, gradient flows) the free energy must be
+> non-increasing at *every* step — enable the strict `energy_monotone` check
+> with the `--variational` CLI flag or by setting `"energy_variational": true`
+> in the metrics file. The monotone check uses a relative tolerance so
+> round-off in energy-stable schemes does not cause false failures.
 
 ### 3.2 Field Validation
 
@@ -142,14 +163,23 @@ Run after simulation completes. Failed checks invalidate results.
 ### 3.4 Confidence Score Calculation
 
 ```
-confidence = (passed_checks) / (total_checks)
+confidence = (passed_substantive_checks) / (total_substantive_checks)
 
 Interpretation:
 - 1.0: All checks passed, high confidence
 - 0.75-0.99: Minor issues, review before use
 - 0.5-0.74: Significant issues, use with caution
 - < 0.5: Major problems, do not use results
+- null / INSUFFICIENT_DATA: no recognized metrics fields were present, so NO
+  check ran. This is NOT a pass — treat it as a failed validation and inspect
+  the metrics file.
 ```
+
+A requested bound (`--bound-min` / `--bound-max`) with no corresponding
+`field_min` / `field_max` in the metrics is recorded as a failed
+`bounds_unverifiable` check, never as a vacuous pass. An empty or unrecognized
+metrics file yields `confidence_score: null` with status `INSUFFICIENT_DATA`,
+not a green-light score of 1.0.
 
 ---
 
@@ -179,7 +209,7 @@ Link validation records to:
 ### Before Running
 - [ ] Config file validated
 - [ ] All required parameters present
-- [ ] Stability conditions satisfied
+- [ ] Stability conditions satisfied (use cfl_checker.py; not done by preflight)
 - [ ] Output directory ready
 - [ ] Disk space sufficient
 

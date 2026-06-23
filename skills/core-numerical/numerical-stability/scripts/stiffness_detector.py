@@ -8,10 +8,15 @@ from typing import Dict, Optional
 import numpy as np
 
 
+MAX_EIGS = 10000
+
+
 def parse_eigs(raw: str) -> np.ndarray:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
         raise ValueError("eigs must be a comma-separated list")
+    if len(parts) > MAX_EIGS:
+        raise ValueError(f"eigs list exceeds maximum of {MAX_EIGS} entries")
     return np.array([complex(p) for p in parts], dtype=complex)
 
 
@@ -38,10 +43,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+MAX_MATRIX_BYTES = 500 * 1024 * 1024  # 500 MB
+
+
 def load_matrix(path: str, delimiter: Optional[str]) -> np.ndarray:
+    if os.path.getsize(path) > MAX_MATRIX_BYTES:
+        raise ValueError("matrix file exceeds 500 MB size limit")
     _, ext = os.path.splitext(path)
     if ext == ".npy":
-        return np.load(path)
+        return np.load(path, allow_pickle=False)
     return np.loadtxt(path, delimiter=delimiter)
 
 
@@ -55,14 +65,53 @@ def compute_stiffness(eigs: np.ndarray, threshold: float) -> Dict[str, object]:
 
     abs_eigs = np.abs(eigs)
     nonzero = abs_eigs[abs_eigs > 0]
+    # Classical magnitude-based stiffness ratio (max|lambda| / min|lambda|).
     ratio = float(np.max(nonzero) / np.min(nonzero)) if nonzero.size else float("inf")
-    stiff = ratio >= threshold
+
+    # Real-part-based ratio over genuinely decaying modes (Re(lambda) < 0).
+    # Classical stiffness reflects scale separation among DECAY rates; modes on
+    # the imaginary axis are oscillatory, not stiff, and should not trigger an
+    # implicit-solver recommendation on magnitude alone.
+    re = np.real(eigs)
+    im = np.abs(np.imag(eigs))
+    decaying = -re[re < 0]  # positive decay rates
+    if decaying.size:
+        real_ratio = float(np.max(decaying) / np.min(decaying))
+    else:
+        real_ratio = None
+
+    max_re = float(np.max(np.abs(re))) if re.size else 0.0
+    max_im = float(np.max(im)) if im.size else 0.0
+    # Imaginary-dominated: oscillation/advection/Hamiltonian character. Treat as
+    # imag-dominated when the largest |Im| dwarfs the largest |Re| (or all Re~0).
+    imag_dominated = bool(max_im > 100.0 * max_re)
+
+    warning = None
+    if real_ratio is not None and not imag_dominated:
+        # Genuine scale separation among decaying modes -> classical stiffness.
+        stiff = real_ratio >= threshold
+    elif imag_dominated:
+        # Spectrum dominated by the imaginary axis: wave/advection/Hamiltonian.
+        stiff = False
+        warning = (
+            "Spectrum is imaginary-axis dominated (oscillatory/wave/Hamiltonian); "
+            "magnitude-based stiffness is misleading. Prefer symplectic/leapfrog "
+            "or an A-stable scheme sized by the CFL limit rather than BDF/Radau."
+        )
+    else:
+        # No decaying modes resolved (e.g. all-zero spectrum); fall back to the
+        # magnitude ratio so degenerate inputs keep a defined verdict.
+        stiff = ratio >= threshold
+
     recommendation = "implicit (BDF/Radau)" if stiff else "explicit (RK/Adams)"
 
     return {
         "stiffness_ratio": ratio,
+        "real_part_stiffness_ratio": real_ratio,
+        "imag_dominated": imag_dominated,
         "stiff": stiff,
         "recommendation": recommendation,
+        "warning": warning,
         "nonzero_count": int(nonzero.size),
         "total_count": int(eigs.size),
     }
@@ -102,9 +151,14 @@ def main() -> None:
         return
 
     print("Stiffness detection")
-    print(f"  stiffness ratio: {results['stiffness_ratio']:.6g}")
+    print(f"  stiffness ratio (magnitude): {results['stiffness_ratio']:.6g}")
+    if results["real_part_stiffness_ratio"] is not None:
+        print(f"  stiffness ratio (real part): {results['real_part_stiffness_ratio']:.6g}")
+    print(f"  imag dominated: {results['imag_dominated']}")
     print(f"  stiff: {results['stiff']}")
     print(f"  recommendation: {results['recommendation']}")
+    if results["warning"]:
+        print(f"  warning: {results['warning']}")
 
 
 if __name__ == "__main__":

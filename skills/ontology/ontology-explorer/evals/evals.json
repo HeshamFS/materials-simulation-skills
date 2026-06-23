@@ -8,7 +8,7 @@
       "assertions": [
         "Invokes scripts/class_browser.py with --ontology cmso --list-roots --json",
         "Output includes results.roots listing the top-level CMSO classes",
-        "Shows classes like Material, Sample, Crystal Structure, Unit Cell, etc.",
+        "Shows root classes like Material, Computational Sample, Structure, Unit Cell, etc.",
         "Explains the hierarchy: root classes are broadest concepts, children are more specific"
       ]
     },
@@ -30,8 +30,8 @@
       "assertions": [
         "Invokes scripts/class_browser.py with --ontology cmso --search lattice --json",
         "Invokes scripts/property_lookup.py with --ontology cmso --search lattice --json",
-        "Returns matching classes (e.g., Bravais Lattice) with relevance scores",
-        "Returns matching properties (e.g., has Bravais lattice, lattice parameters) with domain/range info"
+        "Returns matching classes (e.g., Lattice Parameter, Lattice Vector) with relevance scores",
+        "Returns matching properties (e.g., has Bravais lattice, has lattice parameter) with domain/range info"
       ]
     },
     {

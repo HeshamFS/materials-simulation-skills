@@ -155,6 +155,12 @@ class TestVonNeumannAnalyzer(unittest.TestCase):
                 coeffs=coeffs, dx=1.0, nk=64, offset=None, kmin=None, kmax=None,
             )
 
+    def test_coeffs_cap_enforced(self):
+        """Security: --coeffs list above MAX_COEFFS entries must raise."""
+        raw = ",".join(["0.1"] * (self.mod.MAX_COEFFS + 1))
+        with self.assertRaises(ValueError):
+            self.mod.parse_coeffs(raw)
+
     def test_lax_friedrichs_advection_stable(self):
         cfl = 0.8
         coeffs = np.array([0.5 * (1.0 + cfl), 0.0, 0.5 * (1.0 - cfl)], dtype=float)

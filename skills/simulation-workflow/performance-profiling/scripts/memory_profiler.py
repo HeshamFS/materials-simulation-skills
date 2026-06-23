@@ -86,33 +86,102 @@ def estimate_field_memory(mesh: Dict, fields: Dict) -> float:
     return total_bytes / (1024 ** 3)
 
 
-def estimate_solver_memory(mesh: Dict, solver: Dict) -> float:
+def _count_field_components(fields: Dict) -> int:
+    """Count total degrees of freedom per mesh point across all fields."""
+    total = 0
+    for field_spec in fields.values():
+        components = field_spec.get('components', 1)
+        if isinstance(components, int) and components > 0:
+            total += components
+    return max(total, 1)
+
+
+# Default sparse-matrix stencil (non-zeros per row). 7 is the canonical
+# 3D finite-difference 7-point stencil. Configurable via solver['stencil_nnz'].
+DEFAULT_STENCIL_NNZ = 7
+# Bytes for a column index in a sparse matrix (int32 by default).
+DEFAULT_INDEX_BYTES = 4
+# Conservative fill-in factor for direct-solver factorization. Direct solvers
+# grow like O(N^1.3); this multiplies the assembled sparse-operator cost to
+# reflect factorization fill-in (see optimization_strategies.md Case Study 3,
+# where a 256^3 direct solve uses ~9x the iterative footprint).
+DEFAULT_DIRECT_FILLIN_FACTOR = 10.0
+
+
+def estimate_solver_memory(mesh: Dict, solver: Dict, fields: Optional[Dict] = None) -> Dict:
     """
-    Estimate memory for solver workspace.
-    
+    Estimate memory for solver workspace and matrix storage.
+
+    Implements the three-term formula from references/profiling_guide.md:
+    the solver contribution is the matrix storage plus iterative workspace
+    vectors, and it depends on the solver type:
+
+      - ``matrix-free``: no assembled matrix, workspace vectors only.
+      - ``iterative`` (default): sparse matrix storage + workspace vectors.
+      - ``direct``: sparse matrix storage scaled by a conservative fill-in
+        factor to reflect factorization fill-in (Case Study 3: ~18 GB direct
+        vs ~2 GB iterative for the same mesh).
+
+    The sparse-matrix estimate assumes a documented stencil (default 7,
+    the 3D 7-point finite-difference stencil; override via
+    ``solver['stencil_nnz']``) and is intentionally conservative so that a
+    "will it fit in RAM?" decision does not silently under-estimate.
+
     Args:
         mesh: Mesh parameters
         solver: Solver configuration
-    
+        fields: Field definitions (used to size matrix degrees of freedom)
+
     Returns:
-        Memory in GB
+        Dict with 'workspace_gb' and 'matrix_storage_gb' (both in GB)
     """
     # Calculate total mesh points
     nx = mesh.get('nx', 1)
     ny = mesh.get('ny', 1)
     nz = mesh.get('nz', 1)
     mesh_points = nx * ny * nz
-    
-    # Get workspace multiplier based on solver type
-    solver_type = solver.get('type', 'iterative')
+
+    # Get workspace multiplier and solver type
+    solver_type = str(solver.get('type', 'iterative')).lower()
     workspace_multiplier = solver.get('workspace_multiplier', 5)
-    
-    # Estimate workspace (typically several vectors of size mesh_points)
+    if not isinstance(workspace_multiplier, (int, float)) or workspace_multiplier < 0:
+        raise ValueError(
+            f"solver workspace_multiplier must be a non-negative number, got {workspace_multiplier}"
+        )
+
+    stencil_nnz = solver.get('stencil_nnz', DEFAULT_STENCIL_NNZ)
+    if not isinstance(stencil_nnz, (int, float)) or stencil_nnz < 0:
+        raise ValueError(f"solver stencil_nnz must be a non-negative number, got {stencil_nnz}")
+    index_bytes = solver.get('index_bytes', DEFAULT_INDEX_BYTES)
+    if not isinstance(index_bytes, (int, float)) or index_bytes < 0:
+        raise ValueError(f"solver index_bytes must be a non-negative number, got {index_bytes}")
+
     bytes_per_value = 8  # double precision
-    workspace_bytes = mesh_points * workspace_multiplier * bytes_per_value
-    
-    # Convert to GB
-    return workspace_bytes / (1024 ** 3)
+    n_dofs = mesh_points * _count_field_components(fields or {})
+
+    # Iterative workspace vectors (size n_dofs each).
+    workspace_bytes = n_dofs * workspace_multiplier * bytes_per_value
+
+    # Assembled sparse matrix: each stored non-zero costs one value + one index.
+    sparse_matrix_bytes = n_dofs * stencil_nnz * (bytes_per_value + index_bytes)
+
+    if solver_type == 'matrix-free':
+        matrix_bytes = 0.0
+    elif solver_type == 'direct':
+        fillin = solver.get('fillin_factor', DEFAULT_DIRECT_FILLIN_FACTOR)
+        if not isinstance(fillin, (int, float)) or fillin <= 0:
+            raise ValueError(f"solver fillin_factor must be a positive number, got {fillin}")
+        # Direct factorization fill-in scales the sparse-operator cost; the
+        # workspace vectors are not needed for a direct solve.
+        matrix_bytes = sparse_matrix_bytes * fillin
+        workspace_bytes = 0.0
+    else:  # iterative (default) and any unknown type fall back to iterative
+        matrix_bytes = sparse_matrix_bytes
+
+    return {
+        'workspace_gb': workspace_bytes / (1024 ** 3),
+        'matrix_storage_gb': matrix_bytes / (1024 ** 3),
+    }
 
 
 def compute_total_memory(params: Dict, available_gb: Optional[float] = None) -> Dict:
@@ -142,10 +211,13 @@ def compute_total_memory(params: Dict, available_gb: Optional[float] = None) -> 
     nz = mesh.get('nz', 1)
     mesh_points = nx * ny * nz
     
-    # Estimate memory components
+    # Estimate memory components (three-term formula: field + solver workspace
+    # + matrix storage, per references/profiling_guide.md).
     field_memory_gb = estimate_field_memory(mesh, fields)
-    solver_workspace_gb = estimate_solver_memory(mesh, solver)
-    total_memory_gb = field_memory_gb + solver_workspace_gb
+    solver_mem = estimate_solver_memory(mesh, solver, fields)
+    solver_workspace_gb = solver_mem['workspace_gb']
+    matrix_storage_gb = solver_mem['matrix_storage_gb']
+    total_memory_gb = field_memory_gb + solver_workspace_gb + matrix_storage_gb
     per_process_gb = total_memory_gb / processors
     
     # Generate warnings
@@ -160,6 +232,7 @@ def compute_total_memory(params: Dict, available_gb: Optional[float] = None) -> 
         'mesh_points': mesh_points,
         'field_memory_gb': field_memory_gb,
         'solver_workspace_gb': solver_workspace_gb,
+        'matrix_storage_gb': matrix_storage_gb,
         'total_memory_gb': total_memory_gb,
         'per_process_gb': per_process_gb,
         'warnings': warnings
@@ -199,6 +272,7 @@ def main():
             print(f"Mesh points: {profile['mesh_points']:,}")
             print(f"Field memory: {profile['field_memory_gb']:.3f} GB")
             print(f"Solver workspace: {profile['solver_workspace_gb']:.3f} GB")
+            print(f"Matrix storage: {profile['matrix_storage_gb']:.3f} GB")
             print(f"Total memory: {profile['total_memory_gb']:.3f} GB")
             print(f"Per-process memory: {profile['per_process_gb']:.3f} GB")
             

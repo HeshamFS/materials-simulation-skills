@@ -43,6 +43,12 @@ def _load_summary(ontology: Optional[str] = None,
         return json.load(f)
 
 
+# Input-validation caps (lightweight DoS / abuse guards, see SKILL.md Security)
+MAX_INPUT_BYTES = 1_000_000
+MAX_RELATIONSHIPS = 1000
+MAX_NAME_LEN = 500
+
+
 def _is_subclass_of(classes: Dict, child: str, parent: str) -> bool:
     """Check if child is the same as or a subclass of parent."""
     if child.lower() == parent.lower():
@@ -87,6 +93,11 @@ def check_relationships(
     """
     if not isinstance(relationships, list) or not relationships:
         raise ValueError("Relationships must be a non-empty list of dicts")
+    if len(relationships) > MAX_RELATIONSHIPS:
+        raise ValueError(
+            f"Too many relationships ({len(relationships)}); "
+            f"maximum is {MAX_RELATIONSHIPS}"
+        )
 
     classes = summary.get("classes", {})
     obj_props = summary.get("object_properties", {})
@@ -101,6 +112,12 @@ def check_relationships(
         subject = rel.get("subject_class", "")
         prop_name = rel.get("property", "")
         obj = rel.get("object_class", "")
+        for field_val in (subject, prop_name, obj):
+            if not isinstance(field_val, str) or len(field_val) > MAX_NAME_LEN:
+                raise ValueError(
+                    "subject_class, property, and object_class must be "
+                    f"strings of at most {MAX_NAME_LEN} chars"
+                )
         rel_errors: List[str] = []
 
         # Find the property (case-insensitive)
@@ -181,6 +198,13 @@ def main() -> None:
             ontology=args.ontology,
             summary_file=args.summary_file,
         )
+        if args.relationships is not None and (
+            len(args.relationships.encode("utf-8")) > MAX_INPUT_BYTES
+        ):
+            raise ValueError(
+                f"--relationships exceeds maximum size of "
+                f"{MAX_INPUT_BYTES} bytes"
+            )
         relationships = json.loads(args.relationships)
         result = check_relationships(
             summary=summary,

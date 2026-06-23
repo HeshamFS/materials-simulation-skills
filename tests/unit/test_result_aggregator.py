@@ -214,6 +214,20 @@ class TestResultAggregator(unittest.TestCase):
         self.assertIn("job_0002", job_ids)
 
 
+    def test_summary_reports_minimize_flag(self):
+        """summary.minimize reflects the optimization direction (documented field)."""
+        for i, obj in enumerate([0.5, 0.3, 0.7]):
+            with open(os.path.join(self.sweep_dir, f"result_job_000{i}.json"), "w") as f:
+                json.dump({"objective": obj}, f)
+        # default = minimize
+        res_min = self.mod.aggregate_results(self.sweep_dir, "objective")
+        self.assertTrue(res_min["summary"]["minimize"])
+        self.assertEqual(res_min["best_run"]["job_id"], "job_0001")  # lowest
+        # maximize
+        res_max = self.mod.aggregate_results(self.sweep_dir, "objective", minimize=False)
+        self.assertFalse(res_max["summary"]["minimize"])
+        self.assertEqual(res_max["best_run"]["job_id"], "job_0002")  # highest
+
     def test_extract_metric_rejects_invalid_name(self):
         """Test that metric names with unsafe characters are rejected."""
         result = {"objective": 0.5}

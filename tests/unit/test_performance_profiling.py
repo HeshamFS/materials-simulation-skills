@@ -319,6 +319,66 @@ class TestMemoryProfilerRobustness(unittest.TestCase):
             self.module.estimate_field_memory(mesh, fields)
 
 
+class TestSolverMemoryModel(unittest.TestCase):
+    """F3 regression: matrix storage + solver-type dependence."""
+
+    def setUp(self):
+        import memory_profiler
+        self.module = memory_profiler
+
+    def _profile(self, solver_type):
+        params = {
+            'mesh': {'nx': 256, 'ny': 256, 'nz': 256},
+            'fields': {'phi': {'components': 1, 'bytes_per_value': 8}},
+            'solver': {'type': solver_type},
+            'processors': 1,
+        }
+        return self.module.compute_total_memory(params)
+
+    def test_matrix_storage_term_present(self):
+        """Profile must include a non-trivial matrix_storage_gb for iterative."""
+        profile = self._profile('iterative')
+        self.assertIn('matrix_storage_gb', profile)
+        self.assertGreater(profile['matrix_storage_gb'], 0)
+        # Total = field + workspace + matrix
+        expected = (profile['field_memory_gb']
+                    + profile['solver_workspace_gb']
+                    + profile['matrix_storage_gb'])
+        self.assertAlmostEqual(profile['total_memory_gb'], expected, places=9)
+
+    def test_direct_exceeds_iterative(self):
+        """Direct solver must estimate substantially more than iterative.
+
+        Reflects optimization_strategies.md Case Study 3 (direct ~18 GB vs
+        iterative ~2 GB). Identical estimates for both types is the F3 bug.
+        """
+        direct = self._profile('direct')
+        iterative = self._profile('iterative')
+        self.assertGreater(direct['total_memory_gb'], iterative['total_memory_gb'])
+        # The two estimates must differ by more than rounding noise.
+        self.assertGreater(
+            direct['total_memory_gb'], 3 * iterative['total_memory_gb']
+        )
+
+    def test_matrix_free_has_no_matrix_storage(self):
+        """Matrix-free solvers store no assembled matrix."""
+        profile = self._profile('matrix-free')
+        self.assertEqual(profile['matrix_storage_gb'], 0.0)
+        # Still has workspace vectors.
+        self.assertGreater(profile['solver_workspace_gb'], 0)
+
+    def test_stencil_nnz_override(self):
+        """A larger stencil increases matrix storage proportionally."""
+        base = self.module.estimate_solver_memory(
+            {'nx': 64, 'ny': 64, 'nz': 64}, {'type': 'iterative', 'stencil_nnz': 7},
+            {'phi': {'components': 1}})
+        bigger = self.module.estimate_solver_memory(
+            {'nx': 64, 'ny': 64, 'nz': 64}, {'type': 'iterative', 'stencil_nnz': 27},
+            {'phi': {'components': 1}})
+        self.assertAlmostEqual(
+            bigger['matrix_storage_gb'] / base['matrix_storage_gb'], 27 / 7, places=5)
+
+
 class TestBottleneckDetector(unittest.TestCase):
     """Tests for bottleneck_detector.py"""
     
@@ -328,9 +388,14 @@ class TestBottleneckDetector(unittest.TestCase):
         self.module = bottleneck_detector
     
     def test_detect_timing_bottlenecks(self):
-        """Test detection of timing bottlenecks"""
+        """Detect timing bottlenecks from the analyzer's actual 'results' schema.
+
+        Regression for F1: the detector must read phases under the top-level
+        'results' envelope emitted by timing_analyzer.py.
+        """
         timing_data = {
-            'timing_data': {
+            'inputs': {'log_file': 'x.log'},
+            'results': {
                 'phases': [
                     {'name': 'Linear Solver', 'percentage': 65.0},
                     {'name': 'Assembly', 'percentage': 25.0},
@@ -338,12 +403,75 @@ class TestBottleneckDetector(unittest.TestCase):
                 ]
             }
         }
-        
+
         bottlenecks = self.module.detect_timing_bottlenecks(timing_data, threshold=50.0)
-        
+
         self.assertEqual(len(bottlenecks), 1)
         self.assertEqual(bottlenecks[0]['phase'], 'Linear Solver')
+        self.assertEqual(bottlenecks[0]['category'], 'solver')
         self.assertEqual(bottlenecks[0]['severity'], 'medium')
+
+    def test_detect_timing_bottlenecks_bare_payload(self):
+        """Backward-compatible: a bare payload (phases at top level) still works."""
+        timing_data = {
+            'phases': [
+                {'name': 'Linear Solver', 'percentage': 80.0},
+            ]
+        }
+        bottlenecks = self.module.detect_timing_bottlenecks(timing_data)
+        self.assertEqual(len(bottlenecks), 1)
+        self.assertEqual(bottlenecks[0]['severity'], 'high')
+
+    def test_detect_timing_per_type_thresholds(self):
+        """F6: per-type thresholds - I/O flagged above 30%, others above 50%."""
+        timing_data = {
+            'results': {
+                'phases': [
+                    {'name': 'I/O', 'percentage': 35.0},      # > 30 I/O threshold
+                    {'name': 'Assembly', 'percentage': 35.0},  # < 50, not flagged
+                    {'name': 'Linear Solver', 'percentage': 45.0},  # < 50, not flagged
+                ]
+            }
+        }
+        bottlenecks = self.module.detect_timing_bottlenecks(timing_data)
+        phases = {b['phase']: b for b in bottlenecks}
+        self.assertIn('I/O', phases)
+        self.assertEqual(phases['I/O']['category'], 'io')
+        self.assertEqual(phases['I/O']['threshold'], 30.0)
+        self.assertNotIn('Assembly', phases)
+        self.assertNotIn('Linear Solver', phases)
+
+    def test_detect_scaling_bottlenecks_results_schema(self):
+        """F1: scaling detector reads the 'results' envelope."""
+        scaling_data = {
+            'inputs': {'data_file': 's.json'},
+            'results': {'average_efficiency': 0.45}
+        }
+        bottlenecks = self.module.detect_scaling_bottlenecks(scaling_data)
+        self.assertEqual(len(bottlenecks), 1)
+        self.assertEqual(bottlenecks[0]['type'], 'scaling')
+        self.assertEqual(bottlenecks[0]['severity'], 'high')
+
+    def test_detect_memory_bottlenecks_results_schema(self):
+        """F1: memory detector reads the 'results' envelope."""
+        memory_data = {
+            'inputs': {'params_file': 'p.json'},
+            'results': {'total_memory_gb': 30.0, 'warnings': ['exceeds available']}
+        }
+        bottlenecks = self.module.detect_memory_bottlenecks(memory_data)
+        self.assertEqual(len(bottlenecks), 1)
+        self.assertEqual(bottlenecks[0]['type'], 'memory')
+        self.assertEqual(bottlenecks[0]['value'], 30.0)
+
+    def test_io_phase_routes_to_io_recommendation(self):
+        """F5: canonical 'I/O' phase must route to the io category, not general."""
+        bottlenecks = self.module.detect_timing_bottlenecks({
+            'results': {'phases': [{'name': 'I/O', 'percentage': 55.0}]}
+        })
+        recs = self.module.generate_recommendations(bottlenecks)
+        self.assertEqual(len(recs), 1)
+        self.assertEqual(recs[0]['category'], 'io')
+        self.assertTrue(any('frequency' in s.lower() for s in recs[0]['strategies']))
     
     def test_generate_recommendations_solver_bottleneck(self):
         """Test recommendation generation for solver bottleneck"""
@@ -680,6 +808,59 @@ class TestBottleneckDetectorSecurity(unittest.TestCase):
             self.module.MAX_FILE_SIZE = original
         finally:
             os.unlink(path)
+
+
+class TestAnalyzerToDetectorContract(unittest.TestCase):
+    """End-to-end schema contract: analyzer output -> detector input (F1/F4).
+
+    These call the in-process functions so the test locks the contract between
+    the two scripts without spawning subprocesses.
+    """
+
+    def setUp(self):
+        import timing_analyzer
+        import bottleneck_detector
+        self.timing = timing_analyzer
+        self.detector = bottleneck_detector
+
+    def _timing_output(self, log_content):
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.log') as f:
+            f.write(log_content)
+            path = f.name
+        try:
+            entries = self.timing.parse_timing_log(path)
+            aggregated = self.timing.aggregate_timings(entries)
+            slowest = self.timing.identify_slowest_phases(aggregated)
+            total_time = sum(d['total_time'] for d in aggregated.values())
+            return {
+                'inputs': {'log_file': path, 'pattern': 'default'},
+                'results': {
+                    'phases': [{'name': p, **aggregated[p]} for p in aggregated],
+                    'total_time': total_time,
+                    'slowest_phase': slowest[0] if slowest else None,
+                },
+            }
+        finally:
+            os.unlink(path)
+
+    def test_solver_dominated_pipeline(self):
+        """A solver-dominated log must yield a high-severity solver bottleneck."""
+        log = (
+            "Phase: Assembly, Time: 10.0s\n"
+            "Phase: Linear Solver, Time: 76.0s\n"
+            "Phase: I/O, Time: 5.0s\n"
+            "Phase: Update Fields, Time: 9.0s\n"
+        )
+        timing_output = self._timing_output(log)
+        bottlenecks = self.detector.detect_timing_bottlenecks(timing_output)
+        self.assertGreaterEqual(len(bottlenecks), 1)
+        names = [b['phase'] for b in bottlenecks]
+        self.assertIn('Linear Solver', names)
+        solver_b = next(b for b in bottlenecks if b['phase'] == 'Linear Solver')
+        self.assertEqual(solver_b['severity'], 'high')
+        recs = self.detector.generate_recommendations(bottlenecks)
+        self.assertTrue(any(r['category'] == 'solver' for r in recs))
+        self.assertFalse(any('No significant bottlenecks' in r['issue'] for r in recs))
 
 
 if __name__ == '__main__':

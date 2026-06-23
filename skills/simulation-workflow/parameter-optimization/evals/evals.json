@@ -30,30 +30,31 @@
       "assertions": [
         "Invokes scripts/optimizer_selector.py with --dim 12 --budget 200 --noise high --json",
         "Output includes recommended optimizer, expected_evals, and notes",
-        "Recommends CMA-ES or evolutionary algorithm (not Bayesian Optimization, since dim > 5)",
+        "Recommends CMA-ES or evolutionary algorithm (not Bayesian Optimization, since dim > 10)",
         "Mentions that high noise favors evolutionary or robust optimization methods"
       ]
     },
     {
       "id": 4,
       "prompt": "Build me a surrogate from these data points. Inputs x: 0.1, 0.3, 0.5, 0.7, 0.9 and outputs y: 2.1, 3.5, 4.2, 3.8, 2.6. Use RBF interpolation.",
-      "expected_output": "Agent fits an RBF surrogate model and returns model metrics including fit quality.",
+      "expected_output": "Agent fits an RBF surrogate model and returns honest fit-quality metrics. metrics.mse is the in-sample residual (near zero for the exact RBF interpolant) and metrics.cv_error is the leave-one-out cross-validation error used to judge true predictive quality; metrics.output_variance (~0.6024 for this data) is reported as a baseline only and is NOT labeled as the model error.",
       "assertions": [
         "Invokes scripts/surrogate_builder.py with --x 0.1,0.3,0.5,0.7,0.9 --y 2.1,3.5,4.2,3.8,2.6 --model rbf --json",
-        "Output includes model_type, metrics, and notes fields",
+        "Output includes model_type, metrics, and notes fields, with metrics containing mse, cv_error, and output_variance",
         "Reports model_type as rbf",
-        "Returns fit quality metrics for the surrogate model"
+        "metrics.mse reflects an actual fit residual: for the exact RBF interpolant it is ~0 (much smaller than output_variance ~0.6024), demonstrating the metric responds to fit quality rather than just echoing the data variance",
+        "Uses metrics.cv_error (leave-one-out, ~2.26 here) rather than the near-zero in-sample mse to characterize predictive quality, and does not present output_variance as the model error"
       ]
     },
     {
       "id": 5,
       "prompt": "I only have 2 parameters (Young's modulus and Poisson's ratio) and I need to test every corner of the space. Generate a factorial design with 4 levels per parameter.",
-      "expected_output": "Agent generates a factorial DOE with 4^2=16 sample points covering all corners, selecting factorial method because dimension is low and full coverage is requested.",
+      "expected_output": "Agent generates a factorial DOE with 4^2=16 sample points covering all corners, selecting factorial method because dimension is low and full coverage is requested. The agent sets the level count explicitly, preferably via --levels 4 (which yields exactly 16 samples), or equivalently --budget 16 (the perfect power 4^2).",
       "assertions": [
-        "Invokes scripts/doe_generator.py with --params 2 --budget 16 --method factorial --json",
+        "Invokes scripts/doe_generator.py with --params 2 --method factorial and sets 4 levels per parameter either via --levels 4 or via --budget 16, plus --json",
         "Selects factorial method because dimension <= 3 and full coverage is needed",
-        "Output includes samples array with 16 points",
-        "Explains that factorial design gives all combinations for low-dimensional spaces"
+        "Output includes a samples array with exactly 16 points and coverage.levels == 4",
+        "Explains that factorial design gives all combinations for low-dimensional spaces and that 4 levels over 2 parameters yields 4^2 = 16 points"
       ]
     }
   ]

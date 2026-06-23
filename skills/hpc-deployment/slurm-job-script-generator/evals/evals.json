@@ -4,12 +4,14 @@
     {
       "id": 1,
       "prompt": "Generate a SLURM script for a pure MPI job. I need 2 nodes, 64 tasks per node, 30 minutes walltime, on the compute partition. The command is 'mpirun ./lammps -in input.lammps'. Load gcc/12 and openmpi/4.1 modules. Job name: lammps-scaling.",
-      "expected_output": "Agent generates a pure MPI SLURM sbatch script with correct directives for 2 nodes, 128 total tasks, 1 cpu per task, and proper module loading.",
+      "expected_output": "Agent generates a pure MPI SLURM sbatch script with correct directives for 2 nodes, 128 total tasks, 1 cpu per task, and proper module loading. Because the run command already begins with a launcher (mpirun), the agent passes --launcher none so the generator does not double-wrap it in srun.",
       "assertions": [
-        "Invokes scripts/slurm_script_generator.py with --job-name lammps-scaling --time 00:30:00 --partition compute --nodes 2 --ntasks-per-node 64 --cpus-per-task 1 --module gcc/12 --module openmpi/4.1",
+        "Invokes scripts/slurm_script_generator.py with --job-name lammps-scaling --time 00:30:00 --partition compute --nodes 2 --ntasks-per-node 64 --cpus-per-task 1 --module gcc/12 --module openmpi/4.1 --launcher none",
         "Generated script includes #SBATCH directives for nodes, ntasks-per-node, time, partition, and job-name",
+        "All #SBATCH directives appear immediately after the shebang and before any executable command (no #SBATCH line follows the first non-comment, non-blank line)",
         "Sets cpus-per-task to 1 for pure MPI layout",
-        "Includes module load commands for gcc/12 and openmpi/4.1 before the run command"
+        "Includes module load commands for gcc/12 and openmpi/4.1 before the run command",
+        "Run line is 'mpirun ./lammps -in input.lammps' with no srun wrapper (no double launcher)"
       ]
     },
     {
@@ -25,13 +27,14 @@
     },
     {
       "id": 3,
-      "prompt": "Generate a GPU job script: 1 node, 4 GPUs, 32 MPI tasks, 2 hours, partition gpu, 64G memory per node. Command: srun ./gpu_sim --config params.json. Job name: gpu-phasefield.",
-      "expected_output": "Agent generates a GPU-enabled SLURM script with correct GPU resource request, memory allocation, and warns about task-to-GPU ratio.",
+      "prompt": "Generate a GPU job script: 1 node, 4 GPUs, 30 MPI tasks, 2 hours, partition gpu, 64G memory per node. Command: ./gpu_sim --config params.json. Job name: gpu-phasefield.",
+      "expected_output": "Agent generates a GPU-enabled SLURM script with the correct GPU resource directive (#SBATCH --gres=gpu:4), per-node memory allocation, and a warning that the task-to-GPU ratio is not an integer (30 tasks do not divide evenly across 4 GPUs).",
       "assertions": [
-        "Invokes scripts/slurm_script_generator.py with --nodes 1 --ntasks 32 --gpus 4 --mem 64G --time 02:00:00 --partition gpu --job-name gpu-phasefield",
-        "Generated script includes GPU resource directive (--gpus-per-node or --gres=gpu:4)",
+        "Invokes scripts/slurm_script_generator.py with --nodes 1 --ntasks 30 --gpus-per-node 4 --mem 64G --time 02:00:00 --partition gpu --job-name gpu-phasefield",
+        "Generated script includes a GPU resource directive (#SBATCH --gres=gpu:4)",
         "Uses --mem 64G for per-node memory (not --mem-per-cpu)",
-        "Run command includes srun ./gpu_sim --config params.json"
+        "results.warnings contains a message that the task-to-GPU ratio is not an integer (ntasks=30 not divisible by total GPUs=4)",
+        "results.derived reports total_gpus=4 and ranks_per_gpu=7.5"
       ]
     },
     {

@@ -30,7 +30,7 @@
       "assertions": [
         "Invokes scripts/campaign_manager.py with --action init --config-dir ./dt_kappa_sweep --command 'python phase_field.py --config {config}' --json",
         "Invokes scripts/campaign_manager.py with --action status --config-dir ./dt_kappa_sweep --json",
-        "Output includes campaign_id, status, jobs, and progress fields",
+        "The status invocation output includes campaign_id, status, jobs, and progress fields (the init invocation instead emits campaign_id, total_jobs, config_dir, command_template)",
         "Reports the number of pending, running, and completed jobs"
       ]
     },

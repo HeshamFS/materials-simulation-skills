@@ -1,5 +1,5 @@
 {
-  "_comment": "Per-ontology mapping config for ASMO (Atomistic Simulation Methods Ontology).",
+  "_comment": "Per-ontology mapping config for ASMO (Atomistic Simulation Methods Ontology). ASMO is a simulation-methods ontology and does NOT define crystal-structure or sample-schema vocabulary, so only the concept-mapping path (concept_mapper.py via 'synonyms'/'property_synonyms') is supported. The crystal_output, sample_schema, material_type_rules and annotation_routing blocks were intentionally removed because every class/property they emitted (Crystal Structure, Unit Cell, Space Group, 'has Bravais lattice', ...) is absent from ASMO and cannot resolve to an ASMO IRI. Use crystal_mapper.py / sample_annotator.py with --ontology cmso for crystalline samples.",
   "ontology": "asmo",
   "synonyms": {
     "dft": "Density Functional Theory",
@@ -110,46 +110,5 @@
     "algorithm": "uses simulation algorithm",
     "unit": "has unit",
     "value": "has value"
-  },
-  "material_type_rules": {
-    "keyword_rules": [
-      {"keyword": "amorphous", "fields": ["material", "structure"], "maps_to": "Amorphous Material"},
-      {"keyword": "poly", "fields": ["material", "structure"], "maps_to": "Polycrystal"},
-      {"keyword": "bicrystal", "fields": ["material"], "maps_to": "Bicrystal"}
-    ],
-    "default": "Crystalline Material"
-  },
-  "sample_schema": {
-    "sample_class": "Computational Sample",
-    "sample_subclass": "Computational Sample",
-    "material_class": "Computational Sample",
-    "element_class": "Chemical Element",
-    "element_property": "has chemical symbol",
-    "atom_count_class": "Computational Sample",
-    "atom_count_property": "has number of atoms"
-  },
-  "crystal_output": {
-    "base_classes": [
-      "Computational Sample",
-      "Crystal Structure",
-      "Unit Cell"
-    ],
-    "space_group_class": "Space Group",
-    "lattice_parameter_class": "Lattice Parameter",
-    "property_map": {
-      "bravais_lattice": "has Bravais lattice",
-      "space_group_number": "has space group number",
-      "length_x": "has length x",
-      "length_y": "has length y",
-      "length_z": "has length z",
-      "angle_alpha": "has angle alpha",
-      "angle_beta": "has angle beta",
-      "angle_gamma": "has angle gamma"
-    }
-  },
-  "annotation_routing": {
-    "unit_cell_indicators": ["length", "angle", "Bravais"],
-    "crystal_structure_class": "Crystal Structure",
-    "unit_cell_class": "Unit Cell"
   }
 }

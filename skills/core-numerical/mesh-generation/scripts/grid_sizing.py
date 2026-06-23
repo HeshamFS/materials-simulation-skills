@@ -35,12 +35,33 @@ def compute_grid(
     if dims not in VALID_DIMS:
         raise ValueError(f"dims must be one of {VALID_DIMS}, got {dims}")
 
-    if dx is None:
-        dx = length / resolution
-    _validate_positive_finite("dx", dx, MAX_DX)
-
-    counts = [int(math.ceil(length / dx)) for _ in range(dims)]
     notes = []
+    if dx is None:
+        # dx derived from the requested resolution: the cell count is exactly
+        # the requested resolution. Do NOT recompute via ceil(length/dx) -- the
+        # float round-trip can push length/dx just past an integer and yield an
+        # off-by-one count (e.g. resolution=500 -> 501).
+        dx = length / resolution
+        _validate_positive_finite("dx", dx, MAX_DX)
+        per_dim = int(resolution)
+    else:
+        # dx supplied explicitly: derive the count from the domain length, but
+        # snap to the nearest integer when length/dx is an integer to within
+        # floating-point noise (relative tolerance), so genuine partial cells
+        # are preserved while float-noise off-by-ones are eliminated.
+        _validate_positive_finite("dx", dx, MAX_DX)
+        q = length / dx
+        n = round(q)
+        if n >= 1 and math.isclose(q, n, rel_tol=1e-9, abs_tol=0.0):
+            per_dim = n
+        else:
+            per_dim = int(math.ceil(q))
+        notes.append(
+            f"dx specified explicitly; --resolution ({int(resolution)}) "
+            f"ignored for spacing."
+        )
+
+    counts = [per_dim for _ in range(dims)]
     if dx * counts[0] < length:
         notes.append("Grid does not fully cover length; consider smaller dx.")
 

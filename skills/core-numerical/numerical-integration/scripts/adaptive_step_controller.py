@@ -50,10 +50,15 @@ def compute_step(
     else:
         exp = 1.0 / (order + 1.0)
         if controller == "pi" and prev_error is not None:
+            # Standard PI controller (Hairer & Wanner / Gustafsson):
+            #   dt_new = dt * safety * err^(-alpha) * err_prev^(beta)
+            # with alpha = 0.7/(p+1), beta = 0.4/(p+1). Generalized for an
+            # arbitrary accept_threshold thr by replacing err -> err/thr:
+            #   factor = safety * (thr/err)^alpha * (err_prev/thr)^beta
             k1 = 0.7 * exp
-            k2 = 0.3 * exp
+            k2 = 0.4 * exp
             factor = safety * (accept_threshold / error_norm) ** k1
-            factor *= (accept_threshold / prev_error) ** k2
+            factor *= (prev_error / accept_threshold) ** k2
             controller_used = "pi"
         else:
             factor = safety * (accept_threshold / error_norm) ** exp
