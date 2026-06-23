@@ -151,7 +151,9 @@ class TestControllerAllowlist(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 2)
         self.assertIn("argument --controller: invalid choice", proc.stderr)
-        self.assertIn("p, pi", proc.stderr)
+        # argparse changed its choice formatting in 3.12 (quoted "'p', 'pi'" ->
+        # unquoted "p, pi"); strip quotes so the check holds on 3.10-3.12.
+        self.assertIn("p, pi", proc.stderr.replace("'", ""))
 
     def test_error_norm_message(self):
         proc = self._run("--dt", "1e-3", "--error-norm", "-0.5", "--order", "4")
