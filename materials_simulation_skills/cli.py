@@ -5,6 +5,7 @@ import json
 import sys
 from pathlib import Path
 
+from .eval_runner import run_eval_checks
 from .skill_utils import (
     collect_metrics,
     find_repo_root,
@@ -50,6 +51,36 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         for warning in result["warnings"]:
             print(f"WARNING: {warning}", file=sys.stderr)
         print(f"Validated {result['summary']['skills']} skills")
+    return 0 if result["ok"] else 1
+
+
+def _cmd_eval(args: argparse.Namespace) -> int:
+    root = find_repo_root(Path.cwd())
+    result = run_eval_checks(root, skill_name=args.skill)
+    if args.json:
+        _print_json(result)
+        return 0 if result["ok"] else 1
+    s = result["summary"]
+    if "error" in result:
+        print(f"ERROR: {result['error']}", file=sys.stderr)
+        return 1
+    for skill in result["skills"]:
+        for case in skill["cases"]:
+            for check in case["checks"]:
+                status = "PASS" if check["passed"] else "FAIL"
+                print(f"[{status}] {skill['skill']} (eval {case['id']}): {check['description']}")
+                if not check["passed"]:
+                    if check.get("error"):
+                        print(f"         {check['error']}", file=sys.stderr)
+                    for a in check["assertions"]:
+                        if not a["passed"]:
+                            print(f"         x {a['evidence']}", file=sys.stderr)
+    print(
+        f"\n{s['checks_passed']}/{s['checks']} script-checks passed "
+        f"({s['assertions_passed']}/{s['assertions']} assertions) across "
+        f"{s['skills_with_checks']} skills; "
+        f"{s['cases_without_checks']} eval cases have no script_checks (LLM-judge only)."
+    )
     return 0 if result["ok"] else 1
 
 
@@ -103,6 +134,11 @@ def build_parser() -> argparse.ArgumentParser:
     metrics_parser.add_argument("--include-tests", action="store_true", help="Run pytest collection")
     metrics_parser.set_defaults(func=_cmd_metrics)
 
+    eval_parser = sub.add_parser("eval", help="Run deterministic script_checks from skill evals")
+    eval_parser.add_argument("--skill", help="Evaluate one skill by name")
+    eval_parser.add_argument("--json", action="store_true", help="Emit JSON")
+    eval_parser.set_defaults(func=_cmd_eval)
+
     run_parser = sub.add_parser("run", help="Run a skill script")
     run_parser.add_argument("skill_name")
     run_parser.add_argument("script_name")
@@ -110,7 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.set_defaults(func=_cmd_run)
 
     install_parser = sub.add_parser("install", help="Copy skills into an agent skill directory")
-    install_parser.add_argument("--agent", choices=["codex", "claude", "gemini", "copilot", "cursor"], required=True)
+    install_parser.add_argument("--agent", choices=["codex", "claude", "antigravity", "gemini", "copilot", "cursor"], required=True)
     install_parser.add_argument("--scope", choices=["user", "project"], default="user")
     install_parser.add_argument("--skill", help="Skill name to install")
     install_parser.add_argument("--all", action="store_true", help="Install all skills")

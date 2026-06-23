@@ -231,7 +231,10 @@ def default_install_dir(agent: str, scope: str, root: Path) -> Path:
         mapping = {
             "codex": home / ".agents" / "skills",
             "claude": home / ".claude" / "skills",
-            "gemini": home / ".gemini" / "skills",
+            "antigravity": home / ".agents" / "skills",
+            # Gemini CLI was retired 2026-06-18 and replaced by Antigravity (agy),
+            # which uses the .agents/ convention; keep "gemini" as a legacy alias.
+            "gemini": home / ".agents" / "skills",
             "copilot": home / ".copilot" / "skills",
             "cursor": home / ".cursor" / "skills",
         }
@@ -239,7 +242,8 @@ def default_install_dir(agent: str, scope: str, root: Path) -> Path:
         mapping = {
             "codex": root / ".agents" / "skills",
             "claude": root / ".claude" / "skills",
-            "gemini": root / ".gemini" / "skills",
+            "antigravity": root / ".agents" / "skills",
+            "gemini": root / ".agents" / "skills",
             "copilot": root / ".github" / "skills",
             "cursor": root / ".cursor" / "skills",
         }

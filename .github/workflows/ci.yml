@@ -111,5 +111,13 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Validate skill quality gates
         run: python tools/validate_skills.py
+
+      - name: Run deterministic skill evals (script_checks)
+        run: python tools/run_skill_evals.py
