@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -121,3 +122,39 @@ jobs:
 
       - name: Run deterministic skill evals (script_checks)
         run: python tools/run_skill_evals.py
+
+  skill-quality-eval:
+    # Opt-in LLM-judge layer (Layer 3 of the eval harness, docs/EVAL_HARNESS.md).
+    # The dry-run step validates per-CLI adapter command wiring on every run with no
+    # credentials. The live with/without-skill eval runs only when an ANTHROPIC_API_KEY
+    # secret is configured, so this never blocks the deterministic gate.
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validate eval-harness adapter wiring (dry-run, no credentials needed)
+        run: |
+          python skills/meta/skill-evaluator/scripts/run_quality_eval.py \
+            --skill skills/core-numerical/numerical-stability \
+            --agent claude-code --workspace "$RUNNER_TEMP/ws" --only 1 --dry-run --json
+
+      - name: Live with/without-skill eval (opt-in; requires ANTHROPIC_API_KEY secret)
+        if: ${{ env.ANTHROPIC_API_KEY != '' }}
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          python skills/meta/skill-evaluator/scripts/run_quality_eval.py \
+            --skill skills/core-numerical/numerical-stability \
+            --agent claude-code --workspace "$RUNNER_TEMP/ws" --iteration 1 --only 1
+          echo "Executor runs complete. Grade per references/grader.md, then run aggregate_benchmark.py for the with/without delta."
