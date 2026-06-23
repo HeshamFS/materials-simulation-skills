@@ -7,7 +7,7 @@
 
 **Open-source [Agent Skills](https://agentskills.io) for computational materials science and numerical simulation workflows.**
 
-Give your AI coding agent domain expertise in numerical methods, simulation best practices, and scientific computing -- without re-explaining the same concepts every session. Skills are portable across Claude Code, Codex, Gemini CLI, Cursor, VS Code Copilot, and [20+ other compatible tools](https://agentskills.io).
+Give your AI coding agent domain expertise in numerical methods, simulation best practices, and scientific computing -- without re-explaining the same concepts every session. Skills are portable across Claude Code, Codex, Antigravity (`agy`), Cursor, VS Code Copilot, and [20+ other compatible tools](https://agentskills.io).
 
 ---
 
@@ -23,12 +23,13 @@ Give your AI coding agent domain expertise in numerical methods, simulation best
   - [Data Management Skills](#data-management-skills-skillsdata-management)
   - [Robustness Skills](#robustness-skills-skillsrobustness)
   - [Ontology Skills](#ontology-skills-skillsontology)
+  - [Meta Skills](#meta-skills-skillsmeta)
 - [How Skills Work](#how-skills-work)
 - [Security](#security)
 - [Quick Start](#quick-start)
 - [Adding Skills to Your Agent](#adding-skills-to-your-agent)
   - [Claude Code](#claude-code)
-  - [Gemini CLI](#gemini-cli)
+  - [Antigravity CLI](#antigravity-cli-agy)
   - [OpenAI Codex](#openai-codex)
   - [VS Code / GitHub Copilot](#vs-code--github-copilot)
   - [Cursor](#cursor)
@@ -64,7 +65,7 @@ No prompt engineering. No copy-pasting formulas. The agent finds the right skill
 
 ## What's Inside
 
-**23 skills** | **73 scripts** | **956 tests** | **96 eval cases** | **366 assertions** | Cross-platform CI on Python 3.10-3.12
+**24 skills** | **78 scripts** | **1269 tests** | **101 eval cases** | **447 assertions** | Cross-platform CI on Python 3.10-3.12
 
 ### Core Numerical Skills (`skills/core-numerical/`)
 
@@ -138,6 +139,14 @@ Materials science ontology understanding, mapping, and validation.
 | `ontology-mapper` | Map natural-language materials terms and crystal parameters to ontology classes and properties (CMSO, ASMO) |
 | `ontology-validator` | Validate annotations against ontology constraints, check completeness, verify relationship domain/range |
 
+### Meta Skills (`skills/meta/`)
+
+Tooling skills that operate on skills themselves.
+
+| Skill | What it does |
+|-------|-------------|
+| `skill-evaluator` | Rigorously evaluate any Agent Skill end-to-end across **any** coding-agent CLI (Claude Code, Codex, Antigravity, Cursor, Copilot, Amp, opencode, Grok): deterministic `script_checks`, trigger/discovery testing, and with-skill-vs-baseline quality benchmarking with the pass-rate delta |
+
 ---
 
 ## How Skills Work
@@ -189,7 +198,7 @@ Every skill is classified by its tool access surface:
 
 | Tier | Criteria | Skills |
 |------|----------|-------|
-| **HIGH** | Has `Bash` (can execute scripts) | 15 skills — numerical-stability, time-stepping, convergence-study, differentiation-schemes, nonlinear-solvers, ontology-explorer, ontology-validator, simulation-validator, slurm-job-script-generator, benchmark-and-mms-planner, workflow-engine-mapper, fair-simulation-packager, md-analysis-planner, hpc-runtime-doctor, simulation-failure-triage |
+| **HIGH** | Has `Bash` (can execute scripts) | 16 skills — numerical-stability, time-stepping, convergence-study, differentiation-schemes, nonlinear-solvers, ontology-explorer, ontology-validator, simulation-validator, slurm-job-script-generator, benchmark-and-mms-planner, workflow-engine-mapper, fair-simulation-packager, md-analysis-planner, hpc-runtime-doctor, simulation-failure-triage, skill-evaluator |
 | **MEDIUM** | Has `Write` but no `Bash` | 7 skills — linear-solvers, mesh-generation, numerical-integration, parameter-optimization, performance-profiling, post-processing, simulation-orchestrator |
 | **LOW** | Read/Grep/Glob only | 1 skill — ontology-mapper |
 
@@ -199,11 +208,24 @@ Every skill is classified by its tool access surface:
 
 Every skill includes an evaluation suite (`evals/evals.json`) following the [agentskills.io evaluation spec](https://agentskills.io/skill-creation/evaluating-skills). Each suite contains 4-5 test cases with realistic prompts, expected outputs, and verifiable assertions.
 
-**Current metrics:** 96 eval test cases | 366 assertions | All 23 skills evaluated
+**Current metrics:** 101 eval test cases | 447 assertions | All 24 skills evaluated
+
+### Two-layer evaluation harness
+
+Skills are evaluated, not just unit-tested. See **[docs/EVAL_HARNESS.md](docs/EVAL_HARNESS.md)**.
+
+- **Deterministic layer** (`mss eval`, CI-gated): eval cases may carry machine-checkable `script_checks` that run a script and grade its `--json` output, catching drift between what a `SKILL.md` documents and what its scripts emit. No LLM required.
+- **LLM-judge layer** (designed, on the [roadmap](ROADMAP.md)): the official with-skill vs. without-skill delta loop that measures whether an agent *following the SKILL.md* reaches the right answer.
+
+```bash
+mss eval                 # run all deterministic script_checks (exits non-zero on failure)
+mss eval --skill mesh-generation --json
+```
 
 The CI pipeline validates:
 - SKILL.md frontmatter (name, description < 1024 chars, metadata block)
 - Eval suite completeness (every skill has evals.json with ≥ 3 test cases)
+- Deterministic `script_checks` pass (`tools/run_skill_evals.py`)
 - Security section presence (all skills must have `## Security`)
 - Changelog existence (all skills must have CHANGELOG.md)
 
@@ -231,7 +253,7 @@ mss install --agent codex --scope project --skill numerical-stability
 ### Run the test suite
 
 ```bash
-python -m pytest tests/ -v --tb=short          # All 956 tests
+python -m pytest tests/ -v --tb=short          # All 1269 tests
 python -m pytest tests/unit -v --tb=short       # Unit tests only
 python -m pytest tests/integration -v           # Integration tests only
 ```
@@ -264,21 +286,22 @@ Verify with: `What skills are available?` or type `/` to see skills in the autoc
 
 See the [Claude Code skills docs](https://code.claude.com/docs/en/skills) for more details.
 
-### Gemini CLI
+### Antigravity CLI (`agy`)
 
-Install directly from the repo, or copy skills into your Gemini skills directory:
+Google retired the Gemini CLI on 2026-06-18 and replaced it with **Antigravity CLI**
+(the `agy` command), which keeps Agent Skills support. Copy skills into an Antigravity
+skills directory (it uses the `.agents/` convention):
 
 ```bash
 # User-scoped (available across all workspaces)
-cp -r skills/core-numerical/numerical-stability ~/.gemini/skills/numerical-stability
+cp -r skills/core-numerical/numerical-stability ~/.agents/skills/numerical-stability
 
 # Workspace-scoped (project-specific)
-cp -r skills/core-numerical/numerical-stability .gemini/skills/numerical-stability
+cp -r skills/core-numerical/numerical-stability .agents/skills/numerical-stability
 ```
 
-Verify with: `gemini skills list`
-
-See the [Gemini CLI skills docs](https://geminicli.com/docs/cli/skills/) for more details.
+Verify by asking Antigravity what skills are available. See the
+[Antigravity CLI docs](https://antigravity.google/docs/cli-overview) for more details.
 
 ### OpenAI Codex
 
@@ -374,7 +397,7 @@ tools/
 
 ## Contributing
 
-We welcome contributions of all kinds -- new skills, bug fixes, documentation, and tests. The project is designed to grow from 23 skills across 7 active categories into a broader collection spanning materials physics, simulation patterns, HPC deployment, and more.
+We welcome contributions of all kinds -- new skills, bug fixes, documentation, and tests. The project is designed to grow from 24 skills across 8 active categories into a broader collection spanning materials physics, simulation patterns, HPC deployment, and more.
 
 See **[CONTRIBUTING.md](CONTRIBUTING.md)** for:
 - Step-by-step guide to creating a new skill
