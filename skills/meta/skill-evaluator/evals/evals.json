@@ -1,0 +1,108 @@
+{
+  "skill_name": "skill-evaluator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I use Google Antigravity (the agy CLI). Set up an evaluation run for my numerical-stability skill and tell me the exact headless command you'd execute.",
+      "expected_output": "Identifies the antigravity adapter (binary agy, ANTIGRAVITY_API_KEY auth), notes it replaced the retired Gemini CLI, and produces the correct agy headless command with a clean baseline.",
+      "assertions": [
+        "Maps 'Antigravity' / 'agy' (or 'gemini') to the antigravity adapter",
+        "Uses the binary 'agy' and ANTIGRAVITY_API_KEY for auth",
+        "Notes Antigravity CLI replaced the retired Gemini CLI",
+        "Runs a dry-run before any real (token-spending) run"
+      ],
+      "script_checks": [
+        {
+          "description": "antigravity adapter is encoded correctly (agy / ANTIGRAVITY_API_KEY)",
+          "cmd": ["scripts/agent_adapters.py", "show", "antigravity", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "binary", "op": "eq", "value": "agy"},
+            {"path": "auth_env.0", "op": "eq", "value": "ANTIGRAVITY_API_KEY"},
+            {"path": "skills_project_subdir", "op": "eq", "value": ".agents/skills"}
+          ]
+        },
+        {
+          "description": "the retired 'gemini' alias resolves to antigravity",
+          "cmd": ["scripts/agent_adapters.py", "build", "gemini", "--prompt", "P", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "cli", "op": "eq", "value": "antigravity"},
+            {"path": "argv.0", "op": "eq", "value": "agy"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Run a with-skill vs no-skill comparison of my skill in Claude Code. Make sure the baseline genuinely has no skills loaded.",
+      "expected_output": "Builds a with-skill run and a baseline run; the baseline adds --bare so Claude Code auto-discovers no skills/CLAUDE.md/MCP.",
+      "assertions": [
+        "Runs both a with_skill and a without_skill configuration",
+        "The Claude Code baseline uses --bare to guarantee no skills are loaded",
+        "Reports the with/without pass-rate delta as the measure of value"
+      ],
+      "script_checks": [
+        {
+          "description": "Claude baseline command includes --bare; with-skill does not",
+          "cmd": ["scripts/agent_adapters.py", "build", "claude-code", "--prompt", "P", "--baseline", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "argv", "op": "contains", "value": "--bare"},
+            {"path": "argv", "op": "contains", "value": "--dangerously-skip-permissions"}
+          ]
+        },
+        {
+          "description": "with-skill Claude command does NOT add --bare",
+          "cmd": ["scripts/agent_adapters.py", "build", "claude-code", "--prompt", "P", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "argv", "op": "contains", "value": "--output-format"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I'm on OpenAI Codex. What command will the harness run for one eval, and how does it auto-approve tools so it won't hang?",
+      "expected_output": "Uses `codex exec` with the JSON flag and --dangerously-bypass-approvals-and-sandbox so the headless run does not block on approval.",
+      "assertions": [
+        "Uses the `codex exec` non-interactive subcommand",
+        "Includes the Codex auto-approve flag (--dangerously-bypass-approvals-and-sandbox)",
+        "Explains that without an auto-approve flag the run would hang on a prompt"
+      ],
+      "script_checks": [
+        {
+          "description": "Codex command uses exec + bypass flag",
+          "cmd": ["scripts/agent_adapters.py", "build", "openai-codex", "--prompt", "P", "--workdir", "/tmp/w", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "argv.1", "op": "eq", "value": "exec"},
+            {"path": "argv", "op": "contains", "value": "--dangerously-bypass-approvals-and-sandbox"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Without spending any API tokens, verify that my skill's scripts still emit the numbers its SKILL.md documents.",
+      "expected_output": "Runs the deterministic script_checks layer (no LLM, no CLI) and reports checks/assertions passed.",
+      "assertions": [
+        "Uses the deterministic layer (run_script_checks.py), not an agent CLI",
+        "Reports how many script-checks and assertions passed",
+        "Notes this layer needs no API key or network and is CI-safe"
+      ],
+      "script_checks": [
+        {
+          "description": "adapter registry lists all 8 CLIs including grok with --always-approve",
+          "cmd": ["scripts/agent_adapters.py", "build", "grok-cli", "--prompt", "P", "--workdir", "/tmp/w", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "argv.0", "op": "eq", "value": "grok"},
+            {"path": "argv", "op": "contains", "value": "--always-approve"}
+          ]
+        }
+      ]
+    }
+  ]
+}
