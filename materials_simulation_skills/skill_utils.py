@@ -14,6 +14,14 @@ from typing import Any
 SKILL_ROOT = "skills"
 MAX_INSTALL_SKILL_NAME = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
+# Agent Skills spec name rule: 1-64 chars, lowercase alnum + hyphen, no leading/
+# trailing hyphen (consecutive hyphens are rejected separately).
+SPEC_NAME_RE = re.compile(r"^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$")
+
+# Materials Simulation Skill Protocol: standardized ## Security subsections
+# (see docs/PROTOCOL.md).
+SECURITY_SUBSECTIONS = ("Input Validation", "File Access", "Tool Restrictions", "Safety Measures")
+
 
 @dataclass(frozen=True)
 class SkillRecord:
@@ -170,6 +178,11 @@ def validate_skills(root: Path | None = None, skill_name: str | None = None) -> 
             errors.append(f"{rel}/SKILL.md: missing name")
         if name and name != skill_dir.name:
             errors.append(f"{rel}/SKILL.md: name {name!r} != directory {skill_dir.name!r}")
+        if name and (not SPEC_NAME_RE.match(name) or "--" in name):
+            errors.append(
+                f"{rel}/SKILL.md: name {name!r} violates the Agent Skills spec "
+                f"(1-64 chars, lowercase a-z/0-9/-, no leading/trailing/consecutive hyphen)"
+            )
         if not description:
             errors.append(f"{rel}/SKILL.md: missing description")
         if len(description) > 1024:
@@ -180,6 +193,10 @@ def validate_skills(root: Path | None = None, skill_name: str | None = None) -> 
         content = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
         if "## Security" not in content:
             errors.append(f"{rel}/SKILL.md: missing ## Security section")
+        else:
+            for sub in SECURITY_SUBSECTIONS:
+                if not re.search(rf"^#{{2,4}}\s+{re.escape(sub)}\b", content, re.M):
+                    errors.append(f"{rel}/SKILL.md: Security section missing '### {sub}' subsection")
         if not (skill_dir / "CHANGELOG.md").exists():
             errors.append(f"{rel}: missing CHANGELOG.md")
 

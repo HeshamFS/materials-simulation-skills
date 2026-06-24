@@ -10,14 +10,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.1"
+  version: "1.1.2"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-23"
   eval_cases: 3
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-06-24"
 ---
 
 # HPC Runtime Doctor
@@ -100,14 +100,42 @@ This skill does not query a live scheduler. It diagnoses from the submitted layo
 
 ## Security
 
-- Inputs are scalar CLI values and booleans only.
+### Input Validation
+
+- Inputs are scalar CLI values and booleans only; there is no free-form code path.
 - Resource counts (`--nodes`, `--tasks`, `--cpus-per-task`, `--gpus`, `--gpus-per-node`)
-  are validated as non-negative finite integers and capped at 1,000,000; out-of-range or
-  non-integer values exit with code 2.
-- The symptoms string is capped at 64 entries of at most 64 characters each; `--walltime`
-  is capped at 32 characters. Oversized input exits with code 2.
-- The script does not execute scheduler commands or inspect environment variables.
-- The skill uses `Bash` only to run its bundled script.
+  are validated as integers (booleans rejected), required to be non-negative and finite,
+  and capped at 1,000,000. `--nodes`, `--tasks`, and `--cpus-per-task` must additionally
+  be at least 1. Out-of-range, non-integer, or zero values exit with code 2.
+- The `--symptoms` string is capped at 64 comma-separated entries of at most 64 characters
+  each; `--walltime` is capped at 32 characters. Oversized input exits with code 2.
+- Symptoms are split, trimmed, and lower-cased. Unknown symptoms are not rejected: they are
+  preserved as `custom` diagnoses for human review.
+- `--scheduler` is accepted as a free-form string and is not checked against an allowlist;
+  it is only echoed back in the resource layout.
+
+### File Access
+
+- The script reads and writes no files. All I/O is CLI args in and stdout out
+  (indented JSON with `--json`, otherwise a human-readable summary); errors go to stderr.
+- Because no paths are accepted or opened, there is no filesystem traversal surface and no
+  path-sandboxing concern.
+
+### Tool Restrictions
+
+- `allowed-tools` is `Read, Bash, Write, Grep, Glob`.
+- `Bash` is used only to run the bundled `scripts/hpc_runtime_doctor.py`.
+- `Read`, `Grep`, and `Glob` are used to inspect the skill's own files and any logs or
+  submission scripts the user points at; `Write` is used to record diagnosis notes or a
+  retry plan when asked.
+
+### Safety Measures
+
+- No `eval`, `exec`, `os.system`, or `subprocess`; the script does not launch a scheduler
+  or any external process and does not inspect environment variables.
+- Argument parsing is handled by `argparse`, and machine-readable output is emitted as JSON.
+- DoS exposure is bounded by the resource-count cap (1,000,000), the symptom caps
+  (64 entries x 64 characters), and the walltime cap (32 characters).
 
 ## References
 

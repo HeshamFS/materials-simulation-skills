@@ -13,14 +13,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.1"
+  version: "1.1.2"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-23"
   eval_cases: 3
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-06-24"
 ---
 
 # Simulation Failure Triage
@@ -83,11 +83,34 @@ This skill gives first-response triage. It does not guarantee that a failed simu
 
 ## Security
 
-- Log files are read with a 10 MB size cap; oversized files exit with code 2.
-- Log text is truncated to 10 MB and never executed.
-- Symptoms are capped at 50 entries and 100 characters each; `code` is capped at 100 characters. Invalid input exits with code 2.
-- The script does not run external solvers.
-- The skill uses `Bash` only to run its bundled script.
+### Input Validation
+
+- `--stage` is checked against a fixed allowlist (`setup`, `runtime`, `postprocess`, `unknown`); any other value exits with code 2.
+- `--code` must be non-empty and at most 100 characters; an empty or oversized value exits with code 2.
+- `--symptoms` are split on commas and capped at 50 entries, each at most 100 characters; exceeding either limit exits with code 2.
+- Unknown symptoms are not rejected; they are retained as `custom` evidence rather than silently dropped.
+- There are no numeric arguments, so no finite/positive checks apply.
+- All input-validation failures (and log read errors) are caught and exit with code 2 and a stderr message.
+
+### File Access
+
+- The only file read is the optional `--log-file` path; when omitted, the script reads no files.
+- Before reading, the log file's size is checked via `stat`; if it exceeds the 10 MB cap (`MAX_LOG_SIZE`) the script raises and exits with code 2. Both file content and `--log-text` are then truncated to 10 MB.
+- The script writes no files; all results go to stdout (JSON with `--json`, otherwise plain text).
+- Path-sandboxing caveat: the log path is not restricted to a working directory, so the script can read any file the invoking process has permission to read; only pass trusted paths.
+
+### Tool Restrictions
+
+- `allowed-tools` is `Read, Bash, Write, Grep, Glob`.
+- `Bash` runs only the bundled `scripts/failure_triage.py`.
+- `Read` opens the skill's own files and a user-provided log to inspect failure evidence; `Grep`/`Glob` locate log files, inputs, and prior output; `Write` records triage notes or preserved evidence at the user's direction. The bundled script itself does not write files.
+
+### Safety Measures
+
+- No `eval`/`exec` and no dynamic code execution; log text is treated as data and never run.
+- The script spawns no subprocesses and runs no external solvers.
+- Output is structured JSON (`--json`), making results machine-checkable.
+- DoS caps bound resource use: 10 MB log size/text limit, 50 symptoms, and 100-character limits on `code` and each symptom.
 
 ## References
 

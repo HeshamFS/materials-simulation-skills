@@ -8,14 +8,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.0"
+  version: "1.2.1"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-23"
   eval_cases: 3
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-06-24"
 ---
 
 # Workflow Engine Mapper
@@ -87,12 +87,32 @@ The skill does not replace the official APIs of atomate2, jobflow, AiiDA, or pyi
 
 ## Security
 
-- The script accepts only scalar CLI inputs and booleans.
-- `runs` must be a finite positive integer and is capped at 1,000,000; out-of-range or non-finite values exit with code 2.
-- Free-text fields are length-bounded: `task` <= 2000 characters, `code` and `preferred` <= 100 characters each; `preferred` must be one of the allowed engine names.
-- All invalid input is rejected with a message on stderr and exit code 2 before any recommendation is computed.
-- It does not connect to remote services, submit jobs, read files, or deserialize untrusted data.
-- The skill uses `Bash` only to run the bundled script.
+### Input Validation
+
+- The script accepts only scalar CLI inputs and boolean flags (`--needs-provenance`, `--needs-restart`, `--hpc`, `--json` via `store_true`).
+- `runs` must be a positive integer (rejects booleans, non-integers, and values `<= 0`) and is capped at `MAX_RUNS = 1,000,000`; `main()` also rejects non-finite values via `math.isfinite`.
+- Free-text fields are length-bounded: `task` <= 2000 characters (`MAX_TASK_LEN`) and must be non-empty after stripping; `code` and `preferred` <= 100 characters each (`MAX_FIELD_LEN`).
+- `preferred` must be one of the allowed engine names: `auto`, `one-off`, `jobflow`, `atomate2`, `aiida`, `pyiron`.
+- The `task` and `code` strings are not otherwise restricted by an allowlist; only their length and (for `task`) emptiness are validated.
+- All invalid input raises `ValueError`, which is printed to stderr and exits with code 2 before any recommendation is computed.
+
+### File Access
+
+- The script reads and writes no files; all I/O is CLI args in -> stdout (JSON or two summary lines) out.
+- It accepts no path arguments, so there is no path-sandboxing concern; there are no on-disk size limits because nothing is read from disk.
+
+### Tool Restrictions
+
+- The frontmatter declares `allowed-tools: Read, Bash, Write, Grep, Glob`.
+- `Bash` is used only to run the bundled `scripts/workflow_engine_mapper.py`.
+- `Read`/`Grep`/`Glob` are used to inspect the skill's own files and references (e.g. `references/workflow_engines.md`) and the user's task context; `Write` is available to scaffold workflow files from the recommended structure.
+
+### Safety Measures
+
+- No `eval`/`exec`, no `subprocess`, and no shell invocation inside the script.
+- No network access: it does not connect to remote services, submit jobs, or deserialize untrusted data.
+- Output is emitted as structured JSON via `json.dumps` (with `--json`) or plain text summary lines.
+- DoS caps bound resource use: the `runs` ceiling (1,000,000) and the `task`/`code`/`preferred` length caps prevent unbounded input.
 
 ## References
 

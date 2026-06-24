@@ -9,14 +9,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.0"
+  version: "1.2.1"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-23"
   eval_cases: 3
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-06-24"
 ---
 
 # FAIR Simulation Packager
@@ -102,15 +102,46 @@ This skill creates a metadata manifest. It does not upload to NOMAD, Materials P
 
 ## Security
 
-- File paths are read only for metadata and SHA-256 hashing.
-- The script rejects control characters in fields, fields longer than 4096 characters,
-  lists of more than 1000 entries, and files larger than 500 MB (exit code 2).
-- Unit keys and values must match the allowlist `[A-Za-z0-9_.:/@+-]+`.
-- The manifest is written only to the single path passed via `--out`; no other files are
-  created. The path is user-controlled, so if `--out` points outside the working
-  directory (via `..` or an absolute path) the file is written there as requested — the
-  tool does not sandbox the output location.
-- The skill uses `Bash` only to run the bundled script.
+### Input Validation
+
+- `--project-name` and `--engine` are required and must be non-empty after stripping
+  whitespace; an empty value stops with exit code 2.
+- `--project-name`, `--engine`, `--structure-id` (when given), and every file path are
+  checked for control characters (`ord < 32`) and a 4096-character maximum length; either
+  condition stops with exit code 2.
+- `--inputs` and `--outputs` are split on commas and capped at 1000 entries each; more
+  entries stop with exit code 2.
+- `--units` entries must be `key=value`; both the key and the value must match the
+  allowlist `^[A-Za-z0-9_.:/@+-]+$`. A missing `=` or a non-matching key/value stops with
+  exit code 2.
+- There are no numeric inputs, so no finite/positive numeric checks are performed.
+
+### File Access
+
+- The script reads each existing input/output file in 1 MB chunks to compute its
+  `size_bytes` and SHA-256 hash; files that do not exist are recorded but not read.
+- A file larger than 500 MB stops with exit code 2 before it is hashed.
+- The script writes no files unless `--out PATH` is given, in which case it writes exactly
+  one file (the bare manifest JSON) to that path; otherwise all output goes to stdout.
+- Paths are not sandboxed: absolute paths and paths containing `..` are accepted for both
+  the inventoried files and `--out`. If `--out` points outside the working directory, the
+  file is written there as requested.
+
+### Tool Restrictions
+
+- `Bash` is used to run the bundled `scripts/fair_packager.py`.
+- `Read`, `Write`, `Grep`, and `Glob` are declared so the skill can inspect the working
+  directory and read or write manifest/metadata files when guiding the user; they are not
+  invoked by the script itself, which performs all of its own file I/O directly.
+
+### Safety Measures
+
+- No `eval`, `exec`, `os.system`, or `subprocess` calls; the script does not shell out and
+  parses arguments with `argparse`.
+- Output is emitted as JSON via `json.dumps` (or a short plain-text summary without
+  `--json`).
+- DoS caps bound resource use: 500 MB per file, 1000 entries per input/output list, and
+  4096 characters per field.
 
 ## References
 

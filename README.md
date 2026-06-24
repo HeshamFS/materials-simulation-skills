@@ -222,11 +222,15 @@ mss eval                 # run all deterministic script_checks (exits non-zero o
 mss eval --skill mesh-generation --json
 ```
 
+Skills also follow the **[Materials Simulation Skill Protocol](docs/PROTOCOL.md)** — a
+conformance standard (JSON envelope, exit codes, standardized Security subsections,
+cited science, eval coverage) layered on the Agent Skills spec.
+
 The CI pipeline validates:
-- SKILL.md frontmatter (name, description < 1024 chars, metadata block)
+- SKILL.md frontmatter (spec-valid `name`, description < 1024 chars, metadata block)
 - Eval suite completeness (every skill has evals.json with ≥ 3 test cases)
 - Deterministic `script_checks` pass (`tools/run_skill_evals.py`)
-- Security section presence (all skills must have `## Security`)
+- Security section with the four standardized subsections (Input Validation, File Access, Tool Restrictions, Safety Measures)
 - Changelog existence (all skills must have CHANGELOG.md)
 
 ---

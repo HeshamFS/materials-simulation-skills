@@ -9,14 +9,14 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.0"
+  version: "1.2.1"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-23"
   eval_cases: 3
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-06-24"
 ---
 
 # MD Analysis Planner
@@ -101,14 +101,50 @@ This skill plans analysis and prerequisites; it does not parse large trajectorie
 
 ## Security
 
-- Inputs are scalar CLI values and booleans only.
-- The script does not read trajectory files or execute external analysis programs.
-- The skill uses `Bash` only to run the bundled script.
-- Input is validated and bounded before use; invalid input exits with code `2`:
-  - `system` must be non-empty and at most 256 characters.
-  - At most 64 goals; each goal at most 256 characters.
-  - `trajectory_format` at most 256 characters.
-  - `timestep_fs`, if given, must be a positive, finite number.
+### Input Validation
+
+Inputs are scalar CLI values and booleans only. `plan_md_analysis` validates and
+bounds every field before use; any violation raises `ValueError`, which `main`
+catches to print a message on stderr and exit with code `2`:
+
+- `system` must be non-empty (after stripping) and at most 256 characters.
+- At most 64 goals are allowed; each goal at most 256 characters.
+- `trajectory_format` at most 256 characters.
+- `timestep_fs`, if given, must be a positive, finite number (`math.isfinite`
+  and `> 0`).
+
+Goals are not allowlisted: an unrecognized goal is not rejected but is reported
+with status `needs review` and an "unknown goal" warning. The `--has-velocities`,
+`--has-stress`, and `--unwrap-needed` flags are plain booleans and need no
+validation.
+
+### File Access
+
+The script reads and writes no files; all I/O is stdin/args -> stdout (plain
+text or JSON), with warnings additionally mirrored to stderr. It takes no path
+arguments and opens no trajectory or output files, so there is no filesystem
+sandboxing concern. There are no per-file size limits because no files are read;
+input size is instead capped by the field/goal limits above.
+
+### Tool Restrictions
+
+Frontmatter `allowed-tools` is `Read, Bash, Write, Grep, Glob`:
+
+- `Bash` is used only to run the bundled `scripts/md_analysis_planner.py`.
+- `Read`, `Write`, `Grep`, and `Glob` are used only to inspect, edit, and search
+  this skill's own files (the script, references, and SKILL.md) when authoring
+  analysis plans; they are not used to touch trajectory data.
+
+### Safety Measures
+
+- No use of `eval`, `exec`, `os.system`, or dynamic imports.
+- The script spawns no subprocesses and executes no external analysis programs;
+  it only parses arguments with `argparse` and computes a plan in-process.
+- Output is structured JSON produced via `json.dumps` (or deterministic plain
+  text), never interpolated shell.
+- Denial-of-service caps (`MAX_GOALS = 64`, `MAX_SYSTEM_LEN = 256`,
+  `MAX_FIELD_LEN = 256`) bound the work so a planning helper never materializes
+  pathological input.
 
 ## References
 

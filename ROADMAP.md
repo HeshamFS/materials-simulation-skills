@@ -31,9 +31,11 @@ container.*
 
 ## The protocol (conventions on top of the Agent Skills spec)
 
-These conventions are what turn a collection into a coherent standard. The
-direction is to make them explicit, validated in CI, and documented in a
-`docs/PROTOCOL.md` with a conformance checklist.
+These conventions are what turn a collection into a coherent standard. They are
+codified in **[docs/PROTOCOL.md](docs/PROTOCOL.md)** with a conformance checklist;
+the frontmatter, naming, Security-subsection, and eval-coverage rules are enforced
+in CI by `mss validate` and `mss eval`. The direction is to enforce more of the
+checklist automatically (e.g. the script I/O envelope and `compatibility`).
 
 1. **Script I/O envelope.** Every CLI emits `--json` as
    `{ "inputs": {...}, "results": {...}, "notes": [ ... ] }`, with exit `2` on
