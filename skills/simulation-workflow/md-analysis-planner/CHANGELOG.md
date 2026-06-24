@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.2 - 2026-06-24
+
+- Add a "Verification checklist" section (7 evidence-based items) tying trust in
+  trajectory-derived results to the planner's own outputs: `analysis_plan`
+  statuses, `required_data` presence, diffusive-regime log-log slope ~1,
+  Yeh-Hummer 1/L finite-size correction, PBC unwrap via `cell` + `image flags`,
+  the `equilibration_checks`, and block-averaged uncertainties.
+- Add a "Common pitfalls & rationalizations" section (6 rows) documenting
+  domain-specific MD post-processing shortcuts (fitting non-diffusive MSD,
+  skipping the finite-size correction, using wrapped positions, faking VACF/VDOS
+  without velocities, fitting before equilibration, quoting values without error
+  bars) and the correct practice for each.
+
 ## 1.1.0 - 2026-06-23
 
 - Fix status demotion bug (F1): a `blocked` goal (e.g. VACF/VDOS with no stored

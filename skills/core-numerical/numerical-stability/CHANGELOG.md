@@ -2,6 +2,12 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- **Verification checklist** section in SKILL.md: 7 evidence-based checkbox items, each requiring a concrete recorded value from the scripts (`cfl_checker.py` `metrics.cfl`/`metrics.fourier`/`metrics.reaction` vs `limits.*` and `criteria_applied`/`recommended_dt`; `von_neumann_analyzer.py` `max_amplification`; `stiffness_detector.py` `real_part_stiffness_ratio`/`imag_dominated`/`stiff`; `matrix_condition.py` `condition_number`/`status`) before a "stable" verdict.
+- **Common pitfalls & rationalizations** table in SKILL.md: 6 domain-specific rows (implicit-stability-vs-accuracy, run-completion-vs-correctness, the `Fo ≤ 1/(2d)` dimension trap, magnitude vs real-part stiffness for imaginary-dominated spectra, recomputing `dt` after mesh refinement, and conditioning after a "successful" solve).
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

@@ -24,7 +24,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/convergence-study",
       "description": "Perform spatial and temporal convergence analysis for solution verification — compute observed convergence orders from grid or timestep refinement studies, apply Richardson extrapolation to estimate discretization error, and calculate the Grid Convergence Index (GCI) per ASME V&V 20 standards. Use when verifying that a numerical solution converges at the expected rate, estimating the error on the finest mesh, checking whether grids are in the asymptotic range, or preparing formal verification reports, even if the user only asks \"is my mesh fine enough\" or \"how accurate is my solution.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [],
       "scripts": 4,
@@ -45,7 +45,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/differentiation-schemes",
       "description": "Select and apply numerical differentiation schemes for PDE and ODE discretization — generate finite-difference stencils at arbitrary order and accuracy, choose between central, upwind, compact (Pade), and spectral methods, handle boundary stencils, and estimate truncation error scaling. Use when discretizing spatial derivatives, picking a scheme for advection- or diffusion-dominated problems, building custom stencils for nonstandard operators, or comparing dispersion and dissipation properties of candidate schemes, even if the user just says \"how do I approximate this derivative\" or \"my solution is too diffusive.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -72,7 +72,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/linear-solvers",
       "description": "Select and configure linear solvers for Ax=b systems arising in numerical simulations — choose between direct (LU, Cholesky) and iterative (CG, GMRES, BiCGSTAB, MINRES) methods, analyze sparsity patterns and matrix conditioning, recommend preconditioners (AMG, ILU, IC), apply row/column scaling, and diagnose convergence stagnation from residual histories. Use when setting up a linear solve for FEM/FVM assembly, debugging slow or stalled Krylov iterations, choosing a preconditioner for SPD or nonsymmetric systems, or investigating ill-conditioning, even if the user only says \"my solver is slow\" or \"GMRES won't converge.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -98,7 +98,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/mesh-generation",
       "description": "Plan and evaluate mesh generation for numerical simulations — estimate grid resolution from physics scales (interface width, boundary layers, wavelengths), check aspect ratios and skewness against quality thresholds, choose between structured, unstructured, and adaptive mesh refinement strategies, and compute grid sizing for 1D/2D/3D domains. Use when setting up a new mesh, diagnosing poor solver convergence caused by mesh quality, deciding how many points to place across a phase-field interface or boundary layer, or preparing a mesh convergence study, even if the user only asks \"what resolution do I need\" or \"why is my solver failing.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -124,7 +124,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/nonlinear-solvers",
       "description": "Select and configure nonlinear solvers for root-finding f(x)=0, optimization min F(x), and least-squares problems — choose among Newton, Newton-Krylov, quasi-Newton (BFGS, L-BFGS), Broyden, Anderson acceleration, and Levenberg-Marquardt methods, configure line search or trust-region globalization, diagnose convergence rate (quadratic, linear, stagnated), and assess Jacobian quality and conditioning. Use when a Newton solver converges slowly or diverges, choosing between line search and trust region, debugging nonlinear iteration failures in FEM or phase-field codes, or selecting a solver for large-scale unconstrained optimization, even if the user only says \"my Newton iterations aren't converging.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -151,7 +151,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/numerical-integration",
       "description": "Select and configure time integration methods for ODE and PDE simulations — choose among explicit Runge-Kutta, BDF, Rosenbrock, and Adams families, set relative and absolute error tolerances, implement adaptive step-size control with P/PI step-size controllers, plan IMEX operator splitting for mixed stiff and non-stiff terms, and estimate splitting errors. Use when picking an integrator for a new simulation, diagnosing step rejections or tolerance failures, setting up operator splitting for phase-field or reaction-diffusion problems, or deciding between explicit and implicit time marching, even if the user only says \"my solver keeps rejecting steps\" or \"which ODE method should I use.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -177,7 +177,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/numerical-stability",
       "description": "Analyze numerical stability for time-dependent PDE simulations — check CFL and Fourier criteria, perform von Neumann stability analysis, detect stiffness, evaluate matrix conditioning, and recommend explicit vs implicit time-stepping schemes. Use when selecting time steps, diagnosing numerical blow-up or solver divergence, checking convergence criteria, or evaluating scheme stability for advection, diffusion, or reaction problems, even if the user doesn't explicitly mention \"stability\" or \"CFL.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -204,7 +204,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/time-stepping",
       "description": "Plan and control time-step policies for transient simulations — couple CFL and physics-based stability limits with adaptive stepping, ramp initial transients through sharp gradients or phase changes, schedule output intervals and checkpoint cadence, and plan restart strategies for long-running jobs. Use when choosing dt for a new simulation, diagnosing adaptive time-step oscillations, deciding checkpoint frequency to minimize lost work, or setting up output schedules aligned with physical time scales, even if the user only says \"my run is too slow\" or \"how often should I save.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -230,7 +230,7 @@
       "category": "data-management",
       "path": "skills/data-management/fair-simulation-packager",
       "description": "Create FAIR-minded reproducibility bundles for materials simulations by collecting input/output file inventories, hashes, units, engine versions, structure identifiers, provenance, and NOMAD/OPTIMADE/Materials Project friendly metadata. Use before publishing, sharing, archiving, or handing simulation results to another agent.",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -256,7 +256,7 @@
       "category": "hpc-deployment",
       "path": "skills/hpc-deployment/hpc-runtime-doctor",
       "description": "Diagnose HPC runtime and scheduler problems for materials simulations, including MPI/OpenMP/GPU layout, modules, CUDA/Kokkos hints, scratch paths, walltime, job arrays, restart strategy, scheduler portability, and resource mismatch. Use when an ALREADY-SUBMITTED job failed, ran slowly, got killed, or behaved differently on a cluster than on a workstation. To author or vet a NEW submission script before running, use slurm-job-script-generator instead.",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -282,7 +282,7 @@
       "category": "hpc-deployment",
       "path": "skills/hpc-deployment/slurm-job-script-generator",
       "description": "Generate correct, copy-pasteable SLURM sbatch job scripts and sanity-check HPC resource requests — configure nodes, MPI tasks, OpenMP threads, memory (per-node or per-cpu), GPUs, walltime, partitions, modules, and environment variables, with automatic detection of conflicting directives and oversubscription. Use when preparing a SLURM submission script, deciding between pure MPI and hybrid MPI+OpenMP layouts, standardizing #SBATCH directives across a team, debugging why a job won't launch or gets killed, or setting up GPU-accelerated simulation jobs, even if the user only says \"I need to run this on the cluster\" or \"my job keeps getting killed.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -307,7 +307,7 @@
       "category": "meta",
       "path": "skills/meta/skill-evaluator",
       "description": "Rigorously evaluate an Agent Skill end-to-end across ANY coding-agent CLI — verify its scripts emit the documented numbers (deterministic checks), test whether its description triggers on the right prompts, and measure whether an agent following the SKILL.md beats a no-skill baseline (with/without pass-rate delta, mean ± stddev, benchmarked). Use whenever you need to test, benchmark, validate, grade, or quantify a skill's quality, check if a skill \"actually works,\" compare two skill versions, optimize a skill's triggering, or set up an eval suite — even if the user just says \"is this skill any good,\" \"does my skill work,\" or \"benchmark this skill.\" Drives Claude Code, OpenAI Codex, Antigravity (agy), Cursor, GitHub Copilot, Amp, opencode, or Grok in headless mode.",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -334,7 +334,7 @@
       "category": "ontology",
       "path": "skills/ontology/ontology-explorer",
       "description": "Parse, navigate, and query materials science ontology structures — browse class hierarchies, inspect individual classes and their properties, look up object and data property definitions with domain/range, search for ontology terms by keyword, and parse or summarize raw OWL/XML files. Currently supports CMSO and ASMO; the broader OCDO ecosystem (CDCO, PODO, PLDO, LDO) is planned. Use when exploring what classes or properties an ontology provides, finding the right CMSO term for a crystal structure or simulation concept, understanding parent-child class relationships, or onboarding to an unfamiliar materials ontology, even if the user only says \"what ontology terms describe my FCC copper simulation\" or \"show me the CMSO class hierarchy.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -358,7 +358,7 @@
       "category": "ontology",
       "path": "skills/ontology/ontology-mapper",
       "description": "Map materials science terms, crystal structures, and sample descriptions to standardized ontology classes and properties — resolve natural-language concepts to ontology entries with confidence scores, translate Bravais lattice types, space groups, and lattice constants into ontology-compliant annotations, and produce full sample metadata from structured descriptions. Supports any ontology in ontology_registry.json (CMSO, ASMO, etc.). Use when annotating simulation inputs with FAIR metadata, translating \"BCC iron\" or \"FCC copper\" into formal ontology terms, preparing machine- readable sample descriptions, or bridging between lab vocabulary and ontology vocabulary, even if the user only says \"what CMSO terms describe my material\" or \"annotate this sample for me.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "low",
       "allowed_tools": [
         "Read",
@@ -382,7 +382,7 @@
       "category": "ontology",
       "path": "skills/ontology/ontology-validator",
       "description": "Validate material sample annotations against ontology constraints — check that class names and property names exist in the ontology, verify domain and range consistency for object property relationships, assess annotation completeness (required, recommended, and optional properties), and flag unknown or misspelled terms. Use when verifying that CMSO or other ontology annotations are correct before publishing, checking whether all required properties are present for a class like Crystal Structure or Unit Cell, auditing relationship triples between instances, or catching annotation errors early in a FAIR data workflow, even if the user only says \"is my annotation correct\" or \"what am I missing.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -405,7 +405,7 @@
       "category": "robustness",
       "path": "skills/robustness/simulation-failure-triage",
       "description": "First-response triage for cross-code (LAMMPS/VASP/QE/MOOSE) simulation failures: classifies the failure signature (nonconvergence, NaN/Inf, exploding energy, unstable timestep, pressure blow-up, missing potentials/pseudopotentials, memory exhaustion, process crash/segfault, corrupted output, incomplete runs) and proposes a SAFE one-change-at-a-time RETRY LADDER with explicit STOP CONDITIONS, prioritizing evidence preservation. Use as the immediate first response to a failed or suspicious run. For deep per-stage validation, conservation/physical-bounds checks, and \"can I trust these results\" analysis, defer to the simulation-validator skill.",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -432,7 +432,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/md-analysis-planner",
       "description": "Plan molecular dynamics post-processing for materials simulations, including RDF, MSD and diffusion, VACF/VDOS, coordination numbers, bond-angle distributions, stress-strain curves, equilibration detection, PBC unwrapping, and trajectory format choices. Use before writing MD analysis scripts or trusting trajectory-derived results.",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -458,7 +458,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/parameter-optimization",
       "description": "Explore and optimize simulation parameters via design of experiments (DOE), sensitivity analysis, and optimizer selection — generate Latin Hypercube, quasi-random, or factorial sample plans, rank parameter influence with sensitivity scores, recommend Bayesian optimization, CMA-ES, or gradient- based methods based on dimension and budget, and fit surrogate models for expensive evaluations. Use when calibrating material properties against experimental data, planning a parameter sweep, performing uncertainty quantification, or choosing an optimization strategy for a simulation with a limited evaluation budget, even if the user only says \"which parameters matter most\" or \"how do I calibrate my model.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -484,7 +484,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/performance-profiling",
       "description": "Identify computational bottlenecks, analyze parallel scaling, estimate memory requirements, and generate optimization recommendations for materials simulations — parse timing logs to find dominant phases (solver, assembly, I/O), evaluate strong and weak scaling efficiency, profile memory from mesh and field parameters, and detect bottlenecks with actionable fix suggestions. Use when a simulation is running slower than expected, investigating MPI scaling efficiency, planning HPC resource allocation, deciding whether to tune the preconditioner or reduce I/O frequency, or estimating if a problem fits in available RAM, even if the user only says \"my simulation is too slow\" or \"how many nodes do I need.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -510,7 +510,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/post-processing",
       "description": "Extract, analyze, and summarize simulation output data — pull spatial fields at specific timesteps, compute time-series trends and detect steady state, extract line profiles through the domain, generate statistical summaries and distributions, calculate derived quantities (gradients, fluxes, volume fractions, interface area), compare results against analytical solutions or experimental data, and produce automated analysis reports. Use when interpreting finished simulation results, checking mass or energy conservation, comparing two runs or meshes, extracting interface profiles from phase-field output, or preparing publication-quality analysis, even if the user only says \"what do my results look like\" or \"did my simulation reach steady state.\"",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -536,7 +536,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/simulation-orchestrator",
       "description": "Orchestrate multi-simulation campaigns — generate parameter sweep configurations (grid, linspace, or Latin Hypercube sampling), initialize and track batch job campaigns, monitor job completion status, and aggregate results with summary statistics across all runs. Use when running a parameter study across dt, kappa, or other simulation inputs, managing dozens or hundreds of simulation configurations, combining outputs from completed batch runs to find the best result, or automating the generate-run-collect workflow for systematic studies, even if the user only says \"I need to try many parameter combinations\" or \"how do I organize a sweep.\"",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -562,7 +562,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/simulation-validator",
       "description": "Validate simulations across three stages — run pre-flight checks on configuration files (parameter ranges, required fields, disk space), monitor runtime logs for residual growth, NaN/Inf, and adaptive dt collapse, and perform post-flight validation of results (physical bounds, mass/energy conservation, convergence). Diagnose failed simulations with probable-cause analysis and recommended fixes. Use when preparing to launch a simulation, checking whether a running job is healthy, verifying that finished results are trustworthy, or debugging a crash or blow-up, even if the user only says \"my simulation crashed\" or \"can I trust these results.\"",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -589,7 +589,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/workflow-engine-mapper",
       "description": "Map computational materials tasks onto workflow engines such as atomate2, jobflow, AiiDA, pyiron, or a simple one-off script. Use when deciding how to structure a reproducible campaign, DAG, restart strategy, provenance record, storage layout, or migration path from ad hoc scripts to managed workflows.",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -616,7 +616,7 @@
       "category": "verification-validation",
       "path": "skills/verification-validation/benchmark-and-mms-planner",
       "description": "Plan verification and validation campaigns for simulation codes using manufactured solutions, canonical benchmark problems, grid/time refinement, uncertainty propagation, and pass/fail acceptance criteria. Use when an agent needs to prove a solver, model, or result is trustworthy rather than only plausible.",
-      "version": "1.1.2",
+      "version": "1.1.3",
       "security_tier": "high",
       "allowed_tools": [
         "Read",

@@ -15,7 +15,7 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.2"
+  version: "1.1.3"
   security_tier: medium
   security_reviewed: true
   tested_with:
@@ -283,41 +283,12 @@ python scripts/report_generator.py \
 For a complete simulation analysis:
 
 ```bash
-# Step 1: Inventory available data
-python scripts/field_extractor.py --input results/ --list --json
-
-# Step 2: Extract final state statistics
-python scripts/statistical_analyzer.py \
-    --input results/field_final.json \
-    --field phi \
-    --json
-
-# Step 3: Analyze convergence history
-python scripts/time_series_analyzer.py \
-    --input results/history.json \
-    --quantity residual \
-    --detect-steady-state \
-    --json
-
-# Step 4: Compute derived quantities
-python scripts/derived_quantities.py \
-    --input results/field_final.json \
-    --quantity volume_fraction \
-    --field phi \
-    --json
-
-# Step 5: Compare to reference (if available)
-python scripts/comparison_tool.py \
-    --simulation results/profile.json \
-    --reference benchmark/expected.json \
-    --metric l2_error \
-    --json
-
-# Step 6: Generate summary report
-python scripts/report_generator.py \
-    --input results/ \
-    --output analysis_report.json \
-    --json
+python scripts/field_extractor.py --input results/ --list --json                                             # 1. inventory
+python scripts/statistical_analyzer.py --input results/field_final.json --field phi --json                    # 2. final-state stats
+python scripts/time_series_analyzer.py --input results/history.json --quantity residual --detect-steady-state --json   # 3. convergence
+python scripts/derived_quantities.py --input results/field_final.json --quantity volume_fraction --field phi --json    # 4. derived quantities
+python scripts/comparison_tool.py --simulation results/profile.json --reference benchmark/expected.json --metric l2_error --json   # 5. compare to reference
+python scripts/report_generator.py --input results/ --output analysis_report.json --json                      # 6. summary report
 ```
 
 ## Interpretation Guidelines
@@ -398,6 +369,56 @@ No script emits top-level `script`, `version`, or `input_file` keys, and
 field statistics (`min`/`max`/`mean`/`count`) appear at the top level, not
 nested under a `data` object.
 
+## Verification checklist
+
+Before trusting or reporting a post-processing result, produce and record the
+concrete evidence below (tied to this skill's scripts and output keys):
+
+- [ ] **Listed the real fields first.** Ran `field_extractor.py --list --json`
+      and recorded the actual `fields` names and `shape`; every later `--field`
+      argument is one that appears in that list (no assumed `temperature`, no
+      guessed grid size).
+- [ ] **Used the right convergence test for the quantity type.** For a residual/error,
+      recorded `convergence_threshold.reached` and `final_value` from
+      `--absolute-threshold <tol>` (the `|x_final| <= tol` test) rather than
+      relying on `steady_state.reached`; for a physical quantity, recorded
+      `steady_state.{reached,relative_variation,value}` from `--detect-steady-state`.
+- [ ] **Reconciled the two convergence signals.** Logged `convergence.type` and
+      `convergence.rate` alongside `steady_state.reached`, and confirmed a
+      `convergence.type = "stalled"` is read as a stalled solver (not steady
+      state), and a still-decreasing residual with `steady_state.reached = false`
+      is not reported as a failure.
+- [ ] **Checked conservation against a tolerance.** Recorded the conserved
+      integral (`derived_quantities.py --quantity mass` / `integral`, or
+      `volume_fraction`) at the first and last timestep and confirmed the drift
+      is within the documented tolerance for the dynamics (≈0 for Cahn-Hilliard
+      conserved order parameter; expected to change for Allen-Cahn).
+- [ ] **Confirmed grid spacing is physical.** Recorded the `spacing` block
+      (`dx`/`dy`/`dz`) echoed by `derived_quantities.py` and verified it came
+      from explicit `dx`/`dy` or the correct `Lx/(nx-1)` derivation — and that no
+      `WARNING: explicit dx ... inconsistent with Lx` line was emitted to stderr.
+- [ ] **Verified no non-finite values corrupted the result.** Confirmed
+      derived-quantity scripts did not raise `Field contains non-finite value`
+      (NaN/Inf) and that reported `min`/`max` are physically plausible (e.g. an
+      order parameter stays within its expected bounds).
+- [ ] **Qualified comparison error against the documented bands.** Recorded the
+      `comparison_tool.py` metric value (e.g. `l2_error`) and mapped it to the
+      agreement band in this skill (<1% excellent ... >10% poor, investigate),
+      confirming the simulation and reference were aligned/interpolated onto the
+      same axis first.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "`steady_state.reached = false`, so the solver didn't converge." | The relative steady-state test asks "has it stopped changing?", which is false for a still-decreasing residual. For residuals use `--absolute-threshold <tol>` and read `convergence_threshold.reached`; reconcile with `convergence.type`/`rate`. |
+| "The residual plateaued, so it reached steady state." | A flat residual is a *stalled* solver (`convergence.type = "stalled"`, rate > 0.99), not convergence. Confirm the plateau value is actually at/below tolerance before calling it converged. |
+| "I'll just extract `temperature` / assume a 256×256 grid." | Field names and shape are not guaranteed. Run `field_extractor.py --list --json` first and use only the `fields` and `shape` that the file actually reports. |
+| "Two grids/runs agree, so the result is mesh-independent." | `comparison_tool.py` on two fields only bounds their difference; it does not establish the asymptotic range. Use >=3 resolutions to estimate an observed order before claiming mesh independence. |
+| "Volume fraction looks stable, so mass is conserved." | A stable `volume_fraction` (a thresholded count) is not the conserved integral. Check `--quantity integral`/`mass` drift between first and last timestep against tolerance — and only expect ≈0 drift for conserved (Cahn-Hilliard) dynamics. |
+| "Default `dx=1.0` is fine for the derived quantity." | When no spacing is in the file the scripts fall back to `dx=dy=dz=1.0`, so any length/area/flux/integral is in grid units, not physical units. Supply `--dx`/`--dy` (or `Lx`/`Ly` in the file) and verify the echoed `spacing` block. |
+| "It ran and emitted JSON, so the numbers are valid." | Completion is not correctness. Verify conservation drift, the convergence verdict, finite values, and the comparison error band before reporting. |
+
 ## Security
 
 ### Input Validation
@@ -446,6 +467,11 @@ For detailed information, see:
 
 See `CHANGELOG.md` for the authoritative record.
 
+- v1.1.3 (2026-06-24): Added a "Verification checklist" (evidence-based, tied to
+  the scripts' real output keys: field listing, residual-vs-physical convergence,
+  signal reconciliation, conservation drift, grid-spacing sanity, non-finite
+  guards, comparison error bands) and a "Common pitfalls & rationalizations"
+  table before the Security section. Documentation only; no script behavior change.
 - v1.1.2 (2026-06-23): Made the eval suite self-contained and discriminating —
   copied the real fixtures into `evals/files/` (only `phi`/`concentration` fields
   on a 10x10 grid; residual series ending at 5e-6), rewrote every eval prompt to

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.3 - 2026-06-24
+
+### Added
+- "Verification checklist" section: 7 evidence-based checkbox items tied to the planner's
+  actual outputs (`inputs`/`effective_model`, `refinement_protocol.levels`/`spacing_ratio`,
+  `accept_observed_order_min`, `include_time_refinement`, `mms_plan`, `acceptance_criteria`,
+  and `warnings`).
+- "Common pitfalls & rationalizations" section: 7-row table of domain-specific V&V
+  rationalizations and their corrections (planning is not verification, >=3 grids needed
+  for observed order, screening band is not a certified bound, time refinement, convergence
+  is not validation, `reference none` is verification-only, and the `general` model fallback).
+
 ## 1.1.0 - 2026-06-23
 
 ### Fixed

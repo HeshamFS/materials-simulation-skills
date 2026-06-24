@@ -9,7 +9,7 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -104,6 +104,27 @@ metadata and SHA-256 hashes.
 ## Limitations
 
 This skill creates a metadata manifest. It does not upload to NOMAD, Materials Project, or an OPTIMADE provider.
+
+## Verification checklist
+
+- [ ] Confirmed `fair_checks.has_hashes_for_existing_files` is `true` (not `null` or `false`); a `null` means no listed file existed on disk, so re-run from the directory where the files actually live before trusting the manifest.
+- [ ] Reviewed `missing_files` and confirmed it is empty, or recorded an explicit reason for each entry — every missing path means an input/output was named but not hashed, so the bundle is not reproducible as-is.
+- [ ] Spot-checked at least one `sha256` in `results.manifest.file_inventory` against an independent `sha256sum`/`Get-FileHash` of the same file to confirm the recorded digest matches the bytes on disk.
+- [ ] Confirmed `engine_version` is a real version string and not the default `"unknown"`; pass `--engine-version` so the bundle records the exact code build.
+- [ ] Verified `units` is non-empty and every reported quantity (energy, length, time, etc.) has an entry, so downstream consumers do not have to guess the unit system.
+- [ ] Confirmed `structure_id` is populated when a Materials Project / NOMAD / OPTIMADE / CIF / POSCAR structure was used, so the structure identity is recoverable.
+- [ ] When `--out PATH` was used, opened `PATH` and confirmed it holds the bare `manifest` object (not the `inputs`/`results` envelope) and that no unintended path outside the working directory was written.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "It exited 0, so the bundle is complete." | Exit 0 only means no validation error; missing files are reported in `missing_files` with exit 0. Inspect `missing_files` and `fair_checks` before trusting completeness. |
+| "`has_hashes_for_existing_files` is `null`, close enough to `true`." | `null` means *no listed file existed on disk* — nothing was hashed. Re-run from the correct directory so the files are found and actually digested. |
+| "Skip `--engine-version`, the engine name is enough." | The script defaults `engine_version` to `"unknown"`, which silently breaks reproducibility. Always pass the concrete build/version. |
+| "Parsing `inputs.inputs` from the JSON gives me the per-file records." | `inputs.inputs` is the raw comma-separated CLI string echoed back, not the records. Read per-file data from `results.manifest.file_inventory.inputs/outputs`. |
+| "The manifest captures the structure, so the run is fully reproducible." | This skill only inventories files, hashes, units, and IDs. It does not record code commit, container digest, or parser versions — follow `recommended_next_steps` and add those yourself. |
+| "Absolute paths or `..` will be rejected, so the inventory is sandboxed." | Paths are not sandboxed — absolute and `..` paths are inventoried as given, and `--out` can write outside the working directory. Verify the paths you pass are the intended ones. |
 
 ## Security
 

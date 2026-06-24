@@ -14,7 +14,7 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: medium
   security_reviewed: true
   tested_with:
@@ -161,6 +161,26 @@ python3 scripts/surrogate_builder.py --x 0,1,2 --y 10,12,15 --model rbf --json
 | `could not convert string to float: <token>` | Non-numeric value in `--scores`/`--x`/`--y` | Reformat as `0.1,0.2,0.3` |
 | `scores must be a comma-separated list` | Empty `--scores` input | Provide at least one numeric score |
 
+## Verification checklist
+
+- [ ] Recorded the exact `doe_generator.py` `coverage.count` and confirmed it matches the intended design — for `factorial`, verified `count == levels ** params` and that no `note`/`requested_budget` mismatch warning was emitted (or that the realized count is acceptable).
+- [ ] Confirmed the chosen `--method` matches the Decision Guidance for the actual dimension/goal, and that `quasi-random` was used instead of the deprecated `sobol` alias (no `DeprecationWarning` in output).
+- [ ] Recorded the `optimizer_selector.py` `recommended` strategy and `expected_evals`, and verified `expected_evals <= budget` so the plan is feasible within the stated evaluation budget.
+- [ ] Logged the `sensitivity_summary.py` `ranking` and checked whether the top sensitivity is `< 0.1` (the "All sensitivities are low" note); if so, did not over-interpret the ranking and revisited the output metric.
+- [ ] For surrogate fits, judged quality with `metrics.cv_error` (leave-one-out), NOT in-sample `mse` — especially for `rbf`, where `mse` is near zero by construction — and compared `cv_error` against `metrics.output_variance` to confirm the surrogate beats the constant-mean baseline.
+- [ ] Confirmed any reported `cv_error` is a finite number (not `NaN`), i.e. there were enough samples for leave-one-out (`poly`: `n > degree+1`; `rbf`: `n >= 3`).
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|------------------------------|
+| "RBF surrogate `mse` is ~0, so the model is excellent." | RBF is an exact interpolant — in-sample `mse` is near zero by construction and says nothing about generalization. Judge fit with `metrics.cv_error` and compare it to `output_variance`. |
+| "I asked for `--budget 20` factorial, so I got 20 samples." | Factorial honors `levels ** params`, not the budget; `--budget 20 --params 2` realizes 16 samples and emits a `note`/warning. Use `--levels` for an exact, intended design. |
+| "`sobol` gives me a true Sobol low-discrepancy sequence." | `sobol` is a deprecated alias that emits a `DeprecationWarning` and uses a simplified golden-ratio additive recurrence, not a true Sobol sequence. Use `quasi-random`; for production Sobol use `scipy.stats.qmc`. |
+| "The optimizer recommendation is just advice — budget doesn't matter." | The recommendation is gated on dimension AND budget (BO only for `dim<=10 AND budget<=100`), and `expected_evals` is capped at the budget. Record both and confirm the plan fits the real budget. |
+| "One sensitivity score is highest, so that parameter dominates." | The script only sorts the scores you pass in; it computes no sensitivity itself. If the top score is `< 0.1` it flags that all sensitivities are low — get the scores from a real screening/Sobol analysis before trusting the ranking. |
+| "It printed JSON without erroring, so the result is valid." | Exit success only means inputs parsed. Verify the design size, `expected_evals <= budget`, a finite `cv_error`, and that the surrogate beats `output_variance` before trusting any output. |
+
 ## Security
 
 ### Input Validation
@@ -204,6 +224,7 @@ python3 scripts/surrogate_builder.py --x 0,1,2 --y 10,12,15 --model rbf --json
 
 ## Version History
 
+- **v1.2.2** (2026-06-24): Added Verification checklist and Common pitfalls & rationalizations sections to drive evidence-based use of the DOE, optimizer, sensitivity, and surrogate scripts
 - **v1.2.0** (2026-06-23): Real surrogate fits (`poly` least-squares, `rbf` interpolation) with honest `mse`/`cv_error`/`output_variance`; explicit factorial `--levels` with budget-mismatch warnings; BO dimension cutoff harmonized to dim<=10; corrected Security/Error-Handling/output-field docs to match script behavior
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, conversational examples
 - **v1.0.0**: Initial release with core scripts

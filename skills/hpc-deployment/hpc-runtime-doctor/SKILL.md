@@ -10,7 +10,7 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.2"
+  version: "1.1.3"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -103,6 +103,26 @@ Invalid resource counts stop with exit code 2. Unknown symptoms are preserved as
 
 This skill does not query a live scheduler. It diagnoses from the submitted layout and symptoms.
 
+## Verification checklist
+
+- [ ] Recorded the script's `resource_layout` block and confirmed `tasks_per_node` is an integer (no fractional value) and `total_cpus` equals `tasks * cpus_per_task`; if `tasks_per_node` is fractional, the uneven-placement warning was triaged before retrying.
+- [ ] For GPU jobs, recorded the resolved total `gpus` (and `gpus_per_node` when set) and computed ranks/GPU = `tasks / gpus`, confirming it is at or below the 16 ranks/GPU threshold or that the resulting `Many MPI ranks per GPU` warning was deliberately accepted.
+- [ ] Reviewed every entry in the `warnings` list (OpenMP-with-`cpus_per_task=1`, GPU-requested-but-zero-GPUs, `tasks < nodes`, uneven placement, scratch-for-heavy-I/O) and resolved or justified each one rather than ignoring it.
+- [ ] Completed the `environment_checks` items as real artifacts: captured the module list, executable path/version, MPI launcher-vs-library match, accelerator build flags (CUDA/Kokkos/OpenMP), and scheduler stdout/stderr.
+- [ ] Mapped each observed symptom to a `diagnoses` entry and verified no symptom landed in the `custom` category unaddressed (every `custom` item had stderr/stdout/module list/command line collected for human review).
+- [ ] Followed the `retry_plan`: reran the smallest reproducing case, changed exactly one resource variable, enabled restart/checkpoint, and saved the scheduler script plus environment snapshot alongside the results.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|------------------------------|
+| "It ran without crashing, so the layout is fine." | Run completion is not correctness. Review the `warnings` list and `resource_layout` -- oversubscription, uneven placement, or an idle GPU can silently slow or corrupt results without a crash. |
+| "Per-node ranks fit the GPUs, so there's no oversubscription." | Oversubscription is total ranks over total GPUs, not per-node. The script computes `tasks / gpus`; a multi-node job can hide a high ranks/GPU value that only the unit-consistent check exposes. |
+| "I passed `--gpus`, so per-node GPU count doesn't matter." | `--gpus` is the whole-job total. If the cluster allocates per node, use `--gpus-per-node` (SLURM `--gres=gpu:N`); it overrides `--gpus` and total becomes `gpus_per_node * nodes`. Mixing them up misreports ranks/GPU. |
+| "The job was killed, so it's a physics/solver bug." | `killed`/`oom`/`timeout` are scheduler and resource categories, not physics. Check walltime, memory limits, and preemption from stdout/stderr before touching simulation parameters. |
+| "An unknown symptom isn't in the rules, so I can skip it." | Unknown symptoms become `custom` diagnoses, not no-ops. Collect scheduler stderr/stdout, the module list, and the command line for human review -- silence is not a clean bill of health. |
+| "Just change ranks, threads, and the build together to fix it faster." | Changing multiple variables at once makes the failure undiagnosable. The `retry_plan` mandates one variable at a time on the smallest reproducing case. |
+
 ## Security
 
 ### Input Validation
@@ -148,6 +168,9 @@ This skill does not query a live scheduler. It diagnoses from the submitted layo
 
 ## Version History
 
+- 1.1.3: Added a Verification checklist (evidence-based items tied to
+  `resource_layout`, `warnings`, ranks/GPU, `environment_checks`, `diagnoses`,
+  and the `retry_plan`) and a Common pitfalls & rationalizations table.
 - 1.1.1: Discriminating evals -- each case now pins the script's specific output
   (exact ranks-per-GPU warning, diagnosis categories, resource-layout fields) via
   deterministic `script_checks`.

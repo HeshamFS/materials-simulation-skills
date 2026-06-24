@@ -14,7 +14,7 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: medium
   security_reviewed: true
   tested_with:
@@ -174,6 +174,26 @@ python3 scripts/splitting_error_estimator.py --dt 1e-4 --scheme strang --commuta
 | Moderate | Strang splitting |
 | Strong | Fully coupled IMEX-RK |
 
+## Verification checklist
+
+- [ ] Recorded the scaled `error_norm` (and `scale_min`/`scale_max`) from `scripts/error_norm.py` and confirmed `scale_min > 0`, so no component reduced to atol-only scaling by accident.
+- [ ] Confirmed each accepted step has `error_norm <= accept_threshold` (default 1.0) per `scripts/adaptive_step_controller.py`; logged any `accept: false` steps and the resulting `dt_next`/`factor` rather than forcing the step through.
+- [ ] For the PI controller, supplied `--prev-error` and verified `controller_used` reported `pi` (not the silent `p` fallback that occurs when `--prev-error` is omitted).
+- [ ] Ran `scripts/integrator_selector.py` with the actual `--stiff`/`--jacobian-available`/`--accuracy` flags matching the problem and recorded `recommended` plus the `notes` (e.g. the "expect smaller dt" warning for stiff-without-implicit).
+- [ ] For operator splitting, recorded `error_estimate`, `substeps`, and `dt_effective` from `scripts/splitting_error_estimator.py` and confirmed `error_estimate <= target-error` after substepping, using the correct `--scheme` order (lie=1, strang=2).
+- [ ] Ran the convergence validation (Workflow step 7): repeated with tighter `rtol`/`atol` and confirmed the solution change is below the target accuracy, rather than trusting a single tolerance run.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "I picked an implicit/BDF method, so any `dt` is fine." | Unconditional *stability* is not *accuracy*; large `dt` still inflates temporal error. Check `error_norm` against the accept threshold and run the tighter-tolerance convergence check (Workflow step 7). |
+| "`error_norm` came back < 1, so the step and the whole run are correct." | The norm only certifies the local step under the chosen `rtol`/`atol`. A loose tolerance passes every step while the global solution is wrong — tighten tolerances and confirm convergence before trusting results. |
+| "I'll use the PI controller for smoother stepping" but omit `--prev-error`. | Without `--prev-error` the script silently falls back to the P controller (`controller_used: p`). You get no PI benefit. Pass the previous accepted `error_norm` and verify `controller_used: pi`. |
+| "Strang vs Lie splitting won't matter much here." | Splitting error scales as `commutator_norm * dt^(order+1)` with order 1 (lie) vs 2 (strang). For a nonzero commutator the schemes differ by a full power of `dt` — run `splitting_error_estimator.py` with the actual `--commutator-norm` and `--target-error` instead of guessing. |
+| "The selector recommended IMEX/RK-Chebyshev, so I'll just run explicitly without a Jacobian." | That branch fires only for stiff problems *without* implicit solves and the script warns "expect smaller dt." Read the `notes`: provide a Jacobian/Jv product and use BDF/Radau if implicit solves are feasible. |
+| "It ran to the final time without crashing, so the integration is valid." | Completion is not correctness. Verify step acceptance (`error_norm <= threshold`), splitting error within `target-error`, and convergence under tighter tolerances; for conservative problems pass `--conservative` to `imex_split_planner.py` and check conserved quantities. |
+
 ## Security
 
 ### Input Validation
@@ -217,6 +237,7 @@ python3 scripts/splitting_error_estimator.py --dt 1e-4 --scheme strang --commuta
 
 ## Version History
 
+- **v1.2.2** (2026-06-24): Added Verification checklist and Common pitfalls & rationalizations sections grounding step acceptance, PI controller usage, integrator selection, and splitting-error checks in the scripts' actual outputs
 - **v1.2.0** (2026-06-23): Fixed PI controller coefficient/sign to standard form, fixed error_norm scale-collapse crash, corrected error-message and controller documentation to match the scripts
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 5 integration scripts

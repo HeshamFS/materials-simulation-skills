@@ -11,7 +11,7 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -157,6 +157,29 @@ python3 scripts/matrix_condition.py --matrix A.npy --norm 2 --json
 
 > Conditioning thresholds assume IEEE double precision: solving loses roughly `log10(κ)` significant digits, and a matrix becomes numerically singular near `κ ≈ 1/eps ≈ 4.5e15`. The `> 10⁸` / `> 10¹⁰` cutoffs (matching `matrix_condition.py` `status`) leave ample margin; well-conditioned-for-double FEM matrices (κ up to ~10⁶–10⁷) report `status: ok`.
 
+## Verification checklist
+
+Do not declare a scheme/time step "stable" until each applicable item below is satisfied with a recorded value from the scripts, not a mental estimate.
+
+- [ ] Ran `cfl_checker.py --json` and recorded `metrics.cfl`, `metrics.fourier`, and/or `metrics.reaction` against the reported `limits.*` (explicit defaults: CFL ≤ 1, Fo ≤ 1/(2d), R ≤ 1), with `stable: true` and the intended criteria present in `criteria_applied`.
+- [ ] Confirmed `criteria_applied` is non-empty and `stable` is not `null` — i.e. at least one physics parameter (`--velocity`/`--diffusivity`/`--reaction-rate`) was actually supplied so a real check ran, not a silent no-op.
+- [ ] Used the smallest grid spacing across all directions for `--dx` (anisotropic grids: smallest `dx`/`dy`/`dz`) and re-ran `cfl_checker.py` after any mesh refinement, since `Fo ∝ dt/dx²` makes the limit highly sensitive to `dx`.
+- [ ] If the chosen `dt` is below the limit, recorded the tool's `recommended_dt` (and the `--safety` factor used) so the margin to the stability boundary is explicit and reproducible.
+- [ ] For any custom/non-standard update stencil, ran `von_neumann_analyzer.py --json` and confirmed `results.max_amplification ≤ 1` (`stable: true`); noted `k_at_max` and resolved any even-length-stencil `warning`.
+- [ ] For multi-scale systems, ran `stiffness_detector.py --json` and recorded `real_part_stiffness_ratio`, `imag_dominated`, and `stiff`; only chose BDF/Radau when `stiff: true` on the real-part ratio (not on magnitude alone) and there is no `warning`.
+- [ ] For implicit solves, ran `matrix_condition.py --json` and recorded `condition_number` and `status`; treated `poorly-conditioned` (>1e8) / `ill-conditioned` (>1e10) as a flag to scale/precondition before trusting the solve.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "Implicit scheme, so any `dt` is fine." | Unconditional *stability* is not *accuracy*. `cfl_checker.py` reports `stable: true` with relaxed (infinite) limits for `--scheme implicit` and even adds a note to "check accuracy" — a large `dt` still ruins temporal error. Size `dt` for accuracy, not just stability. |
+| "It ran 100 steps without crashing, so the setup is stable." | Late-time blow-up from round-off, conservation loss, or marginal `Fo` is common. Completion ≠ correctness — record `metrics.fourier`/`metrics.cfl` vs `limits.*` and confirm `stable: true` before trusting the run. |
+| "The 1D Fourier limit is 0.5, so `Fo ≤ 0.5` is safe." | The explicit diffusion limit is `Fo ≤ 1/(2d)` — 0.25 in 2D, 0.167 in 3D. Pass the real `--dimensions`; `cfl_checker.py` tightens `diffusion_limit` automatically, and using 0.5 in 2D/3D is an instability. |
+| "Stiffness ratio is huge, so use BDF/Radau." | The magnitude `stiffness_ratio` is misleading for oscillatory/advective/Hamiltonian spectra. Check `imag_dominated` and `real_part_stiffness_ratio`: if `imag_dominated: true` the detector returns `stiff: false` with a `warning` — prefer symplectic/leapfrog or a CFL-sized A-stable scheme, not implicit stiff solvers. |
+| "I tightened `dt`, so the old mesh's `dt` still works after refining `dx`." | `Fo ∝ dt/dx²`: halving `dx` quadruples `Fo`. Reusing a pre-refinement `dt` reintroduces a violation. Recompute with `cfl_checker.py` after every mesh change. |
+| "The matrix solved, so its conditioning is fine." | A solve can return numbers while silently losing ~`log10(κ)` digits. Record `condition_number`/`status` from `matrix_condition.py`; `poorly-conditioned`/`ill-conditioned` means scale or precondition before trusting the result. |
+
 ## Security
 
 ### Input Validation
@@ -197,6 +220,7 @@ python3 scripts/matrix_condition.py --matrix A.npy --norm 2 --json
 
 ## Version History
 
+- **v1.2.2** (2026-06-24): Added a "Verification checklist" (7 evidence-based items tied to the four scripts' JSON outputs) and a "Common pitfalls & rationalizations" table (6 rows) to make stability verdicts reproducible and guard against false-confidence shortcuts
 - **v1.2.0** (2026-06-23): Corrected the phase-field worked example (genuinely unstable Fo=1.0 with D=1.0); fixed eval case 1 Fourier value; reconciled conditioning thresholds and error-message docs with the scripts; real-part-based stiffness classification with imaginary-dominated detection; enforced documented input/file-size/dimension safeguards
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 4 stability analysis scripts

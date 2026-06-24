@@ -2,6 +2,19 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- **SKILL.md:** `Verification checklist` section (6 evidence-based checkbox items)
+  tying trust in a convergence result to concrete script outputs — `mean_order`,
+  per-triplet `observed_orders`, `convergence_assessment` PASS, `in_asymptotic_range`,
+  refinement ratios >= 1.3, safety-factor choice, `gci_fine`, and `extrapolated_value`.
+- **SKILL.md:** `Common pitfalls & rationalizations` section (6-row table) covering
+  the 2-grid "converged" fallacy, the constant-ratio `AR = f1/f2` trap,
+  tiny-GCI grid-independence claims, superconvergence misread as extra accuracy,
+  quoting an extrapolated value when the order is non-positive, and conflating
+  temporal stability with temporal accuracy.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

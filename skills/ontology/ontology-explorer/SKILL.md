@@ -15,7 +15,7 @@ description: >
 allowed-tools: Read, Bash
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   standards:
     - "W3C OWL 2 Web Ontology Language; RDF Schema (RDFS) and XSD datatypes"
     - "W3C SKOS Simple Knowledge Organization System (skos:definition / preferred labels)"
@@ -185,6 +185,30 @@ python3 skills/ontology/ontology-explorer/scripts/ontology_summarizer.py \
 - **Union domains**: a property can apply to more than one class. When it does, the domain is shown as the classes joined with a pipe, e.g. `A | B`. (The bundled CMSO/ASMO summaries currently contain no union-domain properties.)
 - **Search relevance**: 1.0 = label match, 0.5 = description match only.
 
+## Verification checklist
+
+Before presenting any class, property, or relationship as fact, confirm and record:
+
+- [ ] Resolved the target via `class_browser.py --class <name>` (or `property_lookup.py`) and recorded the exact canonical `label` returned in `results.class_info.label` / `results.property_info.name` — do not quote a name the agent typed; quote the label the tool resolved (e.g. `UnitCell` → `Unit Cell`).
+- [ ] For every relationship chain stated, cited the actual `domain` and `range` from a `property_lookup.py --property <name>` call (recorded `results.property_info.domain` and `.range`), rather than inferring the link from class names.
+- [ ] When a property's `domain` contains a pipe (`A | B`), reported it as a union (applies to each listed class) and confirmed the class in question matches one normalized member — did not silently assume single-class domain.
+- [ ] For `--search` results, recorded each match's `relevance` and stated whether it was a label match (1.0) or description-only match (0.5); did not present a 0.5 description hit as a confirmed term match.
+- [ ] Identified the ontology by its registry key (`cmso` or `asmo`) and confirmed it exists in `references/ontology_registry.json`; did not query an unregistered ontology or conflate CMSO and ASMO terms.
+- [ ] When relying on a generated/refreshed summary, recorded its `metadata.source_url` and `metadata.generated_at` and the `statistics` (`num_classes`, `num_object_properties`, `num_data_properties`) so the result is traceable to a specific OWL source.
+- [ ] Treated absent parents, descriptions, or domain/range as missing data (not as "no such relationship"), since the parser extracts only simple `rdfs:subClassOf` and declared domains/ranges and does no reasoning.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "The class name `UnitCell` returned nothing, so the term doesn't exist." | Labels carry spaces (`Unit Cell`). The tools resolve exact → case-insensitive → space-normalized; if a direct guess fails, run `--search` and use the canonical `label` the tool returns, not the typed string. |
+| "These two classes are obviously related, so I'll state the link." | Relationships exist only where an object property declares them. Verify with `property_lookup.py --property <name>` and quote the recorded `domain → range`; never infer a triple from class names alone. |
+| "The script ran and printed results, so the answer is complete." | Run success ≠ completeness. A missing `parent`, `description`, or `domain/range` means the OWL lacked that annotation — the parser does no inference and ignores complex OWL restrictions. State what is absent. |
+| "`--search crystal` matched it, so it's the right term." | A match may be relevance 0.5 (description-only), not a label match. Check the `relevance` field and prefer 1.0 label matches; report 0.5 hits as "mentioned in the description," not as the canonical term. |
+| "A property has one domain class." | Domains can be unions (`A | B`). Split on `|` and check each normalized member; a property may legitimately apply to several classes. The bundled CMSO/ASMO summaries currently have none, but parsed/refreshed ones can. |
+| "Any OCDO ontology will work / CMSO and ASMO are interchangeable." | Only `cmso` and `asmo` are registered; CDCO/PODO/PLDO/LDO are planned, not available. Pick the correct registry key and don't mix terms across ontologies. |
+| "I'll point the parser at this `http://` OWL URL." | `owl_parser.py`/`ontology_summarizer.py` reject non-`https://` URLs by design. Use an `https://` source or a local file path. |
+
 ## Security
 
 ### Input Validation
@@ -231,5 +255,6 @@ python3 skills/ontology/ontology-explorer/scripts/ontology_summarizer.py \
 
 | Date | Version | Changes |
 |------|---------|---------|
+| 2026-06-24 | 1.2.2 | Added a Verification checklist (evidence-based, tied to canonical-label resolution, recorded domain/range, union domains, search relevance, registry keys, and summary provenance) and a Common pitfalls & rationalizations table. |
 | 2026-06-23 | 1.2.0 | Fixed property_lookup `--class` to resolve canonical labels (spaceless names like `UnitCell` now match), made class/property domain matching consistent across tools, enforced documented security controls (safe-character pattern, length caps, search-result caps, HTTPS-only URLs), corrected union-domain doc example and eval assertions, scoped description to CMSO/ASMO. |
 | 2026-02-25 | 1.0 | Initial release with CMSO support |

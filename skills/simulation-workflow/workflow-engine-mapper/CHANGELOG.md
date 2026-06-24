@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2 - 2026-06-24
+
+- Added a `Verification checklist` section (7 checkbox items) requiring concrete artifacts: the full `--json` payload with echoed inputs, the documented engine precedence, branch+sweep DAG composition and restart-checkpoint suffix, the `provenance_requirements`/`restart_strategy` flags, the one-off `migration_triggers` entry, the `storage_layout` scaffold, and a `0` exit code.
+- Added a `Common pitfalls & rationalizations` table (6 rows) covering one-off-as-permanent, AiiDA over-selection vs. lighter stores, trusting a run without re-reading echoed input flags, collapsing a screening DAG that should compose a property branch, skipping checkpointing despite the `runs>=20` rule, and masking input mismatches with `--preferred`.
+- Bumped SKILL.md frontmatter version 1.2.1 -> 1.2.2 (docs only; no script behavior change).
+
 ## 1.1.0 - 2026-06-23
 
 - Fixed `dag_pattern` to compose branch (relax/static/property) and sweep (screen/campaign) structures instead of overwriting one with the other; a high-throughput relax-static-DOS screening now reports `map over structures -> (relax -> static -> property branches) -> collect -> rank` (F4).

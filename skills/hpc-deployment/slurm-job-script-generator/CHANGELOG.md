@@ -2,6 +2,19 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- "Verification checklist" section (7 evidence-based items) requiring agents to
+  record concrete generator outputs (`results.script` directive ordering,
+  `results.warnings`, `results.derived.cpus_total_requested`, `OMP_NUM_THREADS`,
+  `total_gpus`/`ranks_per_gpu`, `results.run_line` launcher) and to cross-check
+  site policy before submitting.
+- "Common pitfalls & rationalizations" table (7 rows) covering internal-only
+  validation scope, launcher double-wrapping, directive ordering, non-integer
+  task-to-GPU ratios, oversubscription, mutually exclusive memory flags, and
+  `OMP_NUM_THREADS` for MPI-only codes.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

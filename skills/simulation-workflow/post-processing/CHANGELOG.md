@@ -2,6 +2,28 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.1.3] - 2026-06-24
+
+### Added
+- **"Verification checklist" section** in SKILL.md (7 evidence-based items) tying
+  trust in a result to concrete artifacts the scripts actually emit: listing real
+  field names/shape via `field_extractor.py --list`, choosing the right
+  convergence test (`--absolute-threshold`/`convergence_threshold` for residuals
+  vs `--detect-steady-state`/`steady_state` for physical quantities), reconciling
+  `convergence.type`/`rate` with `steady_state.reached`, conservation drift via
+  `derived_quantities.py --quantity mass`/`integral`, the echoed `spacing` block
+  and absence of the inconsistent-`dx` warning, non-finite (NaN/Inf) guards, and
+  mapping `comparison_tool.py` error to the documented agreement bands.
+- **"Common pitfalls & rationalizations" table** (7 rows) covering domain-specific
+  rationalizations: misreading `steady_state.reached`, mistaking a stalled
+  plateau for convergence, assuming field names/grid size, treating two-grid
+  agreement as mesh independence, conflating volume fraction with conserved mass,
+  the `dx=1.0` grid-unit fallback, and "it ran so it's valid".
+
+### Changed
+- Bumped SKILL.md `version` to 1.1.3 and added the matching Version History entry.
+  Documentation only; no script behavior change.
+
 ## [1.1.1] - 2026-06-23
 
 ### Fixed

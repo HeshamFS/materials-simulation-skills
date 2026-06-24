@@ -19,7 +19,7 @@ metadata:
     - "GNU GDB, Valgrind, and AddressSanitizer (ASan) memory-fault debugging tools"
     - "LAMMPS / VASP / Quantum ESPRESSO / MOOSE solver error diagnostics (e.g. 'Lost atoms', ZBRENT nonconvergence)"
     - "Zeller (2009), Why Programs Fail: delta debugging / one-change-at-a-time minimal reproducing case"
-  version: "1.1.2"
+  version: "1.1.3"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -87,6 +87,27 @@ Invalid stages or oversized log files stop with exit code 2. Unknown symptoms ar
 
 This skill gives first-response triage. It does not guarantee that a failed simulation can be repaired.
 
+## Verification checklist
+
+- [ ] Recorded the preserved-evidence set BEFORE any rerun: copied logs, input decks, scheduler output, and the executable/version string (per the first `immediate_actions` item) so the original failure is reproducible.
+- [ ] Quoted the FIRST warning/error from the run, not just the final crash line, and confirmed `evidence.log_excerpt` (first 500 chars, original casing) captures it; re-run with `--log-file`/`--log-text` if the excerpt misses the root signature.
+- [ ] Logged every `likely_causes` entry with its `symptom`, `category`, and `first_action`, and verified no real signature landed in the `category: custom` bucket because its keyword was absent from `LOG_HINTS`/`PATTERNS`.
+- [ ] Confirmed the failure category is correct rather than mislabeled: a segfault/SIGSEGV/signal 11/core-dumped maps to `crash` (not `corrupted-output`), and an OOM/`bad_alloc`/`oom-kill` maps to `out-of-memory` (not `incomplete-run`).
+- [ ] Applied the `retry_ladder` strictly one change at a time, recording the single parameter changed and its effect at each rung (including the memory rung when memory-bound).
+- [ ] Checked every `stop_conditions` entry and halted the retry loop instead of stacking arbitrary stabilizing tweaks when any condition is met (e.g. unverifiable potential/pseudopotential, results dependent on arbitrary stabilizers).
+- [ ] After any numerical recovery, handed off to the `simulation-validator` skill for conservation / physical-bounds / "can I trust these results" checks rather than declaring success here.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "The last line of the log is the error, so I'll fix that." | The final crash line is often a downstream symptom; the script's second `immediate_actions` item exists because the FIRST warning/error is the real cause. Capture it in `evidence.log_excerpt` and triage from there. |
+| "It segfaulted, so it's a corrupted-output / disk issue." | A `crash` (SIGSEGV/signal 11/core dumped) is a memory-fault category pointing at out-of-bounds/null-pointer/ABI bugs and a gdb/valgrind/ASan repro — not I/O. Do not treat it as `corrupted-output`. |
+| "The job got killed, so I'll just bump the walltime." | `killed` alone is genuinely ambiguous and stays `incomplete-run`; an OOM signature (`bad_alloc`, `oom-kill`, "out of memory") is a distinct `out-of-memory` cause needing memory reduction / `--mem` increase, not more walltime. |
+| "I'll lower dt AND change the preconditioner AND adjust the barostat to get it running." | The retry ladder is one controlled change per rung; stacking fixes makes results "depend on arbitrary stabilizing changes" — an explicit `stop_conditions` trigger. Change one parameter, record its effect, then proceed. |
+| "I added the missing PAIR coeff path and it ran, so the physics is fine." | A clean run after fixing `missing-potential`/`bad-pseudopotential` resolves setup, not validity; species mapping, valence, or functional may still be wrong. Run completion is not correctness. |
+| "It runs now, triage is done." | Triage only restores execution. Conservation, physical bounds, and convergence are out of scope here — defer to `simulation-validator` before trusting any number. |
+
 ## Security
 
 ### Input Validation
@@ -124,6 +145,7 @@ This skill gives first-response triage. It does not guarantee that a failed simu
 
 ## Version History
 
+- 1.1.3: Add `Verification checklist` (evidence-based checks tied to `failure_triage.py` outputs — preserved-evidence set, first-error excerpt, category-mislabel guards, one-change retry ladder, stop conditions, simulation-validator handoff) and `Common pitfalls & rationalizations` table covering last-line-only triage, segfault-as-I/O, OOM-vs-walltime, stacked stabilizing changes, and "it ran so it's valid".
 - 1.1.1: Strengthen evals to be discriminating — each case now pins the exact `failure_triage.py` JSON output via `script_checks` (specific `category`/`first_action` strings, log-hint symptom inference, fixed retry-ladder/stop-condition text, recent-change immediate action), so the suite measures the skill's actual output rather than generic triage knowledge.
 - 1.1.0: Add dedicated `out-of-memory` and `crash` (segfault) classifications; segfaults and OOM are no longer mislabeled as I/O or interrupted-execution. Preserve original-case log excerpt. Add input-validation caps (symptoms, code length). Sharpen description to defer deep validation to simulation-validator. Fix `missing-potential` eval token.
 - 1.0.0: Initial cross-code simulation failure triage skill.

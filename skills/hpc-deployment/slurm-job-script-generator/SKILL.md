@@ -13,7 +13,7 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -161,6 +161,28 @@ python3 skills/hpc-deployment/slurm-job-script-generator/scripts/slurm_script_ge
 | `module must match /^[A-Za-z0-9]...` | Module name contains shell metacharacters | Use e.g. `gcc/12`, `openmpi/4.1` |
 | `nodes must be <= 100000 (got ...)` | Integer request exceeds the sanity upper bound | Re-check the requested value |
 
+## Verification checklist
+
+- [ ] Confirmed the generated `results.script` places **every** `#SBATCH` directive immediately after the shebang and before `set -euo pipefail` (open the script and check the first real command line) — a directive after the first command is silently ignored by SLURM.
+- [ ] Inspected `results.warnings` and confirmed it is empty, or recorded each warning (CPU oversubscription, non-integer task-to-GPU ratio, double-launcher) with a deliberate justification for ignoring it.
+- [ ] Recorded `results.derived.cpus_total_requested` (= `ntasks * cpus-per-task`) and, when `--cores-per-node` was supplied, confirmed `cpus_per_node_requested <= cores_per_node` so the node is not oversubscribed.
+- [ ] For hybrid runs, verified the script's `export OMP_NUM_THREADS` value equals `results.derived` `cpus_per_task` (the generator sets them equal — confirm that matches the intended threads-per-rank).
+- [ ] For GPU jobs, recorded `results.derived.total_gpus` and `ranks_per_gpu` and confirmed `ranks_per_gpu` is the intended integer (or documented intentional sharing such as MPS).
+- [ ] Verified `results.run_line` is not double-wrapped: if the run command already starts with `srun`/`mpirun`/`mpiexec`/`orterun`/`aprun`/`jsrun`, confirmed `--launcher none` was used (or the auto-detect warning fired) so SLURM does not launch N independent copies.
+- [ ] Cross-checked the partition, account, QoS, memory style (`--mem` vs `--mem-per-cpu`), and GPU directive against the actual cluster's documented policy — the generator only validates internal consistency, never site policy.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "It generated a script with no errors, so the resources are correct." | The generator only checks internal consistency — it never queries the cluster. Validate partition/account/QoS/memory style and GPU directives against your site's actual docs before submitting. |
+| "I'll keep the `srun`/`mpirun` already in my run command and let the generator wrap it." | Wrapping `srun` around `mpirun` launches N independent `mpirun` processes (each its own MPI world); `srun` around `srun` is malformed. Pass `--launcher none`, and confirm the auto-detect warning fired in `results.warnings`. |
+| "I requested the nodes I want, so the job will use them all." | If any `#SBATCH` directive slips below the first command it is silently dropped and the job falls back to cluster defaults. Re-read the generated script and confirm all directives precede `set -euo pipefail`. |
+| "ntasks doesn't divide the GPU count, but it ran, so it's fine." | A non-integer `ranks_per_gpu` means ranks map unevenly to devices (idle/oversubscribed GPUs). The generator emits a task-to-GPU warning — fix `ntasks`/GPUs or explicitly document MPS sharing. |
+| "I set high `ntasks-per-node` because more ranks is faster." | Without `--cores-per-node` the generator can't catch oversubscription, and `ntasks-per-node*cpus-per-task` exceeding physical cores degrades performance. Pass `--cores-per-node` and check `cpus_per_node_requested`. |
+| "I'll set both `--mem` and `--mem-per-cpu` to be safe." | These are mutually exclusive; the generator rejects supplying both. Pick the one your cluster's policy enforces. |
+| "OMP_NUM_THREADS doesn't matter for an MPI-only code." | The generator always exports `OMP_NUM_THREADS=cpus-per-task`; for MPI-only runs keep `--cpus-per-task=1` so threaded libraries don't silently oversubscribe cores. |
+
 ## Security
 
 ### Input Validation
@@ -203,6 +225,7 @@ python3 skills/hpc-deployment/slurm-job-script-generator/scripts/slurm_script_ge
 
 ## Version History
 
+- **v1.2.2** (2026-06-24): Added "Verification checklist" and "Common pitfalls & rationalizations" sections covering directive ordering, oversubscription, task-to-GPU mapping, launcher double-wrapping, and the generator's internal-consistency-only scope.
 - **v1.2.0** (2026-06-23): Fixed critical directive-ordering bug (all `#SBATCH` lines now precede `set -euo pipefail`), avoided double-launcher wrapping when the run command already starts with `srun`/`mpirun`, added GPU task-to-GPU ratio warning and layout guidance, hardened input validation (integer upper bounds, partition/account/qos/constraint/reservation/gpu-type allowlists, module sanitization, `--srun-extra` quoting), escaped `%j` in `--help`, and corrected the Security and output documentation.
 - **v1.1.0** (2026-03-26): Optimized description for discovery, added eval suite, security review, standardized metadata, and CHANGELOG.
 - **v1.0.0** (2026-02-25): Initial SLURM job script generator

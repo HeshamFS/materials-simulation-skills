@@ -2,6 +2,26 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- **Verification checklist** (6 evidence-based items): recording scaled
+  `error_norm`/`scale_min` from `error_norm.py`, confirming per-step
+  `error_norm <= accept_threshold` and logging rejected steps from
+  `adaptive_step_controller.py`, verifying `controller_used: pi` when using the
+  PI controller, recording integrator `recommended`/`notes` from
+  `integrator_selector.py`, checking `error_estimate <= target-error` after
+  substepping from `splitting_error_estimator.py`, and running the
+  tighter-tolerance convergence validation.
+- **Common pitfalls & rationalizations** table (6 rows) covering
+  stability-vs-accuracy for implicit methods, single-tolerance over-trust, the
+  silent PI->P fallback when `--prev-error` is omitted, lie-vs-strang splitting
+  order, misuse of the stiff-without-Jacobian selector branch, and
+  "ran without crashing != correct".
+
+### Changed
+- Bumped SKILL.md `version` to 1.2.2 (patch).
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

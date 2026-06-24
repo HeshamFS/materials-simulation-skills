@@ -2,6 +2,20 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- **Verification checklist** section (6 evidence-based checkbox items) tying trust
+  in results to concrete script outputs: `doe_generator.py` `coverage.count`/factorial
+  `note`, `optimizer_selector.py` `recommended`/`expected_evals` (`<= budget`),
+  `sensitivity_summary.py` `ranking` low-sensitivity flag, and surrogate
+  `cv_error` vs `output_variance` (with the RBF in-sample `mse` caveat) plus a
+  finite-`cv_error` (sample-count) check.
+- **Common pitfalls & rationalizations** table (6 rows) covering RBF in-sample
+  `mse`, factorial budget-vs-`levels` sizing, the deprecated `sobol` alias,
+  budget-gated optimizer selection, the script ranking pre-supplied scores it does
+  not compute, and "ran without error != valid".
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

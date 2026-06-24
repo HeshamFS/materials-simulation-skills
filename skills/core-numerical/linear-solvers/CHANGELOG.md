@@ -2,6 +2,16 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- **SKILL.md**: Added a "Verification checklist" section (6 evidence-based items
+  tied to `convergence_diagnostics.py`, `residual_norms.py`, `solver_selector.py`,
+  `sparsity_stats.py`, `scaling_equilibration.py`, and `preconditioner_advisor.py`
+  outputs) and a "Common pitfalls & rationalizations" table (6 rows) covering
+  mean-vs-asymptotic rate, absolute-vs-relative residual, CG misuse on indefinite
+  systems, dense-direct memory gating, one-sided scaling, and GMRES stagnation.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

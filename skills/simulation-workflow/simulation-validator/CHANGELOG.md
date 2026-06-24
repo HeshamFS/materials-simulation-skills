@@ -2,6 +2,15 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- **SKILL.md:** "Verification checklist" section (7 checkbox items) requiring concrete artifacts from the four validation scripts — `result_validator` `status`/`confidence_score`/`checks`/`failed_checks`, the recorded `--mass-tol`, `runtime_monitor` `residual_stats`/`dt_stats`/`alerts`, separate CFL/Fourier gating via `cfl_checker.py`, and `failure_diagnoser` output on failure.
+- **SKILL.md:** "Common pitfalls & rationalizations" table (7 rows) covering preflight-vs-stability confusion, `INSUFFICIENT_DATA`/`null` confidence, weak vs strict (`--variational`) energy checks, `bounds_unverifiable` vs vacuous pass, run-completion-is-not-correctness, direction-aware dt collapse, and default-threshold misuse.
+
+### Changed
+- Bumped SKILL.md version to 1.2.2 (patch) and added a Version History entry.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

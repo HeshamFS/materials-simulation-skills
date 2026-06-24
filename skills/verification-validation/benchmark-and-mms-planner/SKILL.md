@@ -9,7 +9,7 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.2"
+  version: "1.1.3"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -96,6 +96,30 @@ python3 skills/verification-validation/benchmark-and-mms-planner/scripts/benchma
 
 This skill plans verification work; it does not run the solver or prove that a physical model is appropriate for an experiment.
 
+## Verification checklist
+
+Before trusting a result that used this planner, record concrete evidence for each item:
+
+- [ ] Ran `benchmark_mms_planner.py --json` and saved the `inputs` block, confirming the echoed `dimension`, `expected_order`, `reference`, and `risk` match the actual run (a fallback to `effective_model: general` was intentional, not a typo in `--model`).
+- [ ] Executed the `refinement_protocol`: used the reported `levels` (3, or 4 for high risk) of systematically refined grids at `spacing_ratio` 2, and recorded the observed order of accuracy from those runs.
+- [ ] Confirmed the observed order is at or above `accept_observed_order_min`; if below, logged the investigation (mesh not yet asymptotic, boundary/source errors, limiter activation) rather than treating the result as passed.
+- [ ] When `include_time_refinement` is `true`, ran a separate time-step refinement study and recorded the temporal observed order, not just the spatial one.
+- [ ] When `mms_plan.manufacture_solution` is `true`, derived the symbolic source/forcing term, applied the matching boundary terms, and recorded the L2 and Linf error norms versus the manufactured solution.
+- [ ] Checked every `acceptance_criteria` item with a number: conservation/balance closes within a documented tolerance, the quantity of interest plateaus under refinement, and any benchmark discrepancy from `benchmark_cases` is explained before production use.
+- [ ] Treated all entries in `warnings` as blockers for high-risk claims and recorded how each was resolved (e.g. an independent analytic/published reference was added when `reference` was `none` or `experimental`).
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "The planner ran and printed a plan, so the result is verified." | The script only *plans* V&V; it never runs the solver. Verification comes from executing the `refinement_protocol`, MMS, and `acceptance_criteria`, not from generating the plan. |
+| "Two grids converged, so the observed order is fine." | `refinement_protocol.levels` is 3 (4 for high risk) for a reason: you need >=3 systematically refined grids to estimate observed order and confirm the solution is in the asymptotic range before quoting it. |
+| "Observed order beats `accept_observed_order_min`, so it's certified." | That threshold is an engineering *screening* heuristic (formal order minus a 10%/20% relative tolerance, floored at 1.0), not a certified bound. For rigorous order verification run a Richardson/GCI study. |
+| "Steady-looking model, so I can skip `include_time_refinement`." | If the planner set `include_time_refinement: true` (any time-dependent or `general` fallback family), spatial refinement alone hides temporal error — run the time-step study too. |
+| "We matched a benchmark, so the code is validated." | Matching `benchmark_cases` or converging shows the code approaches *some* solution; it does not prove the physical model is correct. Validation needs an independent reference plus model-error separation, not convergence alone. |
+| "`reference none` is fine, the runs look physical." | With `reference: none` the strategy is verification-only; `warnings` says so. You may report convergence and conservation but must NOT call the result validated. |
+| "Unknown model name, so I'll ignore the `general` fallback." | An unrecognized `--model` silently resolves to `effective_model: general`; confirm that fallback is intended, since it changes both `benchmark_cases` and the time-refinement decision. |
+
 ## Security
 
 ### Input Validation
@@ -136,6 +160,12 @@ The frontmatter declares `allowed-tools: Read, Bash, Write, Grep, Glob`.
 
 ## Version History
 
+- 1.1.3: Add a "Verification checklist" (evidence-based items tied to the planner's
+  `refinement_protocol`, `mms_plan`, `acceptance_criteria`, and `warnings`) and a
+  "Common pitfalls & rationalizations" table that pins down domain-specific V&V
+  shortcuts (plan != verification, >=3 grids for observed order, screening band is not
+  a certified bound, time refinement, convergence != validation, `reference none`,
+  `general` fallback).
 - 1.1.1: Make the eval suite discriminating by adding deterministic `script_checks`
   that pin the planner's specific output (resolved `verification_strategy`, the
   relative `accept_observed_order_min` band, refinement `levels`,

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.3 - 2026-06-24
+
+### Added
+- "Verification checklist" section with 6 evidence-based checkbox items tied to
+  the script's actual outputs (`resource_layout`, `tasks_per_node`/`total_cpus`,
+  resolved total `gpus` and ranks/GPU vs the 16 threshold, the full `warnings`
+  list, `environment_checks` artifacts, `diagnoses`/`custom` handling, and the
+  `retry_plan`).
+- "Common pitfalls & rationalizations" table with 6 domain-specific
+  rationalizations (run completion != correctness, per-node vs total ranks/GPU,
+  `--gpus` vs `--gpus-per-node`, scheduler-kill vs physics, unknown/`custom`
+  symptoms, and one-variable-at-a-time retries).
+
 ## 1.1.0 - 2026-06-23
 
 ### Fixed

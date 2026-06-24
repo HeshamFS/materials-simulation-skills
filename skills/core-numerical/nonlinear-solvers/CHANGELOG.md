@@ -2,6 +2,12 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- `SKILL.md`: "Verification checklist" section (4-7 evidence-based items) requiring concrete artifacts from this skill's scripts — recorded `convergence_type`/`estimated_rate` and `converged` vs the real tolerance from `convergence_analyzer.py`, `patterns_detected` from `residual_monitor.py`, `condition_number`/`jacobian_quality`/`finite_diff_error`/`rank_deficient` from `jacobian_diagnostics.py`, trust-region reduction `ratio`/`trust_radius_action` from `step_quality.py`, and agreement with `solver_selector.py`/`globalization_advisor.py` recommendations
+- `SKILL.md`: "Common pitfalls & rationalizations" table (7 rows) covering constant-ratio-misread-as-superlinear, run-completion-vs-convergence, insufficient-iterations order estimation, unverified analytic Jacobians, loosening tolerance to mask divergence, trust-region step acceptance/expansion by ρ, and large/expensive-Jacobian Newton-Krylov routing
+
 ## [1.2.0] - 2026-06-23
 
 ### Added

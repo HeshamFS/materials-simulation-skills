@@ -2,6 +2,22 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- SKILL.md: "Verification checklist" section (7 evidence-based checkbox items)
+  tying trust in a result to concrete script outputs — non-empty
+  `timing_analyzer.py` `results.phases`, phase percentages summing to ~100%,
+  recorded `average_efficiency`/`efficiency_threshold_processors` from
+  `scaling_analyzer.py`, the four-term memory breakdown and correct `solver.type`
+  from `memory_profiler.py`, `per_process_gb` vs `--available-gb`, and a
+  before/after re-profile after each optimization.
+- SKILL.md: "Common pitfalls & rationalizations" section (6-row table) covering
+  empty-pattern "balanced run" false negatives, two-point scaling claims,
+  iterative-vs-direct/matrix-free memory under-estimation, total-vs-per-process
+  RAM, the 30% I/O threshold, and recommendations being limited to the JSON
+  inputs actually supplied.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

@@ -1,5 +1,19 @@
 # Changelog — skill-evaluator
 
+## v1.0.1 (2026-06-24)
+
+- Added a **Verification checklist** section (7 evidence-based items) tying a
+  trustworthy verdict to concrete artifacts per layer: the `run_script_checks.py`
+  summary counts and exit status, hand re-derivation of at least one numeric
+  assertion, `cases_without_checks` coverage gaps, positives+negatives trigger
+  pass counts, `--runs-per-query` ≥ 3 stability, and the `run_summary.delta.pass_rate`
+  (mean ± stddev) with grading driven by the actual `outputs/`.
+- Added a **Common pitfalls & rationalizations** table (6 rows) covering the
+  failure modes specific to this harness: treating exit 0 as correctness, trusting
+  weak/`exists`/`truthy` assertions, positives-only trigger sets, single-run trigger
+  rates, reading absolute pass rate instead of the with/without delta, and grading
+  from the transcript instead of the output files.
+
 ## v1.0.0 (2026-06-23)
 
 Initial release. An agent-agnostic harness for rigorously evaluating Agent Skills,

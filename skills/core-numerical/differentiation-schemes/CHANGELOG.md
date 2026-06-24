@@ -2,6 +2,21 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- SKILL.md: "Verification checklist" section (7 evidence-based checkbox items)
+  tying trust in results to concrete artifacts from the scripts'
+  JSON outputs (stencil width/symmetry, coefficient sum-to-zero and catalog
+  cross-check, even-accuracy exit code, `error_scale`/`reduction_if_halved`,
+  >=3-grid observed-order study, explicit boundary stencils, and
+  non-smooth scheme selection) and the `references/` guidance.
+- SKILL.md: "Common pitfalls & rationalizations" table (7 rows) covering
+  domain-specific shortcuts (treating the echoed `accuracy` field as a
+  measured order, expecting odd central accuracy to round up, assuming
+  monotone error improvement, two-grid "convergence", interior-only order
+  claims, high-order central FD at shocks, and custom-offset misuse).
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.2 - 2026-06-24
+
+- Docs: added a "Verification checklist" section (7 evidence-based items tied to
+  `fair_checks.has_hashes_for_existing_files`, `missing_files`, per-file `sha256`,
+  `engine_version`, `units`, `structure_id`, and `--out` output) and a
+  "Common pitfalls & rationalizations" table (6 rows) so agents validate the
+  manifest's real output instead of trusting a clean exit code.
+
 ## 1.2.0 - 2026-06-23
 
 - Evals: made all three eval cases discriminating by adding `script_checks` that pin

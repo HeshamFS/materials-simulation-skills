@@ -14,7 +14,7 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -223,6 +223,31 @@ otherwise a weaker `energy_net_decrease` check is used, which does not detect mi
 | out of memory | Memory exhaustion | Reduce mesh, enable out-of-core |
 | dt reduced | Adaptive stepping triggered | May be okay if controlled |
 
+## Verification checklist
+
+Do not trust a validation verdict until each applicable item below is satisfied
+with the concrete artifact named. Record these in your summary to the user.
+
+- [ ] Ran `result_validator.py --json` and confirmed `results.status` is `PASS` (not `INSUFFICIENT_DATA`) AND `results.confidence_score == 1.0`; a `null` score or `INSUFFICIENT_DATA` means no check ran — treat as unverified, not as a pass.
+- [ ] Listed `results.checks` and confirmed every requested check actually appears (e.g. `mass_conserved`, `bounds_satisfied`, `no_nan`, and `energy_monotone`/`energy_net_decrease`); confirmed `results.failed_checks` is empty and contains no `bounds_unverifiable` entry (which means a requested bound had no `field_min`/`field_max` to compare against).
+- [ ] For variational/gradient-flow models (Allen-Cahn, Cahn-Hilliard), passed `--variational` (or set `"energy_variational": true`) so `energy_monotone` is enforced; recorded that the weaker `energy_net_decrease` was NOT relied on, since it cannot detect mid-run energy spikes.
+- [ ] Recorded the mass drift tolerance used (`--mass-tol`, default `1e-3`) and confirmed it matches the Conservative/Standard/Relaxed column appropriate to the run; did not silently accept the default for a tight-conservation problem.
+- [ ] Ran `runtime_monitor.py --json` and recorded `residual_stats` (min/max/last) and `dt_stats`; confirmed there are no `alerts` for NaN/Inf/overflow, residual growth above `--residual-growth`, or dt collapse below `--dt-drop`.
+- [ ] Confirmed numerical stability was gated separately via `core-numerical/numerical-stability/scripts/cfl_checker.py` (CFL/Fourier limit) — `preflight_checker.py` does NOT evaluate CFL/Fourier and a PASS preflight says nothing about temporal/spatial stability.
+- [ ] On any `FAIL` or alert, ran `failure_diagnoser.py --json` and recorded the `probable_causes`/`recommended_fixes`, rather than reusing the results.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|------------------------------|
+| "Preflight passed, so the run is numerically stable." | `preflight_checker.py` checks required keys, ranges, output-dir writability, and disk space only. It does NOT compute CFL/Fourier. Gate stability with `cfl_checker.py` separately. |
+| "`result_validator` printed a confidence score, so results are good." | An empty or unrecognized metrics file returns `confidence_score: null` and status `INSUFFICIENT_DATA` — that is "no check ran", not a pass. Verify recognized fields are present and `status == PASS`. |
+| "Energy ends lower than it started, so the dissipative run is fine." | The default `energy_net_decrease` only compares first vs last and misses mid-run spikes. For gradient-flow models use `--variational` to enforce the strict monotone `energy_monotone` check. |
+| "I asked for bounds and didn't get a `bounds_satisfied: false`, so bounds hold." | If `field_min`/`field_max` are absent the validator emits `bounds_unverifiable` (a FAILED check), never a vacuous pass. Ensure the metrics file actually carries the field extrema. |
+| "The simulation finished without crashing, so the results are trustworthy." | Run completion is not correctness. Verify mass conservation, energy behavior, physical bounds, and a clean `runtime_monitor` alert list before using results. |
+| "dt got smaller during the run, so the solver is failing." | `runtime_monitor` dt-collapse is direction-aware (running-max vs current) and only alerts past `--dt-drop`; a controlled adaptive ramp is expected. Check the actual `dt_stats` and whether an alert fired. |
+| "I'll just use the default thresholds." | Defaults (`--mass-tol 1e-3`, `--residual-growth 10`, `--dt-drop 100`) are the Standard column; a conservation-critical problem needs the Conservative tolerances. Pick thresholds for the physics, then record them. |
+
 ## Security
 
 ### Input Validation
@@ -266,6 +291,7 @@ otherwise a weaker `energy_net_decrease` check is used, which does not detect mi
 
 ## Version History
 
+- **v1.2.2** (2026-06-24): Added a Verification checklist (evidence-based, tied to the four scripts' JSON outputs) and a Common pitfalls & rationalizations table to harden agent interpretation of validation verdicts.
 - **v1.2.0** (2026-06-23): Corrected diagnostic regexes (no false convergence/blow-up on healthy logs), direction-aware dt-collapse detection, NaN/Inf scan in runtime monitor, strict variational energy check, non-vacuous bounds/confidence, config-relative output-dir + correct-volume disk check, and implemented the documented input-validation/file-size safeguards
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, Windows compatibility
 - **v1.0.0**: Initial release with 4 validation scripts

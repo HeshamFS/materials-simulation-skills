@@ -14,7 +14,7 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -198,6 +198,30 @@ python3 scripts/step_quality.py --predicted-reduction 0.5 --actual-reduction 0.4
 | 0.25 ≤ ρ < 0.75 | good | Maintain |
 | ρ ≥ 0.75 | excellent | Expand if at boundary |
 
+## Verification checklist
+
+Do not trust a "solved" claim until these concrete artifacts are recorded:
+
+- [ ] Logged the full residual norm history and ran `convergence_analyzer.py --residuals <history>`; recorded `convergence_type` and `estimated_rate`, and confirmed `converged: true` against the actual solver tolerance (not the default `1e-10`).
+- [ ] Confirmed the residual sequence is monotone-decreasing or fed it to `residual_monitor.py`; recorded `patterns_detected` and verified it does NOT include `diverging`, `oscillating`, `plateau`, or `slow_convergence` while still above tolerance.
+- [ ] If a Jacobian is available, ran `jacobian_diagnostics.py --matrix J.txt` and recorded `condition_number` and `jacobian_quality`; for an analytic Jacobian, passed `--finite-diff-matrix` and confirmed `finite_diff_error` is below ~1e-2 (no "Large discrepancy" note).
+- [ ] Checked `rank_deficient` from `jacobian_diagnostics.py` is `false` (or documented why a rank-deficient/near-singular Jacobian is expected and that Levenberg-Marquardt regularization is in use).
+- [ ] For a trust-region solve, evaluated accepted steps with `step_quality.py` and recorded the reduction `ratio`; confirmed accepted steps have `ratio >= 0.25` (not `very_poor`/`poor`) and that the `trust_radius_action` matches the recorded ρ.
+- [ ] Recorded the solver and globalization actually used and confirmed they match `solver_selector.py` and `globalization_advisor.py` recommendations for the stated problem type, size, and Jacobian quality (e.g., large/expensive-Jacobian → Newton-Krylov; least-squares → Levenberg-Marquardt trust region).
+- [ ] Re-confirmed convergence after any change to tolerance, initial guess, or preconditioner — the convergence type can flip (e.g., quadratic → linear/stagnated) and must be re-classified, not assumed.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "The residual ratio is a small constant (~0.1), so it's converging superlinearly." | A *constant* contraction ratio is linear, not superlinear — `convergence_analyzer.py` reports this as `linear` (annotated "fast linear"). Superlinear requires the ratio to tend to zero (order p > 1.2). Don't claim Newton-quality convergence from a flat ratio. |
+| "It stopped without erroring, so the solver converged." | Run completion is not convergence. Check `converged` from `convergence_analyzer.py`/`residual_monitor.py` against the real tolerance; a `stagnated` or `plateau` result also "stops" but has not solved `f(x)=0`. |
+| "Two iterations look like they're shrinking, so the rate is fine." | Order estimation needs at least 3 strictly decreasing positive residuals; with fewer, `convergence_analyzer.py` returns `unknown`/falls back to rate-only. Gather more iterations before quoting a convergence type. |
+| "I coded the analytic Jacobian, so it must be right." | A wrong Jacobian still produces *some* step. Run `jacobian_diagnostics.py --finite-diff-matrix` and confirm `finite_diff_error` is small; a "Large discrepancy with finite-diff" note means the analytic Jacobian is buggy, which silently degrades Newton to linear convergence. |
+| "Newton diverged, so I'll just shrink the global tolerance and call it close enough." | Divergence (`convergence_type: diverged`, or `diverging` pattern) signals a bad step direction or far-from-solution start — add globalization. Run `globalization_advisor.py` (use `--far-from-solution` / report failures) and switch to a trust region or damped step instead of loosening the target. |
+| "Trust-region step decreased the objective, so accept and expand the radius." | Acceptance and radius growth depend on the reduction ratio ρ, not just sign. `step_quality.py` only flags `expand` when ρ ≥ 0.75 *and* the step hit the boundary; a small positive ρ (`marginal`) means accept-but-shrink. Use the recorded `trust_radius_action`. |
+| "The Jacobian is large and expensive, but full Newton is the gold standard, so I'll form it anyway." | For n ≥ 1000 or expensive Jacobians, `solver_selector.py` routes to matrix-free Newton-Krylov (JFNK) precisely because forming/factoring J is infeasible; use Jacobian-vector products plus a preconditioner instead. |
+
 ## Security
 
 ### Input Validation
@@ -242,6 +266,7 @@ python3 scripts/step_quality.py --predicted-reduction 0.5 --actual-reduction 0.4
 
 ## Version History
 
+- **v1.2.2** (2026-06-24): Added a "Verification checklist" (evidence tied to each script's JSON outputs — convergence type/rate, residual patterns, Jacobian condition/finite-diff error, rank, trust-region step ratio, and solver/globalization agreement) and a "Common pitfalls & rationalizations" table covering constant-ratio-vs-superlinear, run-completion-vs-convergence, too-few-iterations, unverified analytic Jacobians, divergence handling, trust-region acceptance, and large/expensive-Jacobian routing
 - **v1.2.0** (2026-06-23): Added `--problem-type` to `solver_selector.py` with a nonlinear least-squares path (Levenberg-Marquardt / Gauss-Newton); reordered solver selection so problem size dominates high-accuracy and routes large/expensive-Jacobian problems to Newton-Krylov; added `--far-from-solution` to `globalization_advisor.py` and surfaced Levenberg-Marquardt as the trust-region type for least-squares; corrected convergence classification so constant-ratio sequences are linear (not superlinear); RFC-8259-safe JSON (no `-Infinity`); input-validation hardening
 - **v1.1.0** (2026-03-26): Optimized agent-discovery description, evaluation suite, security review docs, standardized metadata block, CHANGELOG
 - **v1.0.0**: Initial release with 6 analysis scripts

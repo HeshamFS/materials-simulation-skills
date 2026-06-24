@@ -13,7 +13,7 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: medium
   security_reviewed: true
   tested_with:
@@ -177,6 +177,28 @@ Read `asymptotic_rate` when judging the regime below:
 | Flat residual | Poor preconditioner | Improve preconditioner |
 | Oscillating | Near-singular or indefinite | Check matrix, try different solver |
 | Very slow decay | Ill-conditioned | Apply scaling, use AMG |
+
+## Verification checklist
+
+Do not trust a solve until each of these is satisfied with a recorded value, not a "looks fine":
+
+- [ ] Recorded `asymptotic_rate` from `convergence_diagnostics.py` and confirmed it is below the 0.95 stagnation threshold (and ideally < 0.5); a low whole-history `rate` alone does not rule out a flat tail.
+- [ ] Checked the relative residual from `residual_norms.py` against the physics-scaled `--rel-tol` (default 1e-6), not just the absolute norm; for unscaled RHS use `--require-both` so an undersized `rhs` cannot fake convergence.
+- [ ] Confirmed `solver_selector.py` `recommended` matches the actual matrix properties recorded from `sparsity_stats.py` (`symmetry`, and definiteness if known) — e.g. CG only when symmetric AND positive-definite, MINRES for symmetric-indefinite, GMRES/BiCGSTAB for nonsymmetric.
+- [ ] For systems flagged ill-conditioned, ran `scaling_equilibration.py` and recorded `row_scale_max/row_scale_min` and `col_scale_max/col_scale_min`; for symmetric matrices used `--symmetric` (D A D) so symmetry is preserved, and applied row_scale THEN col_scale for nonsymmetric two-sided scaling.
+- [ ] Reviewed `sparsity_stats.py` `notes`/`zero_rows`/`zero_cols` from `scaling_equilibration.py` — any zero row or column means the system is structurally singular and the scale-of-1 fallback is not a fix.
+- [ ] Confirmed the preconditioner from `preconditioner_advisor.py` is admissible for the chosen Krylov method — in particular a MINRES preconditioner must be SPD (an indefinite incomplete LDLᵀ is invalid).
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "The mean `rate` is low, so it converged." | `rate` is the whole-history mean and is dominated by early fast drops; stagnation is a tail property. Read `asymptotic_rate` and confirm it is below 0.95. |
+| "The absolute residual is tiny, so we're done." | A small absolute norm can be meaningless if the RHS is large or unscaled. Check the `relative_norms` / `relative_value` against a physics-scaled `--rel-tol`. |
+| "It's symmetric, so just use CG." | CG requires symmetric AND positive-definite. A symmetric-indefinite matrix needs MINRES (with an SPD preconditioner); using CG can break down or stall. Confirm definiteness before selecting. |
+| "Large system, so factor it directly." | `solver_selector.py` gates dense direct solvers on dense float64 storage (n²·8 bytes < ~2 GB, n ≈ 16384); above that a dense Cholesky/LU is infeasible and you must route to an iterative method. |
+| "Scaling is just dividing each row by its max." | One-sided row scaling does not equilibrate. For nonsymmetric matrices derive `col_scale` from the row-scaled matrix and apply both; for symmetric matrices use the symmetric D A D scale or you destroy symmetry. |
+| "GMRES stagnates, so add more iterations." | A flat tail means the preconditioner or restart length is the problem, not iteration count. Strengthen the preconditioner (higher ILU fill / AMG), increase the restart parameter, or switch methods. |
 
 ## Security
 

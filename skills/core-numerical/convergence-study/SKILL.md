@@ -14,7 +14,7 @@ allowed-tools:
   - Read
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   standards:
     - "ASME V&V 20 (Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer)"
     - "Roache, Grid Convergence Index (GCI) method with safety factors Fs in {1.25, 3.0}"
@@ -129,6 +129,26 @@ python3 scripts/gci_calculator.py --spacings 0.04,0.02,0.01 --values 1.0128,1.00
 > 2. For stronger verification, use 4+ systematically refined grids and check that
 >    the observed order is consistent across successive grid triplets
 >    (`h_refinement.py` reports one order per triplet plus `mean_order`).
+
+## Verification checklist
+
+- [ ] Used >= 3 systematically refined grids/timesteps so `h_refinement.py` / `dt_refinement.py` can report a `results.mean_order`; recorded the per-triplet `results.observed_orders` (a single-pair Richardson run does not verify order).
+- [ ] Recorded `results.mean_order` and confirmed `results.convergence_assessment` reads `PASS` (observed order within 10% of the scheme's expected order); a `FAIL` or `unknown` means the result is not yet verified.
+- [ ] Confirmed `results.in_asymptotic_range` is `true` and that no `notes` entry reports pre-asymptotic (>50% order variation), negative/non-positive order, or zero error differences before quoting any GCI or extrapolated value.
+- [ ] Checked refinement ratios `r21`/`r32` from `gci_calculator.py` are >= 1.3 (round-off noise floor) and that no `Oscillatory convergence detected` error was raised.
+- [ ] Recorded `results.gci_fine` (with the safety factor used: 1.25 for >= 3 grids with verified order, 3.0 for 2 grids with assumed order) as the reported discretization uncertainty, plus `results.extrapolated_value` as the best estimate.
+- [ ] For constant refinement ratios, did NOT treat `asymptotic_ratio` near 1.0 as proof of asymptotic range (it degenerates to `f1/f2`); confirmed the asymptotic range via observed-order-vs-expected and read the `gci_calculator.py` `notes` caveat.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|------------------------------|
+| "Two grids agree closely, so it's converged" | Two levels cannot estimate observed order. Run `h_refinement.py`/`dt_refinement.py` with >= 3 levels; a 2-grid Richardson run uses an *assumed* order and needs safety factor 3.0, not 1.25. |
+| "The asymptotic ratio is ~1.0, so we're in the asymptotic range" | With constant refinement ratios `AR = GCI_coarse/(r^p*GCI_fine)` reduces to `f1/f2` and only measures the gap between the two finest QoI values. Verify the asymptotic range by comparing observed order to the expected order (and 4+ grid consistency). |
+| "GCI_fine is tiny, so the solution is grid-independent" | A near-zero GCI can also mean the QoI is insensitive to refinement or the differences are in round-off noise (ratios < 1.3). Confirm `in_asymptotic_range` is true and refinement ratios are >= 1.3 first. |
+| "Observed order is higher than expected, even better" | Order well above the formal order usually signals superconvergence or error cancellation, not extra accuracy. Treat it as a flag (`convergence_assessment` is FAIL when >10% off) and verify with more grid levels. |
+| "The script printed an extrapolated value, so use it" | When the observed order is non-positive the solution is diverging and `h_refinement.py` returns `richardson_extrapolated_value = null` with a diverging note. Do not quote an extrapolated value or GCI in that case. |
+| "Implicit/stable solver, so any timestep is fine for the study" | Temporal *stability* is not temporal *accuracy*. `dt_refinement.py` still needs >= 3 systematically reduced timesteps to recover the scheme's order; a too-coarse dt sequence stays pre-asymptotic. |
 
 ## Security
 

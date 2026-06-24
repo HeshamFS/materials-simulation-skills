@@ -15,7 +15,7 @@ description: >
 allowed-tools: Read, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: low
   security_reviewed: true
   tested_with:
@@ -194,6 +194,26 @@ config would emit unresolvable terms.
 - **Validation warnings**: indicate potential mistakes (e.g., specifying a!=b for cubic). These are warnings, not errors — the mapping still proceeds.
 - **Unmapped fields**: input keys that the annotator doesn't recognize. These may need manual mapping.
 - **Suggested properties**: additional ontology properties that would make the annotation more complete.
+
+## Verification checklist
+
+- [ ] Confirmed `results.validation_warnings` is empty (or every entry is explained) — a non-empty list means an emitted class/property is **not defined in the chosen ontology** and was given `confidence: 0.0`; do not report such terms as valid annotations.
+- [ ] Recorded the `match_type` and `confidence` for each concept match and confirmed the chosen term is acceptable for its tier (1.0 exact, 0.9 synonym, 0.7 substring, 0.5 description); for any `substring_*` or `description_class` match, verified the matched class is actually the intended concept and not an incidental string hit.
+- [ ] For crystal mappings, recorded `results.effective_system` and `results.bravais_lattice` (the resolved Pearson symbol, e.g. `cF`/`cI`), and confirmed the input Bravais/space-group/system are mutually consistent (no "space group N implies X but Y was specified" warning in `validation_warnings`).
+- [ ] Checked lattice-parameter constraints against `effective_system` — confirmed no warnings such as "Cubic requires a=b" / angle-90 violations, or explicitly justified each one (warnings are advisory, the mapping still proceeds).
+- [ ] Listed `results.unmatched` (concept) and `results.unmapped_fields` (sample) and confirmed nothing materially important was silently dropped; ran the emitted `class_browser.py` suggestion for any unmatched term that should have resolved.
+- [ ] Reviewed `results.suggested_properties` and recorded which missing fields (elements, space_group, lattice_a, ...) are intentionally omitted vs. should be added before the annotation is considered complete.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "The script printed annotations, so the sample is correctly annotated." | Emission is not validation. `sample_annotator.py` will emit a term and then flag it with `validation_warning` / `confidence: 0.0` if it is not in the ontology — always read `results.validation_warnings` before trusting the output. |
+| "I'll annotate this crystalline sample with `--ontology asmo`." | ASMO is a simulation-methods ontology with **no crystal/sample vocabulary**; every crystal term comes back at `confidence: 0.0`. Use CMSO for crystal/sample annotation; use ASMO only via the concept-mapping path. |
+| "It matched the term, so the mapping is high-confidence." | A match can be a 0.7 substring or 0.5 description hit (e.g. an incidental substring inside an unrelated label). Check `confidence`/`match_type`; treat anything below an exact/synonym match as a candidate to verify, not a fact. |
+| "`space group` matched a class label, so that's a 1.0 exact match." | The per-ontology synonym table is consulted **before** exact-label matching, so synonym-key terms (`space group`, `unit cell`, `atom`) report as 0.9 synonym matches even when they equal a class label. The matched class/IRI is still correct — do not "correct" the confidence. |
+| "The space group is valid (1–230), so my crystal system is fine." | A valid space group can still contradict an explicitly given `--system` or Bravais lattice. Read `effective_system` and check for a "space group N implies X but Y was specified" entry in `validation_warnings`. |
+| "My sample has a `structure` field, so the Bravais lattice resolved." | In the sample path `strict_bravais=False`: free-text structures (e.g. `rocksalt`, `perovskite`) are passed through unmapped with a warning, leaving `bravais_lattice` null. Verify `results.bravais_lattice` is the expected Pearson symbol, or supply FCC/BCC/HCP/a Pearson code. |
 
 ## Security
 

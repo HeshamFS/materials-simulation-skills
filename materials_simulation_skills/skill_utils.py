@@ -232,6 +232,10 @@ def validate_skills(root: Path | None = None, skill_name: str | None = None) -> 
             for sub in SECURITY_SUBSECTIONS:
                 if not re.search(rf"^#{{2,4}}\s+{re.escape(sub)}\b", content, re.M):
                     errors.append(f"{rel}/SKILL.md: Security section missing '### {sub}' subsection")
+        if not re.search(r"^## Verification checklist", content, re.M):
+            errors.append(f"{rel}/SKILL.md: missing '## Verification checklist' section")
+        if not re.search(r"^## Common pitfalls", content, re.M):
+            errors.append(f"{rel}/SKILL.md: missing '## Common pitfalls' section")
         if not (skill_dir / "CHANGELOG.md").exists():
             errors.append(f"{rel}: missing CHANGELOG.md")
 

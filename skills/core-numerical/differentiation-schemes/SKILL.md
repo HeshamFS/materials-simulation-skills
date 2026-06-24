@@ -13,7 +13,7 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -168,6 +168,30 @@ python3 scripts/truncation_error.py --dx 0.01 --accuracy 2 --scale 1.0 --json
 | 2nd | 2 | 3 | [1, -2, 1] |
 | 2nd | 4 | 5 | [-1/12, 4/3, -5/2, 4/3, -1/12] |
 
+## Verification checklist
+
+Before trusting a generated stencil or accepting a scheme recommendation, record concrete evidence for each item below:
+
+- [ ] Ran `stencil_generator.py --json` and confirmed `results.accuracy` matches the requested order AND that `len(results.offsets)` equals the expected stencil width (e.g. 5 points for a 4th-order central second derivative); for a `central` scheme also verified the offsets are symmetric about 0.
+- [ ] Sanity-checked the returned `coefficients` against `references/stencil_catalog.md`: confirmed they sum to ~0 (consistency: the operator annihilates a constant) and reproduce a known catalog stencil for at least one standard case (e.g. 2nd-order d²/dx² gives `[1, -2, 1]/dx²`).
+- [ ] For a `central` scheme, confirmed `--accuracy` is even (odd values exit 2 with `accuracy must be even for central`); recorded the actual exit code rather than assuming the requested order was achieved.
+- [ ] Recorded the `error_scale`, `order`, and `reduction_if_halved` from `truncation_error.py` and confirmed `reduction_if_halved == 2**accuracy`, then compared `error_scale` against the smallest physical feature size (dx/L_feature from `references/error_guidance.md`) to confirm the grid actually resolves the physics.
+- [ ] Ran an independent grid-refinement / manufactured-solution study on >=3 grids (the scripts do NOT do this) and confirmed the observed order `p_obs = log(e_h/e_{h/2})/log(2)` is within ~10% of the formal `accuracy` before quoting that order.
+- [ ] For a bounded (non-periodic) domain, confirmed boundary stencils were generated/selected explicitly (`--scheme forward|backward` or `--boundary` guidance) per `references/boundary_handling.md`, since the interior stencil alone does not define the scheme order at the boundary.
+- [ ] For non-smooth fields (shocks/fronts), confirmed `scheme_selector.py` did NOT recommend high-order central FD and that a limiter/WENO/upwind path was chosen instead.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|------------------------------|
+| "The stencil generator returned coefficients, so the scheme is the order I asked for." | The `accuracy` field just echoes your request; it is not measured. Verify the achieved order with a grid-refinement study and confirm the coefficients match a catalog stencil and sum to ~0. |
+| "I asked for 4th order on a central scheme with `--accuracy 3`, it'll just round up." | It will not — central schemes reject odd accuracy with `accuracy must be even for central` (exit 2). Pass an even accuracy; an odd request is an error, not a silent upgrade. |
+| "Higher accuracy order always means lower error here." | `truncation_error.py` reports asymptotic *scaling* (`scale * dx**accuracy`); for a coarse grid or under-resolved feature the higher-order term need not dominate, and roundoff (`O(ε/dx^p)`) can win on very fine grids. Compare `error_scale` to the feature size, do not assume monotone improvement. |
+| "Two grids agree closely, so it's converged." | Two grids cannot estimate observed order or confirm the asymptotic range. Use >=3 grids and compute `p_obs` before claiming the formal order (see `references/error_guidance.md`). |
+| "The interior stencil is 4th order, so my whole solve is 4th order." | The generator emits interior stencils only; boundary closures often limit the global order. Generate one-sided/ghost-cell stencils explicitly and verify the boundary does not drop the observed order (`references/boundary_handling.md`). |
+| "The field has a shock but a wide central stencil is more accurate, so use it." | High-order central FD oscillates (Gibbs) at discontinuities. `scheme_selector.py` recommends FV with limiter/WENO or upwind for `--discontinuous`; follow it rather than maximizing formal order. |
+| "Custom `--offsets` let me build any stencil I want." | Offsets must be distinct, length-capped (51), and number more than the derivative order, or the script exits 2. A valid run still does not guarantee the intended accuracy — verify the coefficients and observed order. |
+
 ## Security
 
 ### Input Validation
@@ -209,6 +233,7 @@ python3 scripts/truncation_error.py --dx 0.01 --accuracy 2 --scale 1.0 --json
 
 ## Version History
 
+- **v1.2.2** (2026-06-24): Added a Verification checklist (evidence-based, tied to script JSON outputs and the references) and a Common pitfalls & rationalizations table.
 - **v1.2.0** (2026-06-23): Enforced even-accuracy and order upper-bound validation, corrected Security/error-handling/output docs to match scripts, fixed CLI/eval examples, hardened input validation
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 3 differentiation scripts

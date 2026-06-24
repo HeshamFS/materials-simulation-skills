@@ -2,6 +2,12 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- **Verification checklist** section (7 evidence-based items) tying trust in results to concrete artifacts from `grid_sizing.py` (`dx`, `counts`, `notes`) and `mesh_quality.py` (`aspect_ratio`, `quality_flags`, `skewness`), plus per-axis isotropy handling, stability cross-check, and a ≥3-grid convergence study.
+- **Common pitfalls & rationalizations** table (6 rows) covering domain-specific shortcuts: misreading `skewness = 0.0` as a quality pass, two-grid "convergence", treating `high_aspect_ratio` as a defect, reusing isotropic `counts` for anisotropic domains, confusing points-per-domain with points-per-feature, and ignoring the dx/dt stability coupling after refinement.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

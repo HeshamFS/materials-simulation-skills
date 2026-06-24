@@ -14,7 +14,7 @@ description: >
 allowed-tools: Read, Bash
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -147,6 +147,28 @@ python3 skills/ontology/ontology-validator/scripts/relationship_checker.py \
 - **required_missing**: must fix for valid annotation
 - **recommended_missing**: should fix for quality
 - **unrecognized**: may indicate typos or properties from a different ontology
+
+## Verification checklist
+
+- [ ] Ran `schema_checker.py --json` and recorded `results.valid`; confirmed `results.errors` is an empty array (a `valid:true` with any `unknown_class`/`unknown_property` error cannot occur, but confirm the array length is 0 rather than trusting the boolean alone).
+- [ ] For every `domain_mismatch` entry in `results.warnings`, recorded the property, its reported `domain`, and the class it was applied to, then made an explicit keep-or-move decision (warnings are not auto-fixed and may be intentional for a subclass).
+- [ ] Ran `completeness_checker.py --json` and confirmed `results.required_missing` is empty BEFORE quoting `completeness_score` — a non-empty `required_missing` means the annotation is invalid no matter how high the score is.
+- [ ] Recorded the exact `completeness_score` together with the `required_missing`, `recommended_missing`, and `optional_missing` lists (do not paraphrase the score as "complete" while any required item is missing).
+- [ ] For each unknown class/property error, recorded the `suggestions[0]` value and confirmed the corrected name actually exists in the ontology (re-ran the checker, or checked via ontology-explorer) rather than assuming the top suggestion is right.
+- [ ] Ran `relationship_checker.py --json` for every subject-property-object triple and confirmed each per-triple `results.results[i].valid` is true; recorded any `results.errors` strings naming the offending `domain` or `range`.
+- [ ] Confirmed the `--ontology` used (e.g. `cmso`, `asmo`) matches the ontology the annotation was authored against — a class can be "unknown" simply because the wrong constraints/summary file was loaded.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|------------------------------|
+| "completeness_score is 0.67, so the annotation is basically complete." | The score weights required, recommended, and optional tiers **equally**, so a high score can still hide a missing required property. Check `required_missing` first; a non-empty list means invalid regardless of score. |
+| "schema_checker returned only warnings, no errors, so I'll ignore them." | `domain_mismatch` warnings flag a property attached to a class that is not (a subclass of) its domain — often the property belongs on a different instance. Record each warning and decide explicitly; don't auto-dismiss. |
+| "The class name didn't match but the validator gave a suggestion, so I'll just use it." | `suggestions` come from stdlib `difflib` fuzzy matching (cutoff 0.6) and can be wrong or empty. Verify the suggested name exists in the ontology before applying it. |
+| "Two of the three relationships passed, so the triples are fine." | `results.valid` is the AND over all triples; you must inspect each `results.results[i]` and its `errors`. A single failing domain/range check invalidates the relationship set. |
+| "It returned valid:true, so the annotation is semantically correct." | The checker only verifies class/property existence and domain/range against a **manually curated** constraints file. It does not check data types, cardinality, or value plausibility — `valid:true` is necessary, not sufficient. |
+| "Property exists in the ontology, so it applies to my class." | Existence is checked against the full property set; domain applicability is a separate subclass-aware check. A real property can still trigger a `domain_mismatch` warning on the wrong class. |
+| "I'll trust the bare class name; substrings are close enough." | Domain/subclass matching is exact-equality plus parent traversal, NOT substring containment. `Material` is not credited with `Crystalline Material` properties; use the precise ontology class name. |
 
 ## Security
 

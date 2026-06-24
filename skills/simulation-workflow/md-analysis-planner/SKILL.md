@@ -9,7 +9,7 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: high
   security_reviewed: true
   tested_with:
@@ -103,6 +103,30 @@ timestep, or inputs exceeding the size caps below).
 ## Limitations
 
 This skill plans analysis and prerequisites; it does not parse large trajectories directly.
+
+## Verification checklist
+
+Do not trust trajectory-derived results until each applicable item below is
+recorded against the planner's own output:
+
+- [ ] Ran `scripts/md_analysis_planner.py` and confirmed no `analysis_plan` entry is `blocked` or `needs time axis`; record any `needs review` goal and how its custom analysis was resolved.
+- [ ] Confirmed every item in the planner's `required_data` list is actually present in the trajectory (e.g. `velocities` for VACF/VDOS, `stress or virial` + `strain history` for stress-strain) before running the corresponding analysis.
+- [ ] For diffusion/MSD: recorded the log-log MSD-vs-time slope and confirmed it is ~1 (diffusive regime) over the fit window, excluding ballistic/sub-diffusive transients, before quoting D = lim MSD/(2*d*t).
+- [ ] For diffusion/MSD: applied the Yeh-Hummer 1/L finite-size correction and recorded the box length L and shear viscosity eta used (D_0 = D_PBC + k_B*T*xi/(6*pi*eta*L), xi~=2.837 cubic box).
+- [ ] For any displacement-based analysis when `pbc_handling.unwrap_needed` is true: confirmed positions were unwrapped using `cell` + `image flags` before computing displacements (not raw wrapped coordinates).
+- [ ] Worked through the planner's `equilibration_checks`: discarded the startup transient, confirmed temperature/pressure plateaus, and compared first-half vs second-half property estimates before any transport/thermodynamic fit.
+- [ ] Reported an uncertainty from block averaging (or independent trajectories) for every quoted transport/thermodynamic property, not a single-window point value.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|-----------------------------|
+| "MSD vs time looks straight, so it's diffusive — just fit a line." | A straight-looking MSD can still include ballistic/sub-diffusive transients. Confirm the log-log slope is ~1 over the fit window first, then fit D = lim MSD/(2*d*t). |
+| "D from the simulation is the diffusion coefficient." | PBC self-diffusion is system-size dependent. Apply the Yeh-Hummer 1/L correction with the actual box length L and viscosity eta; report D_0, not D_PBC. |
+| "Positions are in the dump, so MSD is fine." | Wrapped coordinates make atoms jump across the box and corrupt displacements. When `unwrap_needed` is true, unwrap using `cell` + `image flags` before any displacement analysis. |
+| "No velocities stored, but I can get VACF/VDOS from positions." | The planner marks VACF/VDOS `blocked` without velocities for a reason. A finite-difference velocity estimate must be explicitly justified (frame spacing, aliasing); otherwise the result is unreliable. |
+| "The run finished, so I can fit transport properties on the whole trajectory." | Run completion is not equilibration. Discard the startup transient and verify temperature/pressure plateaus (the `equilibration_checks`) before fitting. |
+| "One window gave a clean number, no need for error bars." | A single window hides correlation-driven variance. Use block averaging or independent trajectories so every transport/thermodynamic value carries an uncertainty. |
 
 ## Security
 

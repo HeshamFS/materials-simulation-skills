@@ -2,6 +2,12 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.1.3] - 2026-06-24
+
+### Added
+- `SKILL.md`: new **Verification checklist** section (7 evidence-based items) requiring the agent to reconcile `summary.total_jobs`/`completed`/`failed`, confirm the swept key path actually altered the solver-read value, record `summary.minimize` direction, independently verify real exit status (since `job_tracker.py` flags "completed" from result-file existence alone), apply an outlier sanity check, and record the LHS `--seed`/`manifest.json` for reproducibility.
+- `SKILL.md`: new **Common pitfalls & rationalizations** table (7 rows) covering the result-file-only completion heuristic, silently-skipped runs, minimize-by-default direction, bare-vs-dotted key-path merge, metric-name typos returning `None`, grid `n^d` explosion, and unrecorded LHS seeds.
+
 ## [1.1.1] - 2026-06-23
 
 ### Fixed

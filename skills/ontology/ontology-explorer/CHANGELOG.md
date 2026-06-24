@@ -2,6 +2,25 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- SKILL.md "Verification checklist" section (7 evidence-based items) requiring
+  the agent to record concrete artifacts before trusting a result: the canonical
+  `label` resolved by `class_browser.py`/`property_lookup.py` (not the typed
+  name), the actual `domain`/`range` behind any stated relationship, union-domain
+  (`A | B`) handling, search `relevance` scores (1.0 label vs 0.5 description),
+  the registry key (`cmso`/`asmo`), and refreshed-summary provenance
+  (`metadata.source_url`, `metadata.generated_at`, `statistics`).
+- SKILL.md "Common pitfalls & rationalizations" table (7 rows) covering
+  spaceless-label resolution, inferring relationships from class names, treating
+  run success as completeness, mistaking 0.5 description hits for canonical
+  terms, single-vs-union domains, unregistered/interchangeable ontologies, and
+  `http://` source rejection.
+
+### Notes
+- Documentation only; no script or behavior changes. Version bumped 1.2.1 → 1.2.2.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

@@ -13,7 +13,7 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   standards:
     - "ANSYS Fluent/ICEM equiangle skewness metric (max(|90-theta|)/90 for quads/hexes; (theta_max-60)/120 for triangles)"
     - "Knupp (2001), Algebraic mesh quality metrics (aspect ratio, Jacobian ratio, warpage)"
@@ -181,6 +181,27 @@ apply when a genuine skewness value is obtained from real cell-corner geometry
 | Shock | 3-5 (with capturing) |
 | Wave propagation | 10-20 per wavelength |
 | Smooth gradients | 5-10 |
+
+## Verification checklist
+
+- [ ] Recorded `dx` and `counts` from `grid_sizing.py --json` and confirmed the smallest physical feature gets enough points (interface ≥5×dx, boundary layer ≥10×dx, wavelength ≥20×dx per Resolution Selection above).
+- [ ] For an anisotropic domain, ran `grid_sizing.py` once per differing edge length (or applied `--dx` per axis) — did NOT apply a single `--length`-derived count to unequal edges.
+- [ ] Checked the `notes` field for "Grid does not fully cover length" and resolved any partial-coverage warning before trusting `counts`.
+- [ ] Logged `aspect_ratio` and `quality_flags` from `mesh_quality.py --json`; confirmed `high_aspect_ratio` is absent OR that the elongation is intentional and physics-aligned (e.g. wall-aligned boundary-layer cell with AR≤100 along the wall).
+- [ ] Confirmed the reported `skewness = 0.0` is the expected orthogonal-Cartesian result, NOT a measured quality pass — for unstructured/non-orthogonal cells, obtained a real angle-based skewness from cell-corner geometry and checked it against the <0.8 threshold.
+- [ ] Verified `dx` also satisfies the solver's stability constraint (cross-check with numerical-stability) before committing to the resolution.
+- [ ] Ran a mesh convergence study (≥3 successively refined grids) and confirmed the quantity of interest changes monotonically/asymptotically before declaring the mesh adequate.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|------------------------------|
+| "`skewness` came back 0.0, so the mesh quality is fine." | `mesh_quality.py` always returns `skewness = 0.0` for axis-aligned spacings — it is a definitional property of orthogonal cells, not a measurement. Real skewness needs cell-corner angles from an unstructured mesh; don't read 0.0 as a passing quality check. |
+| "Two grids gave nearly the same answer, so the mesh is converged." | Two grids cannot establish the observed order or the asymptotic range. Use ≥3 successively refined grids and confirm the quantity of interest is converging before quoting any result as mesh-independent. |
+| "High `aspect_ratio` was flagged, so the cell is bad." | Elongation is not skewness. A wall-aligned boundary-layer cell with AR up to ~100 is acceptable when aligned with the flow/field; check `size_anisotropy` and the physics, not just the `high_aspect_ratio` flag. |
+| "I'll set one `--length` and reuse the `counts` for all axes." | `grid_sizing.py` is isotropic per call — it applies the single derived count to every dimension. For unequal edges this over/under-resolves axes; run it per edge length or supply `--dx` per axis. |
+| "`dx = length/resolution` resolves my feature because resolution is large." | Points-per-domain is not points-per-feature. A fine global `dx` can still place too few cells across a thin interface/layer; check `feature_size / dx` against the Resolution Guidelines (5-10 for interfaces, 10-20 for boundary layers). |
+| "The mesh is fine enough, so I can ignore the time step." | Mesh resolution and temporal stability are coupled: shrinking `dx` tightens explicit CFL/diffusion limits. A refined mesh that violates the solver's stability constraint diverges — re-check `dt` against numerical-stability after any refinement. |
 
 ## Security
 

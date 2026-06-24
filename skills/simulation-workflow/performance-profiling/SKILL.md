@@ -14,7 +14,7 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.2.1"
+  version: "1.2.2"
   security_tier: medium
   security_reviewed: true
   tested_with:
@@ -274,6 +274,29 @@ The estimate is intentionally conservative so a "will it fit in RAM?" decision d
 - Enable out-of-core computation
 - Increase number of processors
 - Use single precision where appropriate
+
+## Verification checklist
+
+Before trusting a profiling result or acting on a recommendation, record the concrete evidence below:
+
+- [ ] Confirmed `timing_analyzer.py` actually matched entries — `results.phases` is non-empty and `results.total_time` > 0; if a custom `--pattern` was used and `results.message`/`suggested_patterns` appeared, the pattern was fixed and re-run (an empty `phases` list silently looks like a fast simulation).
+- [ ] Cross-checked that the sum of `phases[].percentage` is ~100% and that named phases cover the wall-clock time — unaccounted-for time means missing log lines, not a balanced run.
+- [ ] For scaling claims, used >=2 runs spanning a real processor range and recorded `results.average_efficiency` and `results.efficiency_threshold_processors` from `scaling_analyzer.py`; verified the `--type` (strong vs weak) matches how the runs were generated (fixed total size vs fixed work-per-rank).
+- [ ] Recorded the memory breakdown from `memory_profiler.py` (`field_memory_gb`, `solver_workspace_gb`, `matrix_storage_gb`, `total_memory_gb`) and confirmed `solver.type` (iterative / direct / matrix-free) matches the real solver — a direct solve carries the ~10x fill-in factor and a wrong type makes the "fits in RAM?" answer unsafe.
+- [ ] Checked `results.warnings` and compared `total_memory_gb` (and `per_process_gb`) against the actual `--available-gb`; treated >80% as the documented "high" band, not a pass.
+- [ ] For each `bottleneck_detector.py` recommendation, confirmed the driving `bottleneck` (its `category`, `value`, and `threshold`) is consistent with the timing/scaling/memory inputs that were actually supplied — recommendations only reflect the JSON files passed via `--timing`/`--scaling`/`--memory`.
+- [ ] After implementing an optimization, re-ran the relevant analyzer and recorded the before/after `value` to confirm the bottleneck actually moved (re-profile step of the workflow).
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|------------------------------|
+| "`timing_analyzer.py` returned no bottlenecks, so the run is balanced." | An empty/low result is often a pattern mismatch — `phases` may be empty or partial. Verify `total_time` matches wall-clock and that phase percentages sum to ~100% before concluding "balanced". |
+| "Two runs scaled fine, so it scales." | Two points only give an average efficiency; they cannot reveal where efficiency falls off. Add more processor counts and check `efficiency_threshold_processors`, and confirm you used the correct `--type` (strong vs weak). |
+| "Iterative vs direct is just a flag; memory is about the same." | `memory_profiler.py` applies a conservative ~10x fill-in factor for `direct` and stores no matrix for `matrix-free`. Setting the wrong `solver.type` can under-estimate RAM by an order of magnitude — set it to the real solver. |
+| "It fits in `--available-gb` total, so we're fine." | The relevant number for an MPI run is `per_process_gb` against per-node/per-rank RAM, and >80% of total already triggers a warning. Check the per-process figure and the `warnings` list, not just the total. |
+| "I/O is under 50%, so I/O isn't the bottleneck." | I/O is flagged at the lower **30%** threshold, not 50%. A 30-50% I/O phase is a real bottleneck the detector reports — reduce output frequency or use parallel I/O. |
+| "The recommendation says tune the preconditioner, so the solver is the problem." | Recommendations are only as complete as the JSON you passed in. If `--scaling`/`--memory` were omitted, those bottlenecks are simply invisible — feed all available analyses before trusting the priority ranking. |
 
 ## Security
 

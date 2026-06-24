@@ -2,6 +2,12 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- "Verification checklist" section in SKILL.md: 6 evidence-based checkbox items tied to `timestep_planner.py`, `output_schedule.py`, and `checkpoint_planner.py` outputs (dt vs limit, safety margin, endpoint-inclusive count, checkpoint overhead band, clean exit codes).
+- "Common pitfalls & rationalizations" section in SKILL.md: 6-row table of domain-specific shortcuts (implicit-so-any-dt, safety > 1.0, ran-so-valid, off-by-one frame count, checkpoint-every-step, stale-plan reuse) and their corrections.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

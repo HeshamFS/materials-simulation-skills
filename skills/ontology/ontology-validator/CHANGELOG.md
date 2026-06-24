@@ -2,6 +2,12 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- **Verification checklist** section (7 evidence-based checkbox items) tying agent self-checks to concrete script outputs: confirming `results.errors` is empty rather than trusting `valid`, recording each `domain_mismatch` warning with an explicit keep-or-move decision, checking `required_missing` before quoting `completeness_score`, verifying `suggestions[0]` exists before applying it, inspecting per-triple `results.results[i].valid` from `relationship_checker.py`, and confirming the correct `--ontology` was loaded.
+- **Common pitfalls & rationalizations** table (7 rows) capturing domain-specific shortcuts and their corrections — e.g. high completeness score masking a missing required property, dismissing `domain_mismatch` warnings, blindly trusting `difflib` suggestions, treating partial relationship passes as success, equating `valid:true` with semantic correctness, and the exact-equality-not-substring subclass matching rule.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed

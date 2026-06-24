@@ -14,7 +14,7 @@ description: >
 allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
-  version: "1.1.2"
+  version: "1.1.3"
   security_tier: medium
   security_reviewed: true
   tested_with:
@@ -273,6 +273,30 @@ parameter-optimization          simulation-orchestrator
 4. Use `simulation-orchestrator/result_aggregator.py` to collect results
 5. Use `parameter-optimization/sensitivity_summary.py` to analyze
 
+## Verification checklist
+
+Before trusting a campaign's `best_run` or summary statistics, record concrete evidence for each item:
+
+- [ ] Confirmed the swept key path actually changed the value the solver reads: opened at least one generated `config_NNNN.json` and verified the swept parameter (e.g. `parameters.kappa`) holds the expected value at the expected nesting level, not a duplicate unused top-level key (`sweep_generator.py` writes by key path).
+- [ ] Reconciled job accounting from `result_aggregator.py --json`: recorded `summary.total_jobs`, `summary.completed`, and `summary.failed`, and confirmed `completed + failed == total_jobs`. Any shortfall means runs were silently skipped (missing result file or `extract_metric` returned `None`) and must be investigated, not ignored.
+- [ ] Confirmed `completed > 0` and that the recorded `summary.metric` matches the field the solver actually writes. A typo'd or absent metric makes `extract_metric` return `None`, yielding zero completed runs with no error.
+- [ ] Recorded `summary.minimize` and confirmed it matches the intended direction (default minimize; `--maximize` for yield/accuracy/throughput) before quoting `best_run`.
+- [ ] Did NOT treat `job_tracker.py` "completed" as physical success: it flags a job completed purely from a result-file's existence and stamps `exit_code` 0 — independently checked the run's real exit status / solver logs for non-zero codes or NaN/Inf output.
+- [ ] Applied an outlier/sanity check to the metric values (e.g. Tukey 1.5x IQR from `references/aggregation_methods.md`) and confirmed `best_run.value` is physically plausible, not a crashed run that emitted a spurious extremum.
+- [ ] For LHS sweeps, recorded the `--seed` used and saved `manifest.json` (parameter bounds, `total_runs`, `parameter_space`) so the sample set is reproducible.
+
+## Common pitfalls & rationalizations
+
+| Tempting shortcut | Why it's wrong / what to do |
+|-------------------|------------------------------|
+| "The job tracker says completed, so the run succeeded." | `job_tracker.py` marks "completed" whenever a result file *exists* and hard-codes `exit_code` 0 — it never reads the actual exit code. A crashed run that wrote a partial result file looks identical to a clean one. Check the solver's real exit status and output validity. |
+| "`completed` is high, so I have all my results." | Jobs with a missing result file or a metric that `extract_metric` can't read are silently skipped — neither counted as `completed` nor `failed`. Reconcile `completed + failed` against `total_jobs`; a gap means lost runs. |
+| "Aggregation returned a `best_run`, so that's the optimum." | By default the aggregator *minimizes*. If higher is better you must pass `--maximize`, or `best_run` is the worst point. Always record `summary.minimize` and confirm the direction. |
+| "I swept `kappa`, so the runs vary." | `sweep_generator.py` writes by key path. If the base config nests the value under `parameters.kappa` but you sweep the bare name `kappa`, every config keeps the original nested value and gains an unused top-level key — the sweep is scientifically meaningless. Sweep the exact dotted path the solver reads. |
+| "The metric name is close enough." | A misspelled or absent metric makes `extract_metric` return `None` for every run, so `completed` is 0 and statistics are empty — with no error raised. Verify the metric matches the solver's output field exactly. |
+| "Grid covers everything, so use it for all my parameters." | Grid is `n^d` — it explodes exponentially (4 params x 10 = 10,000 runs). For 4+ dimensions use `lhs` with a deliberate budget; reserve grid for 1-3 parameters. |
+| "LHS is random, so I don't need to record anything." | LHS is reproducible only with a fixed `--seed`. Without recording the seed (and `manifest.json`), the sample set cannot be regenerated or defended. |
+
 ## Security
 
 ### Input Validation
@@ -319,6 +343,7 @@ parameter-optimization          simulation-orchestrator
 
 See `CHANGELOG.md` for the authoritative, dated history. Summary:
 
+- **v1.1.3** (2026-06-24): Added a Verification checklist and a Common pitfalls & rationalizations section grounded in the scripts' real behavior (result-file-only "completed" detection, silent skip of unreadable metrics, minimize-by-default direction, key-path merge semantics)
 - **v1.1.1** (2026-06-23): Dot-notation nested overrides in `sweep_generator.py`, input-validation hardening (`--params` name/finite/count caps, `--samples` bounds), documented `--maximize` and the `list` action, corrected Script Outputs table and worked-example numbers
 - **v1.1.0** (2026-03-26): Standardized metadata, evaluation suite, security review, CHANGELOG
 - **v1.0.0** (2026-02-25): Initial release with sweep, campaign, tracking, and aggregation

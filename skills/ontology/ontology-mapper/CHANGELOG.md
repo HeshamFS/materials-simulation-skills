@@ -2,6 +2,21 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.2] - 2026-06-24
+
+### Added
+- **Verification checklist** section (6 evidence-based items) tying trust in results to
+  concrete artifacts: empty/explained `results.validation_warnings`, recorded
+  `match_type`/`confidence` per match, recorded `effective_system` and resolved Bravais
+  Pearson symbol, lattice-constraint warning review, `unmatched`/`unmapped_fields`
+  review, and `suggested_properties` triage.
+- **Common pitfalls & rationalizations** table (6 rows) covering domain-specific
+  shortcuts: trusting emitted annotations without reading `validation_warnings`, using
+  ASMO for crystal/sample annotation, treating substring/description hits as
+  high-confidence, "correcting" the 0.9 synonym precedence for terms that also match a
+  class label, assuming a valid space group implies a consistent system, and assuming a
+  free-text `structure` field resolved to a Bravais lattice.
+
 ## [1.2.0] - 2026-06-23
 
 ### Fixed
