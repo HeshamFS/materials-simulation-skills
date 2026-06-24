@@ -13,6 +13,12 @@ description: >
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
   author: HeshamFS
+  standards:
+    - "SchedMD Slurm sbatch specification (--mem / --mem-per-cpu memory request flags)"
+    - "POSIX signal semantics (SIGSEGV / signal 11, core dump) for crash classification"
+    - "GNU GDB, Valgrind, and AddressSanitizer (ASan) memory-fault debugging tools"
+    - "LAMMPS / VASP / Quantum ESPRESSO / MOOSE solver error diagnostics (e.g. 'Lost atoms', ZBRENT nonconvergence)"
+    - "Zeller (2009), Why Programs Fail: delta debugging / one-change-at-a-time minimal reproducing case"
   version: "1.1.2"
   security_tier: high
   security_reviewed: true

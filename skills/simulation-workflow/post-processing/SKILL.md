@@ -23,6 +23,12 @@ metadata:
   last_evaluated: "2026-06-23"
   eval_cases: 5
   last_reviewed: "2026-06-23"
+  standards:
+    - "Lp error norms (L1/L2/L-infinity) for numerical convergence/verification studies"
+    - "Sample variance with Bessel's correction (n-1 denominator)"
+    - "Marching squares/cubes iso-surface extraction (Lorensen & Cline, 1987)"
+    - "Central finite differences for gradient computation"
+    - "Cahn-Hilliard (conserved) and Allen-Cahn (non-conserved) phase-field dynamics"
 ---
 
 # Post-Processing Skill

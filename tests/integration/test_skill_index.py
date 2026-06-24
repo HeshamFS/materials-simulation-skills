@@ -40,9 +40,10 @@ class TestIndexStructure(unittest.TestCase):
     def test_every_skill_record_is_complete(self):
         required = {"name", "category", "path", "description", "version",
                     "security_tier", "allowed_tools", "scripts", "eval_cases",
-                    "deterministic_checks", "eval_coverage"}
+                    "deterministic_checks", "eval_coverage", "standards"}
         for r in self.index["skills"]:
             self.assertTrue(required.issubset(r), msg=f"{r.get('name')} missing fields")
+            self.assertTrue(r["standards"], msg=f"{r['name']} has no cited standards")
             self.assertTrue((ROOT / r["path"] / "SKILL.md").exists())
             self.assertIn(r["security_tier"], ("low", "medium", "high", ""))
             self.assertGreaterEqual(r["eval_coverage"], 0.0)

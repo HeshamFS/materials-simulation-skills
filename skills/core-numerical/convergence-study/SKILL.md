@@ -15,6 +15,12 @@ allowed-tools:
 metadata:
   author: HeshamFS
   version: "1.2.1"
+  standards:
+    - "ASME V&V 20 (Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer)"
+    - "Roache, Grid Convergence Index (GCI) method with safety factors Fs in {1.25, 3.0}"
+    - "Richardson extrapolation for discretization error estimation"
+    - "Method of Manufactured Solutions (MMS) for code verification"
+    - "AIAA verification and validation guidelines"
   security_tier: high
   security_reviewed: true
   tested_with:

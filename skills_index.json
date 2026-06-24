@@ -31,7 +31,14 @@
       "eval_cases": 4,
       "deterministic_checks": 4,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "ASME V&V 20 (Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer)",
+        "Roache, Grid Convergence Index (GCI) method with safety factors Fs in {1.25, 3.0}",
+        "Richardson extrapolation for discretization error estimation",
+        "Method of Manufactured Solutions (MMS) for code verification",
+        "AIAA verification and validation guidelines"
+      ]
     },
     {
       "name": "differentiation-schemes",
@@ -51,7 +58,14 @@
       "eval_cases": 4,
       "deterministic_checks": 4,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Fornberg (1988), Generation of finite difference formulas on arbitrarily spaced grids",
+        "Taylor-series truncation-error analysis / order-of-accuracy theory",
+        "Lele (1992), Compact finite difference schemes with spectral-like resolution",
+        "Richardson extrapolation and grid-convergence (observed-order) verification",
+        "Jiang & Shu (1996), ENO/WENO essentially non-oscillatory schemes"
+      ]
     },
     {
       "name": "linear-solvers",
@@ -70,7 +84,14 @@
       "eval_cases": 4,
       "deterministic_checks": 7,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Saad (2003), Iterative Methods for Sparse Linear Systems (Krylov methods, ILU/ILUT, preconditioning)",
+        "Hestenes & Stiefel (1952) Conjugate Gradient method and the (√κ−1)/(√κ+1) error bound",
+        "Saad & Schultz (1986), GMRES restarted Krylov method",
+        "Ruge & Stüben (1987), Algebraic Multigrid (AMG) classical coarsening",
+        "Ruiz (2001) equilibration; Sinkhorn & Knopp (1967) doubly-stochastic scaling"
+      ]
     },
     {
       "name": "mesh-generation",
@@ -89,7 +110,14 @@
       "eval_cases": 4,
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "ANSYS Fluent/ICEM equiangle skewness metric (max(|90-theta|)/90 for quads/hexes; (theta_max-60)/120 for triangles)",
+        "Knupp (2001), Algebraic mesh quality metrics (aspect ratio, Jacobian ratio, warpage)",
+        "Shewchuk (2002), What Is a Good Linear Finite Element? (triangle radius-ratio and minimum-angle quality, Delaunay)",
+        "Jasak (1996) / OpenFOAM finite-volume non-orthogonality correction",
+        "Roache (1998), Verification and Validation in Computational Science (grid/mesh convergence study)"
+      ]
     },
     {
       "name": "nonlinear-solvers",
@@ -109,7 +137,14 @@
       "eval_cases": 5,
       "deterministic_checks": 7,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Nocedal & Wright (2006), Numerical Optimization (BFGS/L-BFGS, trust region, dogleg, Steihaug-CG, Wolfe conditions)",
+        "Dennis & Schnabel (1996), Numerical Methods for Unconstrained Optimization and Nonlinear Equations (Newton, Broyden good/bad, line-search globalization)",
+        "Kelley (1995), Iterative Methods for Linear and Nonlinear Equations (inexact Newton, Newton-Krylov); Eisenstat & Walker (1996) forcing sequence",
+        "Walker & Ni (2011), Anderson acceleration for fixed-point iterations (Anderson 1965)",
+        "Levenberg (1944) / Marquardt (1963), Levenberg-Marquardt method for nonlinear least-squares"
+      ]
     },
     {
       "name": "numerical-integration",
@@ -128,7 +163,14 @@
       "eval_cases": 4,
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Hairer, Norsett & Wanner, Solving Ordinary Differential Equations I (Nonstiff): RK45 (Dormand-Prince), DOP853, embedded error estimation",
+        "Hairer & Wanner, Solving ODEs II (Stiff and DAE): BDF, Radau IIA, Rosenbrock methods",
+        "Gustafsson (1991/1994), control-theoretic PI step-size control",
+        "Strang (1968), operator splitting; with Lie-Trotter and Marchuk-Strang variants",
+        "Eyre (1998), unconditionally gradient-stable convex splitting for phase-field (Allen-Cahn / Cahn-Hilliard)"
+      ]
     },
     {
       "name": "numerical-stability",
@@ -148,7 +190,14 @@
       "eval_cases": 4,
       "deterministic_checks": 4,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Courant-Friedrichs-Lewy (CFL) condition (Courant, Friedrichs, Lewy 1928)",
+        "von Neumann (Fourier) stability analysis; amplification factor and Fourier limit Fo ≤ 1/(2d)",
+        "Dahlquist A-stability / L-stability theory for time integrators",
+        "BDF (Gear) and Radau IIA / Rosenbrock methods for stiff systems",
+        "IEEE 754 double precision (conditioning thresholds, κ ≈ 1/eps)"
+      ]
     },
     {
       "name": "time-stepping",
@@ -168,7 +217,13 @@
       "eval_cases": 4,
       "deterministic_checks": 4,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Courant-Friedrichs-Lewy (CFL) condition (Courant, Friedrichs, Lewy 1928)",
+        "von Neumann stability analysis (Fourier/diffusion and Courant number limits)",
+        "Daly (2006), optimal checkpoint interval formula",
+        "Young (1974), first-order checkpoint interval refinement"
+      ]
     },
     {
       "name": "fair-simulation-packager",
@@ -188,7 +243,13 @@
       "eval_cases": 3,
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-23"
+      "last_evaluated": "2026-06-23",
+      "standards": [
+        "FAIR Guiding Principles (Wilkinson et al. 2016, Sci. Data)",
+        "OPTIMADE API specification",
+        "NOMAD Metainfo / Materials Project metadata schema",
+        "FIPS 180-4 Secure Hash Standard (SHA-256)"
+      ]
     },
     {
       "name": "hpc-runtime-doctor",
@@ -208,7 +269,13 @@
       "eval_cases": 3,
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-23"
+      "last_evaluated": "2026-06-23",
+      "standards": [
+        "SchedMD SLURM sbatch / GRES specification (--gpus, --gpus-per-node, --gres=gpu:N, --cpus-per-task)",
+        "MPI Standard (MPI Forum) process/rank model",
+        "OpenMP API specification (OMP_NUM_THREADS thread/task affinity)",
+        "NVIDIA CUDA programming model and Kokkos performance-portability backend"
+      ]
     },
     {
       "name": "slurm-job-script-generator",
@@ -228,7 +295,12 @@
       "eval_cases": 5,
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "SchedMD SLURM sbatch specification (#SBATCH directives, directive-ordering rule, --mem units, --time formats)",
+        "SchedMD SLURM srun task-launch model (srun --ntasks/--cpus-per-task placement, --gpu-bind/--ntasks-per-gpu)",
+        "MPI standard (MPI Forum) and OpenMP API for hybrid MPI+OpenMP layout (OMP_NUM_THREADS = cpus-per-task)"
+      ]
     },
     {
       "name": "skill-evaluator",
@@ -248,7 +320,14 @@
       "eval_cases": 4,
       "deterministic_checks": 6,
       "eval_coverage": 1.0,
-      "last_evaluated": ""
+      "last_evaluated": "",
+      "standards": [
+        "Agent Skills standard / evaluation spec (agentskills.io)",
+        "Anthropic open-source skill-creator reference (evaluation methodology and grader rubric)",
+        "von Neumann stability analysis (FTCS Fourier-number example used in the grading rubric)",
+        "Held-out / with-vs-without baseline (A/B delta) evaluation methodology",
+        "Per-CLI vendor headless specifications (claude -p, codex exec, cursor-agent, copilot, amp, opencode, grok)"
+      ]
     },
     {
       "name": "ontology-explorer",
@@ -265,7 +344,14 @@
       "eval_cases": 5,
       "deterministic_checks": 8,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "W3C OWL 2 Web Ontology Language; RDF Schema (RDFS) and XSD datatypes",
+        "W3C SKOS Simple Knowledge Organization System (skos:definition / preferred labels)",
+        "OCDO ontologies: CMSO and ASMO (plus CDCO/PODO/PLDO/LDO ecosystem), Helmholtz Metadata Collaboration PURL IRIs",
+        "QUDT (Quantities, Units, Dimensions and Types) vocabulary for physical units (ASMO has unit)",
+        "International Tables for Crystallography: space group numbers 1-230 (Hermann-Mauguin symbols) and the 14 Bravais lattices"
+      ]
     },
     {
       "name": "ontology-mapper",
@@ -283,7 +369,13 @@
       "eval_cases": 6,
       "deterministic_checks": 6,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "CMSO (Computational Material Sample Ontology)",
+        "ASMO (Atomistic Simulation Methods Ontology)",
+        "International Tables for Crystallography (7 crystal systems, 14 Bravais lattices via Pearson symbols, 230 space groups)",
+        "FAIR data principles (Wilkinson et al. 2016)"
+      ]
     },
     {
       "name": "ontology-validator",
@@ -300,7 +392,13 @@
       "eval_cases": 5,
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "CMSO — Computational Material Sample Ontology v0.0.1 (OCDO, purls.helmholtz-metadaten.de/cmso/)",
+        "ASMO — Atomistic Simulation Methods Ontology (OCDO)",
+        "W3C OWL 2 / RDFS domain, range, and rdfs:subClassOf semantics",
+        "FAIR Guiding Principles (Wilkinson et al. 2016)"
+      ]
     },
     {
       "name": "simulation-failure-triage",
@@ -320,7 +418,14 @@
       "eval_cases": 3,
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-23"
+      "last_evaluated": "2026-06-23",
+      "standards": [
+        "SchedMD Slurm sbatch specification (--mem / --mem-per-cpu memory request flags)",
+        "POSIX signal semantics (SIGSEGV / signal 11, core dump) for crash classification",
+        "GNU GDB, Valgrind, and AddressSanitizer (ASan) memory-fault debugging tools",
+        "LAMMPS / VASP / Quantum ESPRESSO / MOOSE solver error diagnostics (e.g. 'Lost atoms', ZBRENT nonconvergence)",
+        "Zeller (2009), Why Programs Fail: delta debugging / one-change-at-a-time minimal reproducing case"
+      ]
     },
     {
       "name": "md-analysis-planner",
@@ -340,7 +445,13 @@
       "eval_cases": 3,
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-23"
+      "last_evaluated": "2026-06-23",
+      "standards": [
+        "Yeh & Hummer (2004), 1/L finite-size diffusion correction (xi ~= 2.837, cubic box)",
+        "Einstein relation for self-diffusion, D = lim MSD/(2*d*t)",
+        "Allen & Tildesley, Computer Simulation of Liquids (RDF, coordination, VACF/VDOS, block averaging)",
+        "Flyvbjerg & Petersen (1989), block-averaging error estimation"
+      ]
     },
     {
       "name": "parameter-optimization",
@@ -359,7 +470,14 @@
       "eval_cases": 5,
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Latin Hypercube Sampling (McKay, Beckman & Conover 1979)",
+        "Sobol (1967) low-discrepancy quasi-random sequences",
+        "Morris (1991) Elementary Effects screening method",
+        "Saltelli et al. (2008), Global Sensitivity Analysis: The Primer (Sobol indices / Saltelli estimator)",
+        "CMA-ES (Hansen & Ostermeier 2001)"
+      ]
     },
     {
       "name": "performance-profiling",
@@ -378,7 +496,14 @@
       "eval_cases": 5,
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Amdahl (1967), serial-fraction speedup law S(N)=1/(f+(1-f)/N)",
+        "Gustafson (1988), scaled speedup law S(N)=N-f(N-1)",
+        "Gropp, Lusk & Skjellum (1999), Using MPI (parallel scaling and communication)",
+        "Saad (2003), Iterative Methods for Sparse Linear Systems (solver/preconditioner choice)",
+        "Karypis & Kumar (1998), METIS multilevel graph partitioning (load balancing)"
+      ]
     },
     {
       "name": "post-processing",
@@ -397,7 +522,14 @@
       "eval_cases": 5,
       "deterministic_checks": 7,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-23"
+      "last_evaluated": "2026-06-23",
+      "standards": [
+        "Lp error norms (L1/L2/L-infinity) for numerical convergence/verification studies",
+        "Sample variance with Bessel's correction (n-1 denominator)",
+        "Marching squares/cubes iso-surface extraction (Lorensen & Cline, 1987)",
+        "Central finite differences for gradient computation",
+        "Cahn-Hilliard (conserved) and Allen-Cahn (non-conserved) phase-field dynamics"
+      ]
     },
     {
       "name": "simulation-orchestrator",
@@ -416,7 +548,14 @@
       "eval_cases": 5,
       "deterministic_checks": 6,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Latin Hypercube Sampling (McKay, Beckman & Conover 1979)",
+        "Full factorial / grid Design of Experiments (DOE)",
+        "Sobol (2001) variance-based global sensitivity indices",
+        "Morris (1991) elementary-effects screening",
+        "Tukey (1977) 1.5x IQR outlier rule"
+      ]
     },
     {
       "name": "simulation-validator",
@@ -436,7 +575,14 @@
       "eval_cases": 5,
       "deterministic_checks": 6,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-24"
+      "last_evaluated": "2026-06-24",
+      "standards": [
+        "Courant-Friedrichs-Lewy (CFL) stability condition (Courant, Friedrichs & Lewy, 1928)",
+        "von Neumann stability analysis (diffusion-Fourier number limit dt <= dx^2/(2*D*dim))",
+        "IEEE 754 floating-point arithmetic (NaN / Inf / overflow detection)",
+        "Variational / gradient-flow energy dissipation for Allen-Cahn and Cahn-Hilliard phase-field models",
+        "Conservation laws (mass / energy / momentum drift checks)"
+      ]
     },
     {
       "name": "workflow-engine-mapper",
@@ -456,7 +602,14 @@
       "eval_cases": 3,
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-23"
+      "last_evaluated": "2026-06-23",
+      "standards": [
+        "Ganose et al. (2025), atomate2: high-throughput workflows",
+        "Rosen et al. (2024), jobflow workflow library",
+        "Huber et al. (2020), AiiDA 1.0 provenance/workflow framework",
+        "Janssen et al. (2019), pyiron integrated development environment",
+        "Jain et al. (2013), The Materials Project / input sets"
+      ]
     },
     {
       "name": "benchmark-and-mms-planner",
@@ -476,7 +629,13 @@
       "eval_cases": 3,
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
-      "last_evaluated": "2026-06-23"
+      "last_evaluated": "2026-06-23",
+      "standards": [
+        "ASME V&V 20-2009 (Verification and Validation in Computational Fluid Dynamics and Heat Transfer)",
+        "Roache (1998), Verification and Validation in Computational Science and Engineering",
+        "Salari & Knupp (2000), Code Verification by the Method of Manufactured Solutions",
+        "Celik et al. (2008), GCI procedure (Richardson-extrapolation grid-convergence index)"
+      ]
     }
   ],
   "bundles": [

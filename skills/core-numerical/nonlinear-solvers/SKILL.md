@@ -22,6 +22,12 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 5
   last_reviewed: "2026-06-23"
+  standards:
+    - "Nocedal & Wright (2006), Numerical Optimization (BFGS/L-BFGS, trust region, dogleg, Steihaug-CG, Wolfe conditions)"
+    - "Dennis & Schnabel (1996), Numerical Methods for Unconstrained Optimization and Nonlinear Equations (Newton, Broyden good/bad, line-search globalization)"
+    - "Kelley (1995), Iterative Methods for Linear and Nonlinear Equations (inexact Newton, Newton-Krylov); Eisenstat & Walker (1996) forcing sequence"
+    - "Walker & Ni (2011), Anderson acceleration for fixed-point iterations (Anderson 1965)"
+    - "Levenberg (1944) / Marquardt (1963), Levenberg-Marquardt method for nonlinear least-squares"
 ---
 
 # Nonlinear Solvers

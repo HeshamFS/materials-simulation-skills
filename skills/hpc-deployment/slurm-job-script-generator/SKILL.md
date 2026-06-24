@@ -21,6 +21,10 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 5
   last_reviewed: "2026-06-23"
+  standards:
+    - "SchedMD SLURM sbatch specification (#SBATCH directives, directive-ordering rule, --mem units, --time formats)"
+    - "SchedMD SLURM srun task-launch model (srun --ntasks/--cpus-per-task placement, --gpu-bind/--ntasks-per-gpu)"
+    - "MPI standard (MPI Forum) and OpenMP API for hybrid MPI+OpenMP layout (OMP_NUM_THREADS = cpus-per-task)"
 ---
 
 # SLURM Job Script Generator

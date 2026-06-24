@@ -22,6 +22,12 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 5
   last_reviewed: "2026-06-23"
+  standards:
+    - "Courant-Friedrichs-Lewy (CFL) stability condition (Courant, Friedrichs & Lewy, 1928)"
+    - "von Neumann stability analysis (diffusion-Fourier number limit dt <= dx^2/(2*D*dim))"
+    - "IEEE 754 floating-point arithmetic (NaN / Inf / overflow detection)"
+    - "Variational / gradient-flow energy dissipation for Allen-Cahn and Cahn-Hilliard phase-field models"
+    - "Conservation laws (mass / energy / momentum drift checks)"
 ---
 
 # Simulation Validator

@@ -21,6 +21,12 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 4
   last_reviewed: "2026-06-23"
+  standards:
+    - "Fornberg (1988), Generation of finite difference formulas on arbitrarily spaced grids"
+    - "Taylor-series truncation-error analysis / order-of-accuracy theory"
+    - "Lele (1992), Compact finite difference schemes with spectral-like resolution"
+    - "Richardson extrapolation and grid-convergence (observed-order) verification"
+    - "Jiang & Shu (1996), ENO/WENO essentially non-oscillatory schemes"
 ---
 
 # Differentiation Schemes

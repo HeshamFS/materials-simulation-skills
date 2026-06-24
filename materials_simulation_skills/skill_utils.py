@@ -85,6 +85,36 @@ def _parse_frontmatter(path: Path) -> dict[str, Any]:
     return parsed
 
 
+def frontmatter_standards(skill_dir: Path) -> list[str]:
+    """Extract the ``metadata.standards`` list from a SKILL.md (no YAML dependency).
+
+    Supports block style (``standards:`` then ``- item`` lines) and inline flow
+    style (``standards: ["a", "b"]``). Returns [] if absent.
+    """
+    text = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
+    fm = text.split("\n---\n", 1)[0]
+    out: list[str] = []
+    in_block = False
+    for line in fm.splitlines():
+        flow = re.match(r"^\s*standards:\s*\[(.+)\]\s*$", line)
+        if flow:
+            for item in flow.group(1).split(","):
+                item = item.strip().strip('"').strip("'")
+                if item:
+                    out.append(item)
+            return out
+        if re.match(r"^\s*standards:\s*$", line):
+            in_block = True
+            continue
+        if in_block:
+            item = re.match(r"^\s*-\s*(.+?)\s*$", line)
+            if item:
+                out.append(item.group(1).strip().strip('"').strip("'"))
+            elif line.strip():
+                break
+    return out
+
+
 def load_skill_records(root: Path | None = None) -> list[SkillRecord]:
     root = find_repo_root(root)
     records: list[SkillRecord] = []
@@ -189,6 +219,11 @@ def validate_skills(root: Path | None = None, skill_name: str | None = None) -> 
             errors.append(f"{rel}/SKILL.md: description too long ({len(description)} > 1024)")
         if not frontmatter.get("metadata"):
             errors.append(f"{rel}/SKILL.md: missing metadata block")
+        if not frontmatter_standards(skill_dir):
+            errors.append(
+                f"{rel}/SKILL.md: missing metadata.standards "
+                f"(cite the authoritative standard(s)/reference(s) the skill is grounded in)"
+            )
 
         content = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
         if "## Security" not in content:

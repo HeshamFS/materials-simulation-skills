@@ -46,12 +46,14 @@ Every script is a standalone CLI with:
   runtime error, **`0`** on success.
 - A pure-function core, importable for unit testing, separate from the CLI shell.
 
-### 3. Cited science  *(reviewed)*
+### 3. Cited science  *(enforced — `mss validate`)*
 
 Rules, thresholds, and formulas name the authoritative source they come from
 (e.g. ASME V&V20 for GCI, the SchedMD `sbatch` spec for SLURM, CMSO IRIs for
-ontology terms), in `SKILL.md` or `references/`, so an agent can *defend* an
-answer rather than only produce it. Worked-example numbers must be correct.
+ontology terms), so an agent can *defend* an answer rather than only produce it.
+Each skill declares these in a **`metadata.standards`** list (required, non-empty,
+validated in CI) and elaborates in `SKILL.md`/`references/`. Worked-example
+numbers must be correct.
 
 ### 4. Standardized Security section  *(enforced — `mss validate`)*
 

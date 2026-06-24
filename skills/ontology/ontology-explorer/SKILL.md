@@ -16,6 +16,12 @@ allowed-tools: Read, Bash
 metadata:
   author: HeshamFS
   version: "1.2.1"
+  standards:
+    - "W3C OWL 2 Web Ontology Language; RDF Schema (RDFS) and XSD datatypes"
+    - "W3C SKOS Simple Knowledge Organization System (skos:definition / preferred labels)"
+    - "OCDO ontologies: CMSO and ASMO (plus CDCO/PODO/PLDO/LDO ecosystem), Helmholtz Metadata Collaboration PURL IRIs"
+    - "QUDT (Quantities, Units, Dimensions and Types) vocabulary for physical units (ASMO has unit)"
+    - "International Tables for Crystallography: space group numbers 1-230 (Hermann-Mauguin symbols) and the 14 Bravais lattices"
   security_tier: high
   security_reviewed: true
   tested_with:

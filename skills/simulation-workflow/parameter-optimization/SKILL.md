@@ -22,6 +22,12 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 5
   last_reviewed: "2026-06-23"
+  standards:
+    - "Latin Hypercube Sampling (McKay, Beckman & Conover 1979)"
+    - "Sobol (1967) low-discrepancy quasi-random sequences"
+    - "Morris (1991) Elementary Effects screening method"
+    - "Saltelli et al. (2008), Global Sensitivity Analysis: The Primer (Sobol indices / Saltelli estimator)"
+    - "CMA-ES (Hansen & Ostermeier 2001)"
 ---
 
 # Parameter Optimization

@@ -14,6 +14,12 @@ allowed-tools: Read, Write, Grep, Glob
 metadata:
   author: HeshamFS
   version: "1.2.1"
+  standards:
+    - "ANSYS Fluent/ICEM equiangle skewness metric (max(|90-theta|)/90 for quads/hexes; (theta_max-60)/120 for triangles)"
+    - "Knupp (2001), Algebraic mesh quality metrics (aspect ratio, Jacobian ratio, warpage)"
+    - "Shewchuk (2002), What Is a Good Linear Finite Element? (triangle radius-ratio and minimum-angle quality, Delaunay)"
+    - "Jasak (1996) / OpenFOAM finite-volume non-orthogonality correction"
+    - "Roache (1998), Verification and Validation in Computational Science (grid/mesh convergence study)"
   security_tier: medium
   security_reviewed: true
   tested_with:

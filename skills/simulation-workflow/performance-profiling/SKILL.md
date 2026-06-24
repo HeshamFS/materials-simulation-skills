@@ -22,6 +22,12 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 5
   last_reviewed: "2026-06-23"
+  standards:
+    - "Amdahl (1967), serial-fraction speedup law S(N)=1/(f+(1-f)/N)"
+    - "Gustafson (1988), scaled speedup law S(N)=N-f(N-1)"
+    - "Gropp, Lusk & Skjellum (1999), Using MPI (parallel scaling and communication)"
+    - "Saad (2003), Iterative Methods for Sparse Linear Systems (solver/preconditioner choice)"
+    - "Karypis & Kumar (1998), METIS multilevel graph partitioning (load balancing)"
 ---
 
 # Performance Profiling

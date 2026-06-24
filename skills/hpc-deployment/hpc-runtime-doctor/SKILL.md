@@ -18,6 +18,11 @@ metadata:
   last_evaluated: "2026-06-23"
   eval_cases: 3
   last_reviewed: "2026-06-24"
+  standards:
+    - "SchedMD SLURM sbatch / GRES specification (--gpus, --gpus-per-node, --gres=gpu:N, --cpus-per-task)"
+    - "MPI Standard (MPI Forum) process/rank model"
+    - "OpenMP API specification (OMP_NUM_THREADS thread/task affinity)"
+    - "NVIDIA CUDA programming model and Kokkos performance-portability backend"
 ---
 
 # HPC Runtime Doctor

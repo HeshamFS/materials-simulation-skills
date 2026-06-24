@@ -23,6 +23,11 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 6
   last_reviewed: "2026-06-23"
+  standards:
+    - "CMSO (Computational Material Sample Ontology)"
+    - "ASMO (Atomistic Simulation Methods Ontology)"
+    - "International Tables for Crystallography (7 crystal systems, 14 Bravais lattices via Pearson symbols, 230 space groups)"
+    - "FAIR data principles (Wilkinson et al. 2016)"
 ---
 
 # Ontology Mapper

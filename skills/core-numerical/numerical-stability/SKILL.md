@@ -19,6 +19,12 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 4
   last_reviewed: "2026-06-23"
+  standards:
+    - "Courant-Friedrichs-Lewy (CFL) condition (Courant, Friedrichs, Lewy 1928)"
+    - "von Neumann (Fourier) stability analysis; amplification factor and Fourier limit Fo ≤ 1/(2d)"
+    - "Dahlquist A-stability / L-stability theory for time integrators"
+    - "BDF (Gear) and Radau IIA / Rosenbrock methods for stiff systems"
+    - "IEEE 754 double precision (conditioning thresholds, κ ≈ 1/eps)"
 ---
 
 # Numerical Stability

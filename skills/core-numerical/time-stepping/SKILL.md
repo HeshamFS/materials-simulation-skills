@@ -20,6 +20,11 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 4
   last_reviewed: "2026-06-23"
+  standards:
+    - "Courant-Friedrichs-Lewy (CFL) condition (Courant, Friedrichs, Lewy 1928)"
+    - "von Neumann stability analysis (Fourier/diffusion and Courant number limits)"
+    - "Daly (2006), optimal checkpoint interval formula"
+    - "Young (1974), first-order checkpoint interval refinement"
 ---
 
 # Time Stepping

@@ -17,6 +17,11 @@ metadata:
   last_evaluated: "2026-06-23"
   eval_cases: 3
   last_reviewed: "2026-06-24"
+  standards:
+    - "Yeh & Hummer (2004), 1/L finite-size diffusion correction (xi ~= 2.837, cubic box)"
+    - "Einstein relation for self-diffusion, D = lim MSD/(2*d*t)"
+    - "Allen & Tildesley, Computer Simulation of Liquids (RDF, coordination, VACF/VDOS, block averaging)"
+    - "Flyvbjerg & Petersen (1989), block-averaging error estimation"
 ---
 
 # MD Analysis Planner

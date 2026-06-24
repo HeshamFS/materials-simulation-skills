@@ -22,6 +22,12 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 5
   last_reviewed: "2026-06-23"
+  standards:
+    - "Latin Hypercube Sampling (McKay, Beckman & Conover 1979)"
+    - "Full factorial / grid Design of Experiments (DOE)"
+    - "Sobol (2001) variance-based global sensitivity indices"
+    - "Morris (1991) elementary-effects screening"
+    - "Tukey (1977) 1.5x IQR outlier rule"
 ---
 
 # Simulation Orchestrator

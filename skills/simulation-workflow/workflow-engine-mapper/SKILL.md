@@ -16,6 +16,12 @@ metadata:
   last_evaluated: "2026-06-23"
   eval_cases: 3
   last_reviewed: "2026-06-24"
+  standards:
+    - "Ganose et al. (2025), atomate2: high-throughput workflows"
+    - "Rosen et al. (2024), jobflow workflow library"
+    - "Huber et al. (2020), AiiDA 1.0 provenance/workflow framework"
+    - "Janssen et al. (2019), pyiron integrated development environment"
+    - "Jain et al. (2013), The Materials Project / input sets"
 ---
 
 # Workflow Engine Mapper

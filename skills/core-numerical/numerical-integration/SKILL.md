@@ -22,6 +22,12 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 4
   last_reviewed: "2026-06-23"
+  standards:
+    - "Hairer, Norsett & Wanner, Solving Ordinary Differential Equations I (Nonstiff): RK45 (Dormand-Prince), DOP853, embedded error estimation"
+    - "Hairer & Wanner, Solving ODEs II (Stiff and DAE): BDF, Radau IIA, Rosenbrock methods"
+    - "Gustafsson (1991/1994), control-theoretic PI step-size control"
+    - "Strang (1968), operator splitting; with Lie-Trotter and Marchuk-Strang variants"
+    - "Eyre (1998), unconditionally gradient-stable convex splitting for phase-field (Allen-Cahn / Cahn-Hilliard)"
 ---
 
 # Numerical Integration

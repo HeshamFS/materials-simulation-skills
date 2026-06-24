@@ -21,6 +21,12 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 4
   last_reviewed: "2026-06-23"
+  standards:
+    - "Saad (2003), Iterative Methods for Sparse Linear Systems (Krylov methods, ILU/ILUT, preconditioning)"
+    - "Hestenes & Stiefel (1952) Conjugate Gradient method and the (√κ−1)/(√κ+1) error bound"
+    - "Saad & Schultz (1986), GMRES restarted Krylov method"
+    - "Ruge & Stüben (1987), Algebraic Multigrid (AMG) classical coarsening"
+    - "Ruiz (2001) equilibration; Sinkhorn & Knopp (1967) doubly-stochastic scaling"
 ---
 
 # Linear Solvers

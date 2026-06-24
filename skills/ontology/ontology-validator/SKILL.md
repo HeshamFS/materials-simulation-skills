@@ -22,6 +22,11 @@ metadata:
   last_evaluated: "2026-06-24"
   eval_cases: 5
   last_reviewed: "2026-06-23"
+  standards:
+    - "CMSO — Computational Material Sample Ontology v0.0.1 (OCDO, purls.helmholtz-metadaten.de/cmso/)"
+    - "ASMO — Atomistic Simulation Methods Ontology (OCDO)"
+    - "W3C OWL 2 / RDFS domain, range, and rdfs:subClassOf semantics"
+    - "FAIR Guiding Principles (Wilkinson et al. 2016)"
 ---
 
 # Ontology Validator

@@ -22,6 +22,12 @@ metadata:
   security_tier: high
   last_reviewed: "2026-06-23"
   eval_cases: 4
+  standards:
+    - "Agent Skills standard / evaluation spec (agentskills.io)"
+    - "Anthropic open-source skill-creator reference (evaluation methodology and grader rubric)"
+    - "von Neumann stability analysis (FTCS Fourier-number example used in the grading rubric)"
+    - "Held-out / with-vs-without baseline (A/B delta) evaluation methodology"
+    - "Per-CLI vendor headless specifications (claude -p, codex exec, cursor-agent, copilot, amp, opencode, grok)"
 allowed-tools: Read, Bash, Write, Grep, Glob
 ---
 

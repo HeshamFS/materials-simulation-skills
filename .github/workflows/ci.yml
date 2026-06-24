@@ -7,6 +7,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Least privilege: no job in this workflow needs to write to the repo, so the
+# default GITHUB_TOKEN is read-only (limits blast radius of any CI step).
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -152,15 +157,21 @@ jobs:
           python skills/meta/skill-evaluator/scripts/run_quality_eval.py \
             --skill skills/core-numerical/numerical-stability \
             --agent claude-code --workspace "$RUNNER_TEMP/ws" --only 1 --dry-run --json
+          python skills/meta/skill-evaluator/scripts/run_trigger_eval.py \
+            --skill skills/core-numerical/numerical-stability \
+            --agent claude-code --runs-per-query 1 --dry-run --json
 
-      - name: Live with/without-skill eval (opt-in; requires ANTHROPIC_API_KEY secret)
+      - name: Live with/without-skill + trigger eval (opt-in; requires ANTHROPIC_API_KEY secret)
         if: ${{ env.ANTHROPIC_API_KEY != '' }}
         run: |
           npm install -g @anthropic-ai/claude-code
           python skills/meta/skill-evaluator/scripts/run_quality_eval.py \
             --skill skills/core-numerical/numerical-stability \
             --agent claude-code --workspace "$RUNNER_TEMP/ws" --iteration 1 --only 1
-          echo "Executor runs complete. Grade per references/grader.md, then run aggregate_benchmark.py for the with/without delta."
+          python skills/meta/skill-evaluator/scripts/run_trigger_eval.py \
+            --skill skills/core-numerical/numerical-stability \
+            --agent claude-code --runs-per-query 3
+          echo "Executor + trigger runs complete. Grade per references/grader.md, then run aggregate_benchmark.py for the with/without delta."
 
   actionlint:
     # Lint the GitHub Actions workflow files themselves.
@@ -168,8 +179,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run actionlint
+        # Pin both the installer (release tag, not mutable main) and the installed
+        # actionlint version, so CI never executes unpinned third-party code.
         run: |
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash -o download-actionlint.bash
+          bash download-actionlint.bash 1.7.7
           ./actionlint -color
 
   pip-audit:

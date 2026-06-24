@@ -17,6 +17,11 @@ metadata:
   last_evaluated: "2026-06-23"
   eval_cases: 3
   last_reviewed: "2026-06-24"
+  standards:
+    - "ASME V&V 20-2009 (Verification and Validation in Computational Fluid Dynamics and Heat Transfer)"
+    - "Roache (1998), Verification and Validation in Computational Science and Engineering"
+    - "Salari & Knupp (2000), Code Verification by the Method of Manufactured Solutions"
+    - "Celik et al. (2008), GCI procedure (Richardson-extrapolation grid-convergence index)"
 ---
 
 # Benchmark And MMS Planner

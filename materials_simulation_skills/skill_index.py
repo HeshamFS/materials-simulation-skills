@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .skill_utils import _parse_frontmatter, find_repo_root, iter_skill_dirs
+from .skill_utils import _parse_frontmatter, find_repo_root, frontmatter_standards, iter_skill_dirs
 
 INDEX_SCHEMA_ID = "materials-simulation-skills.index.v1"
 REPOSITORY = "HeshamFS/materials-simulation-skills"
@@ -99,6 +99,7 @@ def _skill_record(root: Path, skill_dir: Path) -> dict[str, Any]:
         "deterministic_checks": deterministic_checks,
         "eval_coverage": coverage,
         "last_evaluated": meta.get("last_evaluated", ""),
+        "standards": frontmatter_standards(skill_dir),
     }
 
 

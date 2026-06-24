@@ -17,6 +17,11 @@ metadata:
   last_evaluated: "2026-06-23"
   eval_cases: 3
   last_reviewed: "2026-06-24"
+  standards:
+    - "FAIR Guiding Principles (Wilkinson et al. 2016, Sci. Data)"
+    - "OPTIMADE API specification"
+    - "NOMAD Metainfo / Materials Project metadata schema"
+    - "FIPS 180-4 Secure Hash Standard (SHA-256)"
 ---
 
 # FAIR Simulation Packager
