@@ -10,6 +10,21 @@
         "Selects LHS method based on decision guidance (3 params, general exploration)",
         "Output includes samples, method, and coverage fields",
         "Explains that LHS provides good space-filling coverage for 3D parameter spaces"
+      ],
+      "script_checks": [
+        {
+          "description": "LHS DOE for 3 params, budget 40",
+          "cmd": ["scripts/doe_generator.py", "--params", "3", "--budget", "40", "--method", "lhs", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.method", "op": "eq", "value": "lhs"},
+            {"path": "results.coverage.count", "op": "eq", "value": 40},
+            {"path": "results.coverage.dimension", "op": "eq", "value": 3},
+            {"path": "results.samples.0", "op": "type", "value": "list"},
+            {"path": "results.samples.0.0", "op": "ge", "value": 0.0},
+            {"path": "results.samples.0.0", "op": "le", "value": 1.0}
+          ]
+        }
       ]
     },
     {
@@ -21,6 +36,21 @@
         "Output includes ranking field with parameters ordered by influence",
         "Identifies kappa as the most influential parameter",
         "Suggests focusing optimization effort on kappa and possibly mobility"
+      ],
+      "script_checks": [
+        {
+          "description": "Sensitivity ranking for 4 scored parameters",
+          "cmd": ["scripts/sensitivity_summary.py", "--scores", "0.72,0.15,0.08,0.05", "--names", "kappa,mobility,interface_width,dt", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.ranking.0.0", "op": "eq", "value": "kappa"},
+            {"path": "results.ranking.0.1", "op": "approx", "value": 0.72, "rel_tol": 1e-9},
+            {"path": "results.ranking.1.0", "op": "eq", "value": "mobility"},
+            {"path": "results.ranking.2.0", "op": "eq", "value": "interface_width"},
+            {"path": "results.ranking.3.0", "op": "eq", "value": "dt"},
+            {"path": "results.ranking.3.1", "op": "approx", "value": 0.05, "rel_tol": 1e-9}
+          ]
+        }
       ]
     },
     {
@@ -32,6 +62,18 @@
         "Output includes recommended optimizer, expected_evals, and notes",
         "Recommends CMA-ES or evolutionary algorithm (not Bayesian Optimization, since dim > 10)",
         "Mentions that high noise favors evolutionary or robust optimization methods"
+      ],
+      "script_checks": [
+        {
+          "description": "Optimizer recommendation for 12D, budget 200, high noise",
+          "cmd": ["scripts/optimizer_selector.py", "--dim", "12", "--budget", "200", "--noise", "high", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.recommended", "op": "contains", "value": "CMA-ES"},
+            {"path": "results.expected_evals", "op": "eq", "value": 120},
+            {"path": "results.notes.0", "op": "contains", "value": "noise"}
+          ]
+        }
       ]
     },
     {
@@ -44,6 +86,19 @@
         "Reports model_type as rbf",
         "metrics.mse reflects an actual fit residual: for the exact RBF interpolant it is ~0 (much smaller than output_variance ~0.6024), demonstrating the metric responds to fit quality rather than just echoing the data variance",
         "Uses metrics.cv_error (leave-one-out, ~2.26 here) rather than the near-zero in-sample mse to characterize predictive quality, and does not present output_variance as the model error"
+      ],
+      "script_checks": [
+        {
+          "description": "RBF surrogate fit with honest fit-quality metrics",
+          "cmd": ["scripts/surrogate_builder.py", "--x", "0.1,0.3,0.5,0.7,0.9", "--y", "2.1,3.5,4.2,3.8,2.6", "--model", "rbf", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.model_type", "op": "eq", "value": "rbf"},
+            {"path": "results.metrics.mse", "op": "lt", "value": 1e-6},
+            {"path": "results.metrics.cv_error", "op": "approx", "value": 2.259928514316111, "rel_tol": 1e-6},
+            {"path": "results.metrics.output_variance", "op": "approx", "value": 0.6024, "rel_tol": 1e-6}
+          ]
+        }
       ]
     },
     {
@@ -55,6 +110,23 @@
         "Selects factorial method because dimension <= 3 and full coverage is needed",
         "Output includes a samples array with exactly 16 points and coverage.levels == 4",
         "Explains that factorial design gives all combinations for low-dimensional spaces and that 4 levels over 2 parameters yields 4^2 = 16 points"
+      ],
+      "script_checks": [
+        {
+          "description": "Factorial DOE with 4 levels per param for 2 params (16 points)",
+          "cmd": ["scripts/doe_generator.py", "--params", "2", "--levels", "4", "--method", "factorial", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.method", "op": "eq", "value": "factorial"},
+            {"path": "results.coverage.count", "op": "eq", "value": 16},
+            {"path": "results.coverage.dimension", "op": "eq", "value": 2},
+            {"path": "results.coverage.levels", "op": "eq", "value": 4},
+            {"path": "results.samples.0.0", "op": "approx", "value": 0.0, "abs_tol": 1e-12},
+            {"path": "results.samples.0.1", "op": "approx", "value": 0.0, "abs_tol": 1e-12},
+            {"path": "results.samples.15.0", "op": "approx", "value": 1.0, "rel_tol": 1e-12},
+            {"path": "results.samples.15.1", "op": "approx", "value": 1.0, "rel_tol": 1e-12}
+          ]
+        }
       ]
     }
   ]

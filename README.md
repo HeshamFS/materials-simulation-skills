@@ -208,7 +208,7 @@ Every skill is classified by its tool access surface:
 
 Every skill includes an evaluation suite (`evals/evals.json`) following the [agentskills.io evaluation spec](https://agentskills.io/skill-creation/evaluating-skills). Each suite contains 4-5 test cases with realistic prompts, expected outputs, and verifiable assertions.
 
-**Current metrics:** 101 eval test cases | 447 assertions | All 24 skills evaluated
+**Current metrics:** 101 eval test cases | 447 assertions | All 24 skills evaluated | **101/101 eval cases carry deterministic `script_checks`** (117 checks, 686 machine-verified assertions)
 
 ### Two-layer evaluation harness
 

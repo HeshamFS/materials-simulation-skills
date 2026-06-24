@@ -49,6 +49,48 @@
         "Identifies first-order upwind as excessively diffusive for smooth flows",
         "Recommends central differences or higher-order upwind (2nd or 4th order)",
         "Suggests using truncation_error.py to quantify the error improvement"
+      ],
+      "script_checks": [
+        {
+          "description": "Smooth subsonic advection: recommend central FD over diffusive upwind",
+          "cmd": [
+            "scripts/scheme_selector.py",
+            "--smooth",
+            "--order",
+            "1",
+            "--accuracy",
+            "2",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.recommended.0",
+              "op": "eq",
+              "value": "Central FD"
+            },
+            {
+              "path": "results.recommended",
+              "op": "contains",
+              "value": "Central FD"
+            },
+            {
+              "path": "results.alternatives.0",
+              "op": "eq",
+              "value": "Higher-order upwind (2nd/4th)"
+            },
+            {
+              "path": "results.notes.0",
+              "op": "contains",
+              "value": "truncation_error.py"
+            },
+            {
+              "path": "inputs.smooth",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
       ]
     },
     {
@@ -60,6 +102,38 @@
         "Reports error scaling as O(dx^2)",
         "Computes approximate error magnitude around 1e-6",
         "Explains that halving dx would reduce error by factor of 4"
+      ],
+      "script_checks": [
+        {
+          "description": "2nd-order central difference truncation error at dx=0.001",
+          "cmd": [
+            "scripts/truncation_error.py",
+            "--dx",
+            "0.001",
+            "--accuracy",
+            "2",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.error_scale",
+              "op": "approx",
+              "value": 1e-06,
+              "rel_tol": 1e-09
+            },
+            {
+              "path": "results.order",
+              "op": "eq",
+              "value": 2
+            },
+            {
+              "path": "results.reduction_if_halved",
+              "op": "eq",
+              "value": 4
+            }
+          ]
+        }
       ]
     },
     {
@@ -71,6 +145,43 @@
         "Recommends upwind-biased, TVD, or WENO schemes",
         "Explains that central differences produce spurious oscillations at shocks",
         "Notes that limiters or shock-capturing methods are essential for discontinuities"
+      ],
+      "script_checks": [
+        {
+          "description": "Shock with discontinuities: recommend FV with limiter/WENO, avoid central FD",
+          "cmd": [
+            "scripts/scheme_selector.py",
+            "--discontinuous",
+            "--order",
+            "1",
+            "--accuracy",
+            "2",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.recommended.0",
+              "op": "eq",
+              "value": "Finite Volume (FV) with limiter/WENO"
+            },
+            {
+              "path": "results.alternatives",
+              "op": "contains",
+              "value": "Upwind FD (low order)"
+            },
+            {
+              "path": "results.notes.0",
+              "op": "contains",
+              "value": "Avoid high-order central FD"
+            },
+            {
+              "path": "inputs.discontinuous",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
       ]
     }
   ]

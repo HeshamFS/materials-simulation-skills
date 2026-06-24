@@ -1,0 +1,7 @@
+{
+  "dt": 0.007525000000000001,
+  "kappa": 0.7,
+  "steps": 1000,
+  "mesh": 64,
+  "output": "result.json"
+}

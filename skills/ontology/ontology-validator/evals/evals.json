@@ -10,6 +10,20 @@
         "Output includes results.valid boolean, results.class_valid, and results.properties_valid",
         "Validates that 'Unit Cell' is a recognized CMSO class",
         "Confirms results.valid is true because 'has Bravais lattice' and 'has lattice parameter' are valid properties for Unit Cell"
+      ],
+      "script_checks": [
+        {
+          "description": "schema_checker validates a correct Unit Cell annotation",
+          "cmd": ["scripts/schema_checker.py", "--ontology", "cmso", "--annotation", "{\"class\":\"Unit Cell\",\"properties\":{\"has Bravais lattice\":\"cF\",\"has lattice parameter\":3.615}}", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.valid", "op": "eq", "value": true},
+            {"path": "results.errors", "op": "eq", "value": []},
+            {"path": "results.class_valid.Unit Cell", "op": "eq", "value": true},
+            {"path": "results.properties_valid.has Bravais lattice", "op": "eq", "value": true},
+            {"path": "results.properties_valid.has lattice parameter", "op": "eq", "value": true}
+          ]
+        }
       ]
     },
     {
@@ -21,6 +35,21 @@
         "Output includes results.completeness_score as a ratio between 0 and 1",
         "Reports results.required_missing, results.recommended_missing, and results.optional_missing",
         "Identifies any additional properties needed for a complete Crystal Structure annotation"
+      ],
+      "script_checks": [
+        {
+          "description": "completeness_checker reports a fully complete Crystal Structure annotation",
+          "cmd": ["scripts/completeness_checker.py", "--ontology", "cmso", "--class", "Crystal Structure", "--provided", "has unit cell,has space group", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.class_name", "op": "eq", "value": "Crystal Structure"},
+            {"path": "results.completeness_score", "op": "approx", "value": 1.0, "rel_tol": 1e-9},
+            {"path": "results.required_missing", "op": "eq", "value": []},
+            {"path": "results.recommended_missing", "op": "eq", "value": []},
+            {"path": "results.optional_missing", "op": "eq", "value": []},
+            {"path": "results.unrecognized", "op": "eq", "value": []}
+          ]
+        }
       ]
     },
     {
@@ -32,6 +61,22 @@
         "Output includes results.valid boolean and results.results for each triple",
         "Checks domain and range consistency for each relationship",
         "Reports any domain/range mismatches as errors or warnings"
+      ],
+      "script_checks": [
+        {
+          "description": "relationship_checker confirms all three triples satisfy domain/range",
+          "cmd": ["scripts/relationship_checker.py", "--ontology", "cmso", "--relationships", "[{\"subject_class\":\"Computational Sample\",\"property\":\"has material\",\"object_class\":\"Material\"},{\"subject_class\":\"Material\",\"property\":\"has structure\",\"object_class\":\"Crystal Structure\"},{\"subject_class\":\"Crystal Structure\",\"property\":\"has unit cell\",\"object_class\":\"Unit Cell\"}]", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.valid", "op": "eq", "value": true},
+            {"path": "results.errors", "op": "eq", "value": []},
+            {"path": "results.results.0.valid", "op": "eq", "value": true},
+            {"path": "results.results.0.property", "op": "eq", "value": "has material"},
+            {"path": "results.results.1.valid", "op": "eq", "value": true},
+            {"path": "results.results.2.valid", "op": "eq", "value": true},
+            {"path": "results.results.2.object_class", "op": "eq", "value": "Unit Cell"}
+          ]
+        }
       ]
     },
     {
@@ -44,6 +89,24 @@
         "Detects 'has_unit_cell' as an unrecognized property (should be 'has unit cell')",
         "Output results.valid is false with specific errors for both the class and property",
         "The unknown_class error includes a suggestions array containing 'Crystal Structure' and the unknown_property error includes a suggestions array containing 'has unit cell'"
+      ],
+      "script_checks": [
+        {
+          "description": "schema_checker flags the misspelled class and property with nearest-match suggestions",
+          "cmd": ["scripts/schema_checker.py", "--ontology", "cmso", "--annotation", "{\"class\":\"CrystalStructurr\",\"properties\":{\"has_unit_cell\":true}}", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.valid", "op": "eq", "value": false},
+            {"path": "results.class_valid.CrystalStructurr", "op": "eq", "value": false},
+            {"path": "results.properties_valid.has_unit_cell", "op": "eq", "value": false},
+            {"path": "results.errors.0.error_type", "op": "eq", "value": "unknown_class"},
+            {"path": "results.errors.0.field", "op": "eq", "value": "CrystalStructurr"},
+            {"path": "results.errors.0.suggestions", "op": "contains", "value": "Crystal Structure"},
+            {"path": "results.errors.1.error_type", "op": "eq", "value": "unknown_property"},
+            {"path": "results.errors.1.field", "op": "eq", "value": "has_unit_cell"},
+            {"path": "results.errors.1.suggestions", "op": "contains", "value": "has unit cell"}
+          ]
+        }
       ]
     },
     {
@@ -55,6 +118,23 @@
         "Reports a low completeness_score (0.2) since only one of the tracked properties is provided",
         "Lists required_missing including 'has simulation cell' that must be added",
         "Lists recommended_missing properties (has species, has attribute, has number of atoms) that would improve annotation quality"
+      ],
+      "script_checks": [
+        {
+          "description": "completeness_checker reports low score and missing required/recommended props for Atomic Scale Sample",
+          "cmd": ["scripts/completeness_checker.py", "--ontology", "cmso", "--class", "Atomic Scale Sample", "--provided", "has material", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.class_name", "op": "eq", "value": "Atomic Scale Sample"},
+            {"path": "results.completeness_score", "op": "approx", "value": 0.2, "rel_tol": 1e-9},
+            {"path": "results.required_missing", "op": "contains", "value": "has simulation cell"},
+            {"path": "results.recommended_missing", "op": "contains", "value": "has species"},
+            {"path": "results.recommended_missing", "op": "contains", "value": "has attribute"},
+            {"path": "results.recommended_missing", "op": "contains", "value": "has number of atoms"},
+            {"path": "results.optional_missing", "op": "eq", "value": []},
+            {"path": "results.unrecognized", "op": "eq", "value": []}
+          ]
+        }
       ]
     }
   ]

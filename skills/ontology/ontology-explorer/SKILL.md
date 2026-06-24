@@ -15,12 +15,12 @@ description: >
 allowed-tools: Read, Bash
 metadata:
   author: HeshamFS
-  version: "1.2.0"
+  version: "1.2.1"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
-  last_evaluated: "2026-06-23"
+  last_evaluated: "2026-06-24"
   eval_cases: 5
   last_reviewed: "2026-06-23"
 ---

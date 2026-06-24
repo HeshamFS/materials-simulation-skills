@@ -10,6 +10,19 @@
         "Output includes report.status (PASS, WARN, or BLOCK)",
         "Reports any blockers that would prevent simulation launch",
         "Reports any warnings about non-critical issues"
+      ],
+      "files": ["evals/files/simulation.json"],
+      "script_checks": [
+        {
+          "description": "preflight on a valid phase-field config (all required params present and in range) reports no blockers",
+          "cmd": ["scripts/preflight_checker.py", "--config", "evals/files/simulation.json", "--required", "dt,dx,kappa", "--ranges", "dt:1e-6:1e-2,dx:1e-4:1e-1", "--min-free-gb", "2.0", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "report.blockers", "op": "eq", "value": []},
+            {"path": "report.warnings", "op": "contains", "value": "No output directory specified."},
+            {"path": "report.status", "op": "eq", "value": "WARN"}
+          ]
+        }
       ]
     },
     {
@@ -21,6 +34,24 @@
         "Output includes alerts, residual_stats, and dt_stats fields",
         "Emits alerts for NaN/Inf/overflow detection, residual growth, and adaptive dt collapse (the three checks runtime_monitor performs)",
         "Reports whether the simulation appears healthy (empty alerts) or shows warning signs"
+      ],
+      "files": ["evals/files/simulation.log"],
+      "script_checks": [
+        {
+          "description": "runtime monitor flags residual growth and dt collapse with exact min/max/last stats",
+          "cmd": ["scripts/runtime_monitor.py", "--log", "evals/files/simulation.log", "--residual-growth", "10.0", "--dt-drop", "100.0", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.alerts", "op": "contains", "value": "Residual increased > threshold."},
+            {"path": "results.alerts", "op": "contains", "value": "Time step reduced > threshold."},
+            {"path": "results.dt_stats.max", "op": "approx", "value": 0.001, "rel_tol": 1e-9},
+            {"path": "results.dt_stats.min", "op": "approx", "value": 1e-06, "rel_tol": 1e-9},
+            {"path": "results.dt_stats.last", "op": "approx", "value": 1e-06, "rel_tol": 1e-9},
+            {"path": "results.residual_stats.max", "op": "approx", "value": 0.4, "rel_tol": 1e-9},
+            {"path": "results.residual_stats.min", "op": "approx", "value": 0.005, "rel_tol": 1e-9},
+            {"path": "results.residual_stats.last", "op": "approx", "value": 0.09, "rel_tol": 1e-9}
+          ]
+        }
       ]
     },
     {
@@ -32,6 +63,23 @@
         "Output includes checks, confidence_score, and failed_checks fields",
         "Validates that phi values remain within [0, 1] bounds",
         "Checks mass conservation against the 1e-3 tolerance"
+      ],
+      "files": ["evals/files/results.json"],
+      "script_checks": [
+        {
+          "description": "result validator passes bounds, mass, energy, and NaN checks for in-spec results",
+          "cmd": ["scripts/result_validator.py", "--metrics", "evals/files/results.json", "--bound-min", "0.0", "--bound-max", "1.0", "--mass-tol", "1e-3", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.status", "op": "eq", "value": "PASS"},
+            {"path": "results.confidence_score", "op": "approx", "value": 1.0, "rel_tol": 1e-9},
+            {"path": "results.failed_checks", "op": "eq", "value": []},
+            {"path": "results.checks.bounds_satisfied", "op": "eq", "value": true},
+            {"path": "results.checks.mass_conserved", "op": "eq", "value": true},
+            {"path": "results.checks.energy_net_decrease", "op": "eq", "value": true},
+            {"path": "results.checks.no_nan", "op": "eq", "value": true}
+          ]
+        }
       ]
     },
     {
@@ -43,6 +91,19 @@
         "Output includes probable_causes and recommended_fixes fields",
         "Identifies likely failure pattern (NaN/Inf, convergence failure, memory, dt collapse)",
         "Provides specific actionable fixes (e.g., reduce dt, tune preconditioner, check initial conditions)"
+      ],
+      "files": ["evals/files/crash.log"],
+      "script_checks": [
+        {
+          "description": "failure diagnoser identifies numerical blow-up from a NaN/overflow crash log",
+          "cmd": ["scripts/failure_diagnoser.py", "--log", "evals/files/crash.log", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.probable_causes", "op": "contains", "value": "Numerical blow-up"},
+            {"path": "results.probable_causes.0", "op": "eq", "value": "Numerical blow-up"},
+            {"path": "results.recommended_fixes", "op": "contains", "value": "Reduce dt, tighten tolerances, or increase damping."}
+          ]
+        }
       ]
     },
     {
@@ -54,6 +115,30 @@
         "Invokes scripts/failure_diagnoser.py with --log run.log --json",
         "Surfaces preflight report.status (PASS/WARN/BLOCK) and any blockers, e.g. a dt-out-of-range blocker when dt falls outside 1e-6 to 1e-2",
         "Surfaces failure_diagnoser probable_causes and recommended_fixes from the crash log (e.g. a numerical blow-up cause and a reduce-dt fix)"
+      ],
+      "files": ["evals/files/config.json", "evals/files/run.log"],
+      "script_checks": [
+        {
+          "description": "preflight on config.json BLOCKS on missing M and dt out of range",
+          "cmd": ["scripts/preflight_checker.py", "--config", "evals/files/config.json", "--required", "dt,dx,kappa,M", "--ranges", "dt:1e-6:1e-2", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "report.status", "op": "eq", "value": "BLOCK"},
+            {"path": "report.blockers", "op": "contains", "value": "Missing required parameter: M"},
+            {"path": "report.blockers", "op": "contains", "value": "dt out of range [1e-06, 0.01]."}
+          ]
+        },
+        {
+          "description": "failure diagnoser identifies blow-up and convergence failure from the crash log",
+          "cmd": ["scripts/failure_diagnoser.py", "--log", "evals/files/run.log", "--json"],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.probable_causes", "op": "contains", "value": "Numerical blow-up"},
+            {"path": "results.probable_causes", "op": "contains", "value": "Convergence failure"},
+            {"path": "results.recommended_fixes", "op": "contains", "value": "Reduce dt, tighten tolerances, or increase damping."},
+            {"path": "results.recommended_fixes", "op": "contains", "value": "Check solver/preconditioner settings and matrix conditioning."}
+          ]
+        }
       ]
     }
   ]

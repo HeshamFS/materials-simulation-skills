@@ -53,6 +53,42 @@
         "Reports extrapolated value near 1.0",
         "Provides error estimate for the fine-grid solution",
         "Notes that only 2 levels means order cannot be independently verified"
+      ],
+      "script_checks": [
+        {
+          "description": "Richardson 2-level: extrapolated ~1.0, error estimate ~0.0008",
+          "cmd": [
+            "scripts/richardson_extrapolation.py",
+            "--spacings",
+            "0.02,0.01",
+            "--values",
+            "1.0032,1.0008",
+            "--order",
+            "2.0",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.extrapolated_value",
+              "op": "approx",
+              "value": 1.0,
+              "rel_tol": 1e-09
+            },
+            {
+              "path": "results.error_estimate",
+              "op": "approx",
+              "value": 0.0008,
+              "rel_tol": 0.0001
+            },
+            {
+              "path": "results.relative_error_estimate",
+              "op": "approx",
+              "value": 0.0008,
+              "rel_tol": 0.0001
+            }
+          ]
+        }
       ]
     },
     {
@@ -106,6 +142,46 @@
         "Reports observed temporal convergence order of 2.0",
         "Evaluates whether the order exceeds 2 and explicitly states it does not (no superconvergence/cancellation)",
         "Concludes the observed order is exactly 2.0 (PASS), so the user's suspicion of superconvergence is not supported by the data"
+      ],
+      "script_checks": [
+        {
+          "description": "dt-refinement: observed order exactly 2.0, PASS, no superconvergence",
+          "cmd": [
+            "scripts/dt_refinement.py",
+            "--timesteps",
+            "0.04,0.02,0.01",
+            "--values",
+            "2.12,2.03,2.0075",
+            "--expected-order",
+            "2.0",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.mean_order",
+              "op": "approx",
+              "value": 2.0,
+              "rel_tol": 1e-06
+            },
+            {
+              "path": "results.in_asymptotic_range",
+              "op": "eq",
+              "value": true
+            },
+            {
+              "path": "results.convergence_assessment",
+              "op": "contains",
+              "value": "PASS"
+            },
+            {
+              "path": "results.richardson_extrapolated_value",
+              "op": "approx",
+              "value": 2.0,
+              "rel_tol": 1e-06
+            }
+          ]
+        }
       ]
     }
   ]
