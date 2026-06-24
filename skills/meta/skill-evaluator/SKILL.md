@@ -18,7 +18,7 @@ compatibility: >
   authenticated (claude, codex, agy, cursor-agent, copilot, amp, opencode, grok).
 metadata:
   author: HeshamFS
-  version: "1.0.1"
+  version: "1.0.2"
   security_tier: high
   last_reviewed: "2026-06-23"
   eval_cases: 4
@@ -129,8 +129,17 @@ python scripts/aggregate_benchmark.py <skill>-workspace/iteration-1 \
 
 `run_summary.delta.pass_rate` is the value of the skill. Surface patterns the
 averages hide (`references/methodology.md`): non-discriminating assertions,
-high-variance evals, time/token tradeoffs. **Put outputs in front of the user
-before concluding.**
+high-variance evals, time/token tradeoffs.
+
+**Then generate the review and put it in front of the user *before* you self-grade**
+(a standalone HTML page — no server needed):
+
+```bash
+python eval-viewer/generate_review.py <skill>-workspace/iteration-1/benchmark.json -o review.html
+```
+
+It renders the with/without delta, per-configuration stats, and an expandable
+per-eval breakdown of each graded assertion (text, pass/fail, evidence).
 
 ## Step 4 — iterate
 
@@ -153,6 +162,7 @@ comparison described in `references/methodology.md`.
 - `references/methodology.md` — the rigorous practices (read for non-trivial evals).
 - `references/grader.md` — how to grade a run into `grading.json`.
 - `references/schemas.md` — exact JSON shapes for every file.
+- `eval-viewer/generate_review.py` — render a benchmark into a standalone HTML review.
 
 ## Verification checklist
 

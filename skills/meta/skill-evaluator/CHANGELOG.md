@@ -1,5 +1,13 @@
 # Changelog — skill-evaluator
 
+## v1.0.2 (2026-06-24)
+
+- Added `eval-viewer/generate_review.py`: renders a `benchmark.json` into a
+  standalone HTML review (with/without pass-rate delta, per-configuration stats,
+  and an expandable per-eval breakdown of each graded assertion). Supports the
+  "put outputs in front of a human before self-grading" step; no server or
+  third-party dependencies. Wired into the Step-3 quality-eval flow in SKILL.md.
+
 ## v1.0.1 (2026-06-24)
 
 - Added a **Verification checklist** section (7 evidence-based items) tying a
