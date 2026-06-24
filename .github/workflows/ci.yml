@@ -161,3 +161,37 @@ jobs:
             --skill skills/core-numerical/numerical-stability \
             --agent claude-code --workspace "$RUNNER_TEMP/ws" --iteration 1 --only 1
           echo "Executor runs complete. Grade per references/grader.md, then run aggregate_benchmark.py for the with/without delta."
+
+  actionlint:
+    # Lint the GitHub Actions workflow files themselves.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
+
+  pip-audit:
+    # Audit declared dependencies for known vulnerabilities (supply-chain gate).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: pip-audit
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          pip-audit -r requirements.txt -r requirements-dev.txt
+
+  dependency-review:
+    # Block PRs that introduce dependencies with known vulnerabilities.
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependency review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
