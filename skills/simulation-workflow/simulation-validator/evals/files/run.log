@@ -1,0 +1,5 @@
+iter 0   residual 1.0e-2
+iter 1   residual 3.0e+0
+iter 2   residual 1.0e+5
+iter 3   solution diverged: values are Inf
+iter 4   overflow encountered, aborting run

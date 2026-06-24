@@ -27,6 +27,11 @@ timing_results.json
 scaling_results.json
 memory_results.json
 
+# Always track bundled eval fixtures, even if their names/extensions match the
+# temporary-file patterns above (e.g. *.log, scaling_results.json). These are
+# committed inputs that the deterministic script_checks (mss eval) depend on.
+!skills/**/evals/files/**
+
 # OS
 Thumbs.db
 .DS_Store

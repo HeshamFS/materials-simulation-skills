@@ -1,0 +1,4 @@
+Phase: assembly, Time: 12.5s
+Phase: solver, Time: 85.0s
+Phase: I/O, Time: 8.0s
+Phase: postprocessing, Time: 4.5s
