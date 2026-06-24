@@ -3,7 +3,7 @@
 This project distinguishes two very different questions:
 
 1. **Do the scripts compute correctly?** — answered by the unit/integration test
-   suite (`tests/`, 1269 tests). These call each script's pure-function core and
+   suite (`tests/`, 1283 tests). These call each script's pure-function core and
    CLI directly.
 2. **Do the *skills* work as skills?** — i.e. when an agent reads a `SKILL.md`
    and follows it on a realistic prompt, does it pick the right script, pass the

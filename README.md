@@ -4,50 +4,20 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-standard-orange.svg)](https://agentskills.io)
 [![Python 3.10-3.12](https://img.shields.io/badge/Python-3.10--3.12-blue.svg)](https://www.python.org/)
+[![Skills](https://img.shields.io/badge/skills-24-blue.svg)](skills_index.json)
+[![Deterministic eval coverage](https://img.shields.io/badge/deterministic_eval_coverage-100%25-brightgreen.svg)](docs/EVALUATION_METHODOLOGY.md)
 
-**Open-source [Agent Skills](https://agentskills.io) for computational materials science and numerical simulation workflows.**
+**Give your AI coding agent real expertise in numerical methods, simulation best practices, and computational materials science — so it stops guessing.**
 
-Give your AI coding agent domain expertise in numerical methods, simulation best practices, and scientific computing -- without re-explaining the same concepts every session. Skills are portable across Claude Code, Codex, Antigravity (`agy`), Cursor, VS Code Copilot, and [20+ other compatible tools](https://agentskills.io).
-
----
-
-## Table of Contents
-
-- [The Problem](#the-problem)
-- [The Solution](#the-solution)
-- [What's Inside](#whats-inside)
-  - [Core Numerical Skills](#core-numerical-skills-skillscore-numerical)
-  - [Simulation Workflow Skills](#simulation-workflow-skills-skillssimulation-workflow)
-  - [HPC Deployment Skills](#hpc-deployment-skills-skillshpc-deployment)
-  - [Verification & Validation Skills](#verification--validation-skills-skillsverification-validation)
-  - [Data Management Skills](#data-management-skills-skillsdata-management)
-  - [Robustness Skills](#robustness-skills-skillsrobustness)
-  - [Ontology Skills](#ontology-skills-skillsontology)
-  - [Meta Skills](#meta-skills-skillsmeta)
-- [How Skills Work](#how-skills-work)
-- [Security](#security)
-- [Quick Start](#quick-start)
-- [Adding Skills to Your Agent](#adding-skills-to-your-agent)
-  - [Claude Code](#claude-code)
-  - [Antigravity CLI](#antigravity-cli-agy)
-  - [OpenAI Codex](#openai-codex)
-  - [VS Code / GitHub Copilot](#vs-code--github-copilot)
-  - [Cursor](#cursor)
-  - [Other Agents](#other-agents)
-- [Repository Layout](#repository-layout)
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgements](#acknowledgements)
+> **New to Agent Skills?** A "skill" is a portable folder of instructions + small scripts that an AI coding agent **discovers automatically and loads only when relevant**. They follow the open [Agent Skills standard](https://agentskills.io) and work across **20+ tools** — Claude Code, Codex, Cursor, Antigravity, GitHub Copilot, and more. Nothing to wire up: drop them in and your agent gets smarter at the task.
 
 ---
 
-## The Problem
+## What it solves
 
-Simulation engineers repeat the same guidance to AI agents constantly: *"Check the CFL number before running," "Use Richardson extrapolation for grid convergence," "Exit code 2 means bad input."* General-purpose agents lack the domain knowledge to run reliable numerical simulations without heavy hand-holding.
+Simulation engineers repeat the same guidance to AI agents constantly: *"Check the CFL number before running," "Use Richardson extrapolation for grid convergence," "Exit code 2 means bad input."* General-purpose agents lack the domain knowledge to run reliable numerical simulations without heavy hand-holding — so they pick wrong time steps, miss convergence checks, and misread solver failures.
 
-## The Solution
-
-This project packages that domain knowledge into **skills** -- structured folders of instructions, scripts, and references that agents discover automatically and load on demand. Each skill teaches an agent a specific simulation competency, backed by validated Python scripts that produce reproducible results.
+This project packages that domain knowledge into **skills** the agent finds and runs on its own:
 
 ```text
 You: Check if dt=0.001 is stable for my advection problem with v=2.0 m/s and dx=0.01.
@@ -59,355 +29,112 @@ Agent: I'll use the numerical-stability skill to check this.
        Recommended max dt = 0.005 with safety factor 1.0.
 ```
 
-No prompt engineering. No copy-pasting formulas. The agent finds the right skill, runs the script, and interprets the results.
+No prompt engineering, no copy-pasting formulas. **24 skills** span numerical methods, simulation workflows, HPC deployment, verification & validation, FAIR data, robustness, and materials ontologies.
+
+### Validated, not just curated
+
+Most agent-skill collections are unverified prompt text. These are **measured**:
+
+- **Tested scripts** — every skill ships Python CLIs with a pure-function core (1283 tests, Python 3.10–3.12).
+- **100% deterministic eval coverage** — every eval case runs the script and asserts its exact output, so docs can't silently drift from code. Enforced in CI.
+- **Measured uplift** — skills are evaluated *with vs. without* the skill across coding-agent CLIs; value is the pass-rate **delta**, not a claim.
+- **Cited science + an enforced [protocol](docs/PROTOCOL.md)** — rules reference authoritative standards (ASME V&V20, the SchedMD `sbatch` spec, CMSO IRIs).
+
+How and why: **[evaluation methodology](docs/EVALUATION_METHODOLOGY.md)** · **[harness](docs/EVAL_HARNESS.md)**.
 
 ---
 
-## What's Inside
+## Install
 
-**24 skills** | **78 scripts** | **1269 tests** | **101 eval cases** | **447 assertions** | Cross-platform CI on Python 3.10-3.12
-
-### Core Numerical Skills (`skills/core-numerical/`)
-
-Foundational numerical methods and analysis tools.
-
-| Skill | What it does |
-|-------|-------------|
-| `numerical-stability` | CFL/Fourier analysis, von Neumann stability, stiffness detection, matrix conditioning |
-| `time-stepping` | Time integrator selection, adaptive step-size control, output scheduling |
-| `mesh-generation` | Mesh quality metrics (aspect ratio, skewness, orthogonality), refinement guidance |
-| `convergence-study` | Grid/time convergence analysis, Richardson extrapolation, GCI calculation |
-| `numerical-integration` | Quadrature rule selection, error estimation, adaptive stepping |
-| `differentiation-schemes` | Finite difference stencil generation, truncation error analysis, scheme comparison |
-| `linear-solvers` | Iterative/direct solver selection, preconditioner advice, convergence diagnostics |
-| `nonlinear-solvers` | Newton/quasi-Newton/fixed-point selection, globalization strategies, convergence diagnostics |
-
-### Simulation Workflow Skills (`skills/simulation-workflow/`)
-
-End-to-end simulation management and automation.
-
-| Skill | What it does |
-|-------|-------------|
-| `simulation-validator` | Pre-flight checks, runtime log monitoring, post-flight validation |
-| `parameter-optimization` | DOE sampling (LHS, factorial), optimizer selection, sensitivity analysis |
-| `simulation-orchestrator` | Parameter sweeps, batch campaign management, result aggregation |
-| `post-processing` | Field extraction, time series analysis, derived quantity computation |
-| `performance-profiling` | Timing analysis, scaling studies, memory profiling, bottleneck detection |
-| `workflow-engine-mapper` | Map simulations onto jobflow, atomate2, AiiDA, pyiron, or simpler scripts with DAG and provenance guidance |
-| `md-analysis-planner` | Plan MD post-processing for RDF, MSD/diffusion, VACF/VDOS, coordination, stress-strain, and equilibration checks |
-
-### HPC Deployment Skills (`skills/hpc-deployment/`)
-
-Deployment and job submission tooling for running simulations on HPC systems.
-
-| Skill | What it does |
-|-------|-------------|
-| `slurm-job-script-generator` | Generate `sbatch` scripts, sanity-check resource requests, and standardize `#SBATCH` directives |
-| `hpc-runtime-doctor` | Diagnose module, MPI/OpenMP/GPU, scheduler, scratch, restart, walltime, and resource mismatch issues |
-
-### Verification & Validation Skills (`skills/verification-validation/`)
-
-Code verification, benchmark selection, and validation reporting.
-
-| Skill | What it does |
-|-------|-------------|
-| `benchmark-and-mms-planner` | Plan manufactured solutions, canonical benchmarks, refinement protocols, uncertainty propagation, and pass/fail reports |
-
-### Data Management Skills (`skills/data-management/`)
-
-Reproducibility and FAIR packaging for simulation campaigns.
-
-| Skill | What it does |
-|-------|-------------|
-| `fair-simulation-packager` | Create metadata manifests with units, engine versions, hashes, structure identifiers, provenance, and repository-friendly fields |
-
-### Robustness Skills (`skills/robustness/`)
-
-Failure diagnosis and retry planning across simulation engines.
-
-| Skill | What it does |
-|-------|-------------|
-| `simulation-failure-triage` | Build retry ladders for nonconvergence, NaN/Inf, exploding energies, unstable timesteps, pressure blow-up, bad potentials, and incomplete runs |
-
-### Ontology Skills (`skills/ontology/`)
-
-Materials science ontology understanding, mapping, and validation.
-
-| Skill | What it does |
-|-------|-------------|
-| `ontology-explorer` | Parse OWL/XML ontologies, browse class hierarchies, look up properties, search concepts (CMSO, ASMO, OCDO ecosystem) |
-| `ontology-mapper` | Map natural-language materials terms and crystal parameters to ontology classes and properties (CMSO, ASMO) |
-| `ontology-validator` | Validate annotations against ontology constraints, check completeness, verify relationship domain/range |
-
-### Meta Skills (`skills/meta/`)
-
-Tooling skills that operate on skills themselves.
-
-| Skill | What it does |
-|-------|-------------|
-| `skill-evaluator` | Rigorously evaluate any Agent Skill end-to-end across **any** coding-agent CLI (Claude Code, Codex, Antigravity, Cursor, Copilot, Amp, opencode, Grok): deterministic `script_checks`, trigger/discovery testing, and with-skill-vs-baseline quality benchmarking with the pass-rate delta |
-
----
-
-## How Skills Work
-
-Skills follow the open [Agent Skills standard](https://agentskills.io/specification). Each skill is a folder with three tiers of content, loaded progressively to keep context efficient:
-
-```
-skills/core-numerical/numerical-stability/
-    SKILL.md              # Instructions + YAML metadata (loaded when skill triggers)
-    scripts/              # Python CLI tools (executed for reproducible results)
-        cfl_checker.py
-        von_neumann_analyzer.py
-        matrix_condition.py
-        stiffness_detector.py
-    references/           # Deep domain knowledge (loaded only when needed)
-        stability_criteria.md
-        common_pitfalls.md
-        scheme_catalog.md
-    evals/                # Evaluation suite per agentskills.io spec
-        evals.json        # Test cases with prompts, assertions, expected outputs
-    CHANGELOG.md          # Version history
-```
-
-1. **Discovery** -- The agent sees each skill's name and description at startup (~100 tokens per skill)
-2. **Activation** -- When a task matches, the agent loads the full `SKILL.md` with decision guidance, workflows, and CLI examples
-3. **Execution** -- Scripts run as subprocesses with `--json` output for structured, parseable results
-
-All scripts are standalone CLI tools with `--help`, a pure-function core for testing, and consistent error handling (exit code 2 for bad input, 1 for runtime errors).
-
----
-
-## Security
-
-All skills are hardened against the [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/), with dedicated validation and edge-case tests. Key safeguards:
-
-- **Tool access is explicit** -- Skills that only inspect or write files avoid `Bash`; script-bearing skills declare `Bash` and keep executable behavior inside reviewed Python CLIs
-- **Input validation at every boundary** -- Numeric parameters are bounds-checked and validated as finite; string inputs (parameter names, field names, term names) are validated against regex allowlists
-- **Safe file loading** -- All JSON/CSV/NPY loaders enforce file size limits (100-500 MB) and structure validation (dict root required); `np.load()` uses `allow_pickle=False`
-- **No `eval()`/`exec()`** -- Region condition parsing uses strict regex matching, never dynamic code execution
-- **Prompt injection resistance** -- String values extracted from external files are truncated and stripped of control characters before surfacing to the agent; phase names from logs are sanitized
-- **Command construction safety** -- `shlex.quote()` escapes paths interpolated into shell commands; command templates are validated against a shell-operator denylist
-- **ReDoS prevention** -- User-supplied regex patterns are length-capped and checked for catastrophic backtracking constructs
-
-Each skill documents its specific safeguards in a **Security** section within its `SKILL.md`, with standardized subsections for Input Validation, File Access, Tool Restrictions, and Safety Measures.
-
-### Security Risk Tiers
-
-Every skill is classified by its tool access surface:
-
-| Tier | Criteria | Skills |
-|------|----------|-------|
-| **HIGH** | Has `Bash` (can execute scripts) | 16 skills — numerical-stability, time-stepping, convergence-study, differentiation-schemes, nonlinear-solvers, ontology-explorer, ontology-validator, simulation-validator, slurm-job-script-generator, benchmark-and-mms-planner, workflow-engine-mapper, fair-simulation-packager, md-analysis-planner, hpc-runtime-doctor, simulation-failure-triage, skill-evaluator |
-| **MEDIUM** | Has `Write` but no `Bash` | 7 skills — linear-solvers, mesh-generation, numerical-integration, parameter-optimization, performance-profiling, post-processing, simulation-orchestrator |
-| **LOW** | Read/Grep/Glob only | 1 skill — ontology-mapper |
-
----
-
-## Quality & Evaluation
-
-Every skill includes an evaluation suite (`evals/evals.json`) following the [agentskills.io evaluation spec](https://agentskills.io/skill-creation/evaluating-skills). Each suite contains 4-5 test cases with realistic prompts, expected outputs, and verifiable assertions.
-
-**Current metrics:** 101 eval test cases | 447 assertions | All 24 skills evaluated | **101/101 eval cases carry deterministic `script_checks`** (117 checks, 686 machine-verified assertions)
-
-### Two-layer evaluation harness
-
-Skills are evaluated, not just unit-tested. See **[docs/EVAL_HARNESS.md](docs/EVAL_HARNESS.md)**.
-
-- **Deterministic layer** (`mss eval`, CI-gated): eval cases may carry machine-checkable `script_checks` that run a script and grade its `--json` output, catching drift between what a `SKILL.md` documents and what its scripts emit. No LLM required.
-- **LLM-judge layer** (designed, on the [roadmap](ROADMAP.md)): the official with-skill vs. without-skill delta loop that measures whether an agent *following the SKILL.md* reaches the right answer.
+The repo follows the open standard, so the ecosystem installers work out of the box:
 
 ```bash
-mss eval                 # run all deterministic script_checks (exits non-zero on failure)
-mss eval --skill mesh-generation --json
+npx skills add HeshamFS/materials-simulation-skills          # any agent → ~/.agents/skills/
+gh skill install HeshamFS/materials-simulation-skills --pin v1.0.0   # version-pinned
 ```
 
-Skills also follow the **[Materials Simulation Skill Protocol](docs/PROTOCOL.md)** — a
-conformance standard (JSON envelope, exit codes, standardized Security subsections,
-cited science, eval coverage) layered on the Agent Skills spec.
+Or install a curated **bundle** into a specific agent with the bundled `mss` CLI:
 
-The CI pipeline validates:
-- SKILL.md frontmatter (spec-valid `name`, description < 1024 chars, metadata block)
-- Eval suite completeness (every skill has evals.json with ≥ 3 test cases)
-- Deterministic `script_checks` pass (`tools/run_skill_evals.py`)
-- Security section with the four standardized subsections (Input Validation, File Access, Tool Restrictions, Safety Measures)
-- Changelog existence (all skills must have CHANGELOG.md)
+```bash
+mss bundles                                                  # list bundles
+mss install --agent claude --bundle verification-and-validation
+```
+
+Claude Code users can also `/plugin marketplace add HeshamFS/materials-simulation-skills`.
+Full per-agent guide → **[docs/INSTALL.md](docs/INSTALL.md)**.
 
 ---
 
-## Quick Start
+## Use it
 
-### Install
+Once installed, just describe your task — the agent picks the right skill, runs the
+script, and interprets the result (as in the example above). You can also name a
+skill explicitly:
+
+```text
+Use convergence-study to check if my mesh is in the asymptotic range:
+h = 0.4, 0.2, 0.1 gave stress = 98.5, 99.6, 99.9 MPa.
+```
+
+Browse the full catalog in **[docs/SKILLS.md](docs/SKILLS.md)** (or the machine-readable
+[`skills_index.json`](skills_index.json)).
+
+**Try it locally / develop:**
 
 ```bash
 git clone https://github.com/HeshamFS/materials-simulation-skills.git
-cd materials-simulation-skills
-pip install -e ".[dev]"
-```
+cd materials-simulation-skills && pip install -e ".[dev]"
 
-### Use the helper CLI
-
-```bash
-mss list --json
-mss validate --json
+mss list                                              # list skills
 mss run numerical-stability cfl_checker -- --dx 0.01 --dt 0.001 --velocity 2.0 --json
-mss install --agent codex --scope project --skill numerical-stability
-```
-
-### Run the test suite
-
-```bash
-python -m pytest tests/ -v --tb=short          # All 1269 tests
-python -m pytest tests/unit -v --tb=short       # Unit tests only
-python -m pytest tests/integration -v           # Integration tests only
+mss eval                                              # run the deterministic eval gate
+python -m pytest tests/                               # full test suite
 ```
 
 ---
 
-## Adding Skills to Your Agent
+## What's inside
 
-These skills follow the open [Agent Skills standard](https://agentskills.io) and work across 20+ AI coding tools. Choose your agent below.
+**24 skills** across 8 categories (one-line summary; full tables in [docs/SKILLS.md](docs/SKILLS.md)):
 
-### Claude Code
+| Category | Skills | Focus |
+|---|---|---|
+| Core Numerical | 8 | stability, time-stepping, meshing, convergence, integration, differentiation, linear/nonlinear solvers |
+| Simulation Workflow | 7 | validation, DOE/optimization, orchestration, post-processing, profiling, workflow mapping, MD analysis |
+| HPC Deployment | 2 | SLURM script generation, runtime diagnosis |
+| Verification & Validation | 1 | manufactured solutions, benchmarks, pass/fail reports |
+| Data Management | 1 | FAIR reproducibility packaging |
+| Robustness | 1 | cross-code failure triage & retry ladders |
+| Ontology | 3 | CMSO/ASMO exploration, mapping, validation |
+| Meta | 1 | `skill-evaluator` — evaluate any skill across any agent CLI |
 
-Copy individual skills (or the whole `skills/` tree) into your personal or project skills directory:
-
-```bash
-# Personal (available across all projects)
-cp -r skills/core-numerical/numerical-stability ~/.claude/skills/numerical-stability
-
-# Project-level (committed to version control)
-cp -r skills/core-numerical/numerical-stability .claude/skills/numerical-stability
-```
-
-Or clone the whole repo and point Claude Code at it with `--add-dir`:
-
-```bash
-claude --add-dir /path/to/materials-simulation-skills/skills
-```
-
-Verify with: `What skills are available?` or type `/` to see skills in the autocomplete menu.
-
-See the [Claude Code skills docs](https://code.claude.com/docs/en/skills) for more details.
-
-### Antigravity CLI (`agy`)
-
-Google retired the Gemini CLI on 2026-06-18 and replaced it with **Antigravity CLI**
-(the `agy` command), which keeps Agent Skills support. Copy skills into an Antigravity
-skills directory (it uses the `.agents/` convention):
-
-```bash
-# User-scoped (available across all workspaces)
-cp -r skills/core-numerical/numerical-stability ~/.agents/skills/numerical-stability
-
-# Workspace-scoped (project-specific)
-cp -r skills/core-numerical/numerical-stability .agents/skills/numerical-stability
-```
-
-Verify by asking Antigravity what skills are available. See the
-[Antigravity CLI docs](https://antigravity.google/docs/cli-overview) for more details.
-
-### OpenAI Codex
-
-Copy skills into one of the Codex skills directories:
-
-```bash
-# User-scoped
-cp -r skills/core-numerical/numerical-stability ~/.agents/skills/numerical-stability
-
-# Repository-scoped
-cp -r skills/core-numerical/numerical-stability .agents/skills/numerical-stability
-```
-
-Restart Codex after adding skills. Use `/skills` or `$` to invoke skills by name.
-
-See the [Codex skills docs](https://developers.openai.com/codex/skills) for more details.
-
-### VS Code / GitHub Copilot
-
-Copy skills into your workspace or personal skills directory:
-
-```bash
-# Workspace (committed to version control)
-cp -r skills/core-numerical/numerical-stability .github/skills/numerical-stability
-
-# Personal (across all workspaces)
-cp -r skills/core-numerical/numerical-stability ~/.copilot/skills/numerical-stability
-```
-
-Type `/skills` in the chat input to see and invoke available skills.
-
-See the [VS Code skills docs](https://code.visualstudio.com/docs/copilot/customization/agent-skills) for more details.
-
-### Cursor
-
-Copy skills into a `skills/` directory at your project root:
-
-```bash
-cp -r skills/core-numerical/numerical-stability skills/numerical-stability
-```
-
-Cursor's MCP server auto-discovers skills from the `skills/` directory.
-
-### Other Agents
-
-Any agent that supports the [Agent Skills standard](https://agentskills.io) can use these skills. The general pattern:
-
-1. Copy the skill directory (containing `SKILL.md`, `scripts/`, `references/`) into your agent's skills folder
-2. The agent discovers the skill by its `name` and `description` in the YAML frontmatter
-3. Mention the skill by name or ask a task that matches its description
-
-```text
-Use numerical-stability to check a proposed dt for my phase-field run.
-```
-
-The agent loads the skill's instructions, runs the appropriate scripts, and interprets the results.
-
----
-
-## Repository Layout
-
-```
-skills/
-    core-numerical/          # 8 skills: stability, solvers, meshing, convergence, ...
-    simulation-workflow/     # 7 skills: validation, optimization, orchestration, workflow mapping, ...
-    hpc-deployment/          # 2 skills: SLURM generation and runtime diagnosis
-    verification-validation/ # 1 skill: MMS and benchmark planning
-    data-management/         # 1 skill: FAIR simulation packaging
-    robustness/              # 1 skill: simulation failure triage
-    ontology/                # 3 skills: ontology exploration, mapping, validation
-    <each-skill>/
-        SKILL.md             # Instructions + YAML frontmatter (with metadata block)
-        scripts/             # Python CLI tools with --json output
-        references/          # Domain knowledge documents
-        evals/evals.json     # Evaluation suite (prompts, assertions)
-        CHANGELOG.md         # Version history
-tests/
-    unit/                    # Pure-function tests via load_module()
-    integration/             # Subprocess + JSON schema validation
-    fixtures/                # Sample data files for CI smoke tests
-materials_simulation_skills/
-    cli.py                   # Installable mss helper CLI
-tools/
-    validate_skills.py       # Repo quality validation
-    update_metrics.py        # README metric computation
-.github/
-    workflows/ci.yml         # Cross-platform CI + quality validation
-    ISSUE_TEMPLATE/          # Bug reports, skill proposals
-    PULL_REQUEST_TEMPLATE.md # PR checklist
-```
+Quality is gated in CI: spec-valid frontmatter, deterministic `script_checks`, the
+standardized Security section, and a fresh index — see **[docs/PROTOCOL.md](docs/PROTOCOL.md)**
+and **[docs/SECURITY.md](docs/SECURITY.md)**.
 
 ---
 
 ## Contributing
 
-We welcome contributions of all kinds -- new skills, bug fixes, documentation, and tests. The project is designed to grow from 24 skills across 8 active categories into a broader collection spanning materials physics, simulation patterns, HPC deployment, and more.
+This is an open project and contributions are very welcome — **a new skill, a fix, docs, or just an idea**.
 
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for:
-- Step-by-step guide to creating a new skill
-- Script and test templates
-- Skill taxonomy and open categories for community contributions
-- PR guidelines and checklists
+- **Have an idea or a skill to propose?** Open an [issue](https://github.com/HeshamFS/materials-simulation-skills/issues) (there are templates for bug reports and skill proposals) — early ideas are great even without code.
+- **Want to build a skill?** **[CONTRIBUTING.md](CONTRIBUTING.md)** has a step-by-step guide, script/test templates, the skill taxonomy, and open categories. The bar that keeps this project trustworthy: a skill ships a **tested script + an eval case with a deterministic `script_check`**, and passes `mss validate` + `mss eval`.
+- **Where it's headed:** the **[ROADMAP.md](ROADMAP.md)** — growing toward materials-physics and code-interface skills (LAMMPS, DFT) and a richer skill protocol.
+
+---
+
+## Documentation
+
+| Doc | What's in it |
+|---|---|
+| [docs/SKILLS.md](docs/SKILLS.md) | Full skill catalog, how skills work, repo layout |
+| [docs/INSTALL.md](docs/INSTALL.md) | Install for every supported agent |
+| [docs/EVALUATION_METHODOLOGY.md](docs/EVALUATION_METHODOLOGY.md) | How skills are evaluated, with results |
+| [docs/EVAL_HARNESS.md](docs/EVAL_HARNESS.md) | The three-layer evaluation harness |
+| [docs/PROTOCOL.md](docs/PROTOCOL.md) | The Materials Simulation Skill Protocol |
+| [docs/SECURITY.md](docs/SECURITY.md) | Safeguards and security tiers |
+| [CONTRIBUTING.md](CONTRIBUTING.md) · [ROADMAP.md](ROADMAP.md) | Contributing guide · direction |
 
 ---
 
@@ -427,6 +154,6 @@ See **[CONTRIBUTING.md](CONTRIBUTING.md)** for:
 
 ## Acknowledgements
 
-- [Agent Skills standard](https://agentskills.io) -- Open specification for portable agent capabilities
-- [Anthropic](https://anthropic.com) -- Original developer of the Agent Skills format
-- [agentskills/agentskills](https://github.com/agentskills/agentskills) -- Reference implementation and validation library
+- [Agent Skills standard](https://agentskills.io) — open specification for portable agent capabilities
+- [Anthropic](https://anthropic.com) — original developer of the Agent Skills format
+- [agentskills/agentskills](https://github.com/agentskills/agentskills) — reference implementation and validation library
