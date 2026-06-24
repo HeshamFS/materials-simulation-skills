@@ -442,6 +442,24 @@ python -m pytest tests/unit/test_your_script.py::TestYourScript::test_basic_case
 python -m pytest tests/ --cov=skills --cov-report=term-missing
 ```
 
+#### Test against the CI Python matrix (3.10–3.12)
+
+CI runs the suite on Python **3.10, 3.11, and 3.12** across Linux/macOS/Windows.
+Some failures only appear on older versions — e.g. `argparse` changed its
+invalid-choice message format in 3.12, so an assertion on that text can pass
+locally on 3.12 yet fail on 3.10/3.11. Before pushing, run the suite on the
+oldest supported version. If you don't have it installed, [`uv`](https://docs.astral.sh/uv/)
+spins up an ephemeral interpreter with the deps:
+
+```bash
+uv run --python 3.10 --with numpy --with scipy --with scikit-learn \
+  --with hypothesis --with pytest python -m pytest tests/ -q
+```
+
+Prefer asserting on **your own** error strings (stable across versions) rather than
+on argparse-generated text. When you must check argparse output, match a
+version-stable substring (e.g. `"invalid choice"`), not the formatted choice list.
+
 ---
 
 ## Pull Request Guidelines
