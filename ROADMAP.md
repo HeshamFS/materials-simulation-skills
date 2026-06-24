@@ -78,16 +78,21 @@ Cursor, Copilot, Amp, opencode, Grok). The direction now is depth, not foundatio
 
 ### Breadth — new skill areas
 
-Each new skill starts from one well-tested script.
+Breadth is gated by the [verifiable-correctness principle](docs/PROTOCOL.md): we
+expand first where correctness is checkable without an expert, and route
+expert-judgment domains through expert contribution. Each new skill starts from
+one well-tested script.
 
-- **Materials physics**: structure preparation (supercells, defects, surfaces,
-  grain boundaries), interatomic-potential / **MLIP readiness** selection,
-  CALPHAD/thermodynamic sanity, elasticity and symmetry checks.
-- **Code-interface review**: LAMMPS input review, DFT input review (VASP/QE —
-  k-points, cutoffs, smearing, convergence), phase-field setup review.
-- **Deeper HPC & V&V**: more scheduler portability (PBS/LSF), profiling-to-action
-  loops, richer manufactured-solution libraries and benchmark catalogs.
-- **Data / FAIR**: tighter NOMAD / OPTIMADE / Materials Project round-tripping.
+- **Self-validating first** (checkable against math/standards — the safest growth):
+  richer manufactured-solution and benchmark libraries with known exact answers,
+  spectral / multigrid methods, uncertainty quantification on analytical test
+  functions, deeper V&V, more scheduler portability (PBS/LSF).
+- **Expert-reviewed domains** (correctness rests on judgment — **only via expert
+  contribution + review**): DFT input review (VASP/QE — k-points, cutoffs,
+  smearing), LAMMPS/MD input review, interatomic-potential / **MLIP-readiness**
+  selection, CALPHAD/thermodynamic sanity.
+- **Data / FAIR**: tighter NOMAD / OPTIMADE / Materials Project round-tripping
+  (verifiable against the published APIs/schemas).
 
 ### Interoperability & distribution
 

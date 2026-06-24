@@ -22,6 +22,28 @@ All contributors are expected to follow the [Contributor Covenant Code of Conduc
 
 ---
 
+## What we accept: verifiable correctness
+
+This project's promise is that its skills are **validated, not just curated**. To
+keep that true, a new skill is accepted only when its correctness is **verifiable**,
+by one of two routes:
+
+1. **Checkable against ground truth that needs no expert** — the skill's outputs
+   reduce to math or a standard (analytical/closed-form solutions, the method of
+   manufactured solutions, published reference values, a named standard). These are
+   the easiest to land: pin the known answers with deterministic `script_checks`.
+2. **Vouched for by relevant expertise** — a maintainer or a domain-expert
+   reviewer can confirm the science is right (defaults, thresholds, classifications).
+
+Passing tests is **necessary but not sufficient** — tests confirm a script does
+what it was told, not that the underlying science is correct. For domains that
+hinge on **expert judgment** (e.g. DFT cutoffs/k-meshes, force-field selection),
+please **open a skill-proposal issue first** and bring a domain expert into the
+review; we will not author or merge unverifiable domain content. (Principle:
+[docs/PROTOCOL.md](docs/PROTOCOL.md).)
+
+---
+
 ## Getting Started
 
 ### 1. Fork and Clone

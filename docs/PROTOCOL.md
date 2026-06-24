@@ -22,6 +22,27 @@ every safeguard is documented in a fixed shape, and the science is cited.
 
 ---
 
+## Acceptance principle: verifiable correctness
+
+The project's value is that its skills are **validated, not just curated** — so the
+governing rule for *what gets shipped* is:
+
+> **A skill is accepted only when its correctness is verifiable** — either by
+> maintainer expertise, or against an authoritative ground truth that needs no
+> expert (an analytical/closed-form solution, a manufactured solution, a published
+> reference value, or a named standard). Passing tests is **not** sufficient: tests
+> confirm a script does what it was told, not that the science is right.
+
+Practically, this favours domains where correctness reduces to **math or
+standards** (numerical methods, verification & validation, well-specified
+formats) — anyone can check `CFL = 0.2` or a `[1, -2, 1]` stencil against a
+textbook. It defers domains where the "right" answer rests on **expert judgment**
+(e.g. DFT cutoffs/k-meshes, force-field choice): those enter only through
+**expert contribution and review**, never by authoring content no one in the loop
+can vouch for. See [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+---
+
 ## Conformance checklist
 
 ### 1. Spec-valid frontmatter  *(enforced — `mss validate`)*
