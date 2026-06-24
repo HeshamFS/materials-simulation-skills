@@ -15,7 +15,7 @@
       "script_checks": [
         {
           "description": "5x4 linspace sweep of dt and kappa yields 20 runs with exact grid values",
-          "cmd": ["scripts/sweep_generator.py", "--base-config", "evals/files/simulation.json", "--params", "dt:1e-4:1e-2:5,kappa:0.1:1.0:4", "--method", "linspace", "--output-dir", "evals/files/case1_sweep", "--force", "--json"],
+          "cmd": ["scripts/sweep_generator.py", "--base-config", "evals/files/simulation.json", "--params", "dt:1e-4:1e-2:5,kappa:0.1:1.0:4", "--method", "linspace", "--output-dir", "evals/scratch/case1_sweep", "--force", "--json"],
           "expect_exit": 0,
           "assert": [
             {"path": "total_runs", "op": "eq", "value": 20},
@@ -47,7 +47,7 @@
       "script_checks": [
         {
           "description": "LHS over 4 params with budget 25 yields 25 runs; seed-42 sample values are deterministic",
-          "cmd": ["scripts/sweep_generator.py", "--base-config", "evals/files/simulation.json", "--params", "dt:1e-4:1e-2,kappa:0.1:1.0,M:1e-6:1e-4,W:0.5:2.0", "--method", "lhs", "--samples", "25", "--output-dir", "evals/files/case2_sweep", "--force", "--json"],
+          "cmd": ["scripts/sweep_generator.py", "--base-config", "evals/files/simulation.json", "--params", "dt:1e-4:1e-2,kappa:0.1:1.0,M:1e-6:1e-4,W:0.5:2.0", "--method", "lhs", "--samples", "25", "--output-dir", "evals/scratch/case2_sweep", "--force", "--json"],
           "expect_exit": 0,
           "assert": [
             {"path": "total_runs", "op": "eq", "value": 25},
@@ -150,7 +150,7 @@
       "script_checks": [
         {
           "description": "1D linspace sweep of dt with 10 points yields 10 runs and exact evenly-spaced values",
-          "cmd": ["scripts/sweep_generator.py", "--base-config", "evals/files/config.json", "--params", "dt:1e-5:1e-3:10", "--method", "linspace", "--output-dir", "evals/files/case5_sweep", "--force", "--json"],
+          "cmd": ["scripts/sweep_generator.py", "--base-config", "evals/files/config.json", "--params", "dt:1e-5:1e-3:10", "--method", "linspace", "--output-dir", "evals/scratch/case5_sweep", "--force", "--json"],
           "expect_exit": 0,
           "assert": [
             {"path": "total_runs", "op": "eq", "value": 10},

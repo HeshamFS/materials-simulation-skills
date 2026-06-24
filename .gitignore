@@ -32,6 +32,13 @@ memory_results.json
 # committed inputs that the deterministic script_checks (mss eval) depend on.
 !skills/**/evals/files/**
 
+# ...but NOT files the script_checks regenerate at eval time (kept out of the
+# tree to avoid noise/non-deterministic churn): transient sweep outputs, and the
+# campaign.json the orchestrator init check writes into its input config dir.
+**/evals/scratch/
+skills/simulation-workflow/simulation-orchestrator/evals/files/case3_init/campaign.json
+skills/ontology/ontology-explorer/evals/files/mini_summary_out.json
+
 # OS
 Thumbs.db
 .DS_Store
