@@ -123,6 +123,9 @@ jobs:
       - name: Run deterministic skill evals (script_checks)
         run: python tools/run_skill_evals.py
 
+      - name: Check skill index + marketplace manifest are up to date
+        run: python tools/build_index.py --check
+
   skill-quality-eval:
     # Opt-in LLM-judge layer (Layer 3 of the eval harness, docs/EVAL_HARNESS.md).
     # The dry-run step validates per-CLI adapter command wiring on every run with no

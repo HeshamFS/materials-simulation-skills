@@ -4,6 +4,7 @@
 # But include specific dot folders we need
 !.github/
 !.git/
+!.claude-plugin/
 
 
 # Python

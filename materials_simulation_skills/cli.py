@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from .eval_runner import run_eval_checks
+from .skill_index import build_index
 from .skill_utils import (
     collect_metrics,
     find_repo_root,
@@ -98,6 +99,30 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return run_skill_script(root, args.skill_name, args.script_name, script_args)
 
 
+def _cmd_index(args: argparse.Namespace) -> int:
+    root = find_repo_root(Path.cwd())
+    index = build_index(root)
+    if args.json:
+        _print_json(index)
+    else:
+        s = index["summary"]
+        print(f"{s['skills']} skills | {s['scripts']} scripts | "
+              f"{s['deterministic_checks']} deterministic checks | "
+              f"{s['eval_coverage'] * 100:.0f}% eval coverage | {len(index['bundles'])} bundles")
+    return 0
+
+
+def _cmd_bundles(args: argparse.Namespace) -> int:
+    root = find_repo_root(Path.cwd())
+    bundles = build_index(root)["bundles"]
+    if args.json:
+        _print_json(bundles)
+    else:
+        for b in bundles:
+            print(f"{b['name']} ({b['kind']}, {len(b['skills'])} skills): {b['description']}")
+    return 0
+
+
 def _cmd_install(args: argparse.Namespace) -> int:
     root = find_repo_root(Path.cwd())
     installed = install_skills(
@@ -108,6 +133,7 @@ def _cmd_install(args: argparse.Namespace) -> int:
         install_all=args.all,
         dest=Path(args.dest) if args.dest else None,
         force=args.force,
+        bundle=args.bundle,
     )
     if args.json:
         _print_json({"installed": [str(path) for path in installed]})
@@ -145,10 +171,23 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument("script_args", nargs=argparse.REMAINDER)
     run_parser.set_defaults(func=_cmd_run)
 
+    index_parser = sub.add_parser("index", help="Show the machine-readable skill index summary")
+    index_parser.add_argument("--json", action="store_true", help="Emit the full index JSON")
+    index_parser.set_defaults(func=_cmd_index)
+
+    bundles_parser = sub.add_parser("bundles", help="List installable skill bundles")
+    bundles_parser.add_argument("--json", action="store_true", help="Emit JSON")
+    bundles_parser.set_defaults(func=_cmd_bundles)
+
     install_parser = sub.add_parser("install", help="Copy skills into an agent skill directory")
-    install_parser.add_argument("--agent", choices=["codex", "claude", "antigravity", "gemini", "copilot", "cursor"], required=True)
+    install_parser.add_argument(
+        "--agent",
+        choices=["codex", "claude", "antigravity", "gemini", "copilot", "cursor", "amp", "opencode", "grok"],
+        required=True,
+    )
     install_parser.add_argument("--scope", choices=["user", "project"], default="user")
     install_parser.add_argument("--skill", help="Skill name to install")
+    install_parser.add_argument("--bundle", help="Bundle name to install (see `mss bundles`)")
     install_parser.add_argument("--all", action="store_true", help="Install all skills")
     install_parser.add_argument("--dest", help="Override destination directory")
     install_parser.add_argument("--force", action="store_true", help="Replace existing destination")

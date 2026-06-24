@@ -254,6 +254,9 @@ def default_install_dir(agent: str, scope: str, root: Path) -> Path:
             "gemini": home / ".agents" / "skills",
             "copilot": home / ".copilot" / "skills",
             "cursor": home / ".cursor" / "skills",
+            "amp": home / ".config" / "agents" / "skills",
+            "opencode": home / ".config" / "opencode" / "skills",
+            "grok": home / ".grok" / "skills",
         }
     else:
         mapping = {
@@ -263,8 +266,20 @@ def default_install_dir(agent: str, scope: str, root: Path) -> Path:
             "gemini": root / ".agents" / "skills",
             "copilot": root / ".github" / "skills",
             "cursor": root / ".cursor" / "skills",
+            "amp": root / ".agents" / "skills",
+            "opencode": root / ".opencode" / "skills",
+            "grok": root / ".grok" / "skills",
         }
     return mapping[agent]
+
+
+def resolve_bundle(root: Path, bundle: str) -> list[str]:
+    """Return the skill names in a bundle (from the generated index)."""
+    from .skill_index import build_index
+    for b in build_index(root)["bundles"]:
+        if b["name"] == bundle:
+            return list(b["skills"])
+    raise KeyError(f"Unknown bundle: {bundle}")
 
 
 def install_skills(
@@ -275,11 +290,17 @@ def install_skills(
     install_all: bool,
     dest: Path | None,
     force: bool,
+    bundle: str | None = None,
 ) -> list[Path]:
-    if not install_all and not skill_name:
-        raise ValueError("Pass --skill NAME or --all")
+    if not install_all and not skill_name and not bundle:
+        raise ValueError("Pass --skill NAME, --bundle NAME, or --all")
     target_root = (dest or default_install_dir(agent, scope, root)).expanduser().resolve()
-    records = load_skill_records(root) if install_all else [find_skill(root, skill_name or "")]
+    if install_all:
+        records = load_skill_records(root)
+    elif bundle:
+        records = [find_skill(root, n) for n in resolve_bundle(root, bundle)]
+    else:
+        records = [find_skill(root, skill_name or "")]
     installed: list[Path] = []
     target_root.mkdir(parents=True, exist_ok=True)
     for record in records:

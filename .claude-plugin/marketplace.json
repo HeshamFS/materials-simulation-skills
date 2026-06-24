@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "materials-simulation-skills",
+  "description": "Validated, agent-agnostic Agent Skills for computational materials science and numerical simulation.",
+  "owner": {
+    "name": "Hesham Salama",
+    "url": "https://github.com/HeshamFS"
+  },
+  "metadata": {
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "core-numerical",
+      "description": "All core numerical skills.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/core-numerical/convergence-study",
+        "./skills/core-numerical/differentiation-schemes",
+        "./skills/core-numerical/linear-solvers",
+        "./skills/core-numerical/mesh-generation",
+        "./skills/core-numerical/nonlinear-solvers",
+        "./skills/core-numerical/numerical-integration",
+        "./skills/core-numerical/numerical-stability",
+        "./skills/core-numerical/time-stepping"
+      ]
+    },
+    {
+      "name": "data-management",
+      "description": "All data management skills.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/data-management/fair-simulation-packager"
+      ]
+    },
+    {
+      "name": "hpc-deployment",
+      "description": "All hpc deployment skills.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/hpc-deployment/hpc-runtime-doctor",
+        "./skills/hpc-deployment/slurm-job-script-generator"
+      ]
+    },
+    {
+      "name": "meta",
+      "description": "All meta skills.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/meta/skill-evaluator"
+      ]
+    },
+    {
+      "name": "ontology",
+      "description": "All ontology skills.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/ontology/ontology-explorer",
+        "./skills/ontology/ontology-mapper",
+        "./skills/ontology/ontology-validator"
+      ]
+    },
+    {
+      "name": "robustness",
+      "description": "All robustness skills.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/robustness/simulation-failure-triage"
+      ]
+    },
+    {
+      "name": "simulation-workflow",
+      "description": "All simulation workflow skills.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/simulation-workflow/md-analysis-planner",
+        "./skills/simulation-workflow/parameter-optimization",
+        "./skills/simulation-workflow/performance-profiling",
+        "./skills/simulation-workflow/post-processing",
+        "./skills/simulation-workflow/simulation-orchestrator",
+        "./skills/simulation-workflow/simulation-validator",
+        "./skills/simulation-workflow/workflow-engine-mapper"
+      ]
+    },
+    {
+      "name": "verification-validation",
+      "description": "All verification validation skills.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/verification-validation/benchmark-and-mms-planner"
+      ]
+    },
+    {
+      "name": "reproducible-campaigns",
+      "description": "Plan, run, diagnose, and FAIR-package multi-run simulation campaigns across HPC.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/simulation-workflow/parameter-optimization",
+        "./skills/simulation-workflow/simulation-orchestrator",
+        "./skills/simulation-workflow/performance-profiling",
+        "./skills/hpc-deployment/slurm-job-script-generator",
+        "./skills/hpc-deployment/hpc-runtime-doctor",
+        "./skills/robustness/simulation-failure-triage",
+        "./skills/data-management/fair-simulation-packager",
+        "./skills/simulation-workflow/workflow-engine-mapper"
+      ]
+    },
+    {
+      "name": "verification-and-validation",
+      "description": "Prove a result is trustworthy: stability, convergence, manufactured solutions, and pre/post-flight validation.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/core-numerical/numerical-stability",
+        "./skills/core-numerical/convergence-study",
+        "./skills/verification-validation/benchmark-and-mms-planner",
+        "./skills/simulation-workflow/simulation-validator"
+      ]
+    },
+    {
+      "name": "full",
+      "description": "Every materials-simulation domain skill.",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/verification-validation/benchmark-and-mms-planner",
+        "./skills/core-numerical/convergence-study",
+        "./skills/core-numerical/differentiation-schemes",
+        "./skills/data-management/fair-simulation-packager",
+        "./skills/hpc-deployment/hpc-runtime-doctor",
+        "./skills/core-numerical/linear-solvers",
+        "./skills/simulation-workflow/md-analysis-planner",
+        "./skills/core-numerical/mesh-generation",
+        "./skills/core-numerical/nonlinear-solvers",
+        "./skills/core-numerical/numerical-integration",
+        "./skills/core-numerical/numerical-stability",
+        "./skills/ontology/ontology-explorer",
+        "./skills/ontology/ontology-mapper",
+        "./skills/ontology/ontology-validator",
+        "./skills/simulation-workflow/parameter-optimization",
+        "./skills/simulation-workflow/performance-profiling",
+        "./skills/simulation-workflow/post-processing",
+        "./skills/robustness/simulation-failure-triage",
+        "./skills/simulation-workflow/simulation-orchestrator",
+        "./skills/simulation-workflow/simulation-validator",
+        "./skills/hpc-deployment/slurm-job-script-generator",
+        "./skills/core-numerical/time-stepping",
+        "./skills/simulation-workflow/workflow-engine-mapper"
+      ]
+    }
+  ]
+}
