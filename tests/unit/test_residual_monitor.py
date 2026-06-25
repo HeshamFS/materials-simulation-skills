@@ -30,7 +30,7 @@ class TestResidualMonitor(unittest.TestCase):
         residuals = [1.0, 0.8, 1.2, 0.7, 1.1, 0.6, 1.0, 0.5]
         result = self.mod.monitor_residuals(residuals)
         self.assertIn("oscillating", result["patterns_detected"])
-        self.assertTrue(len(result["alerts"]) > 0)
+        self.assertGreater(len(result["alerts"]), 0)
 
     def test_plateau_detection(self):
         """Test detection of residual plateau."""
@@ -43,7 +43,7 @@ class TestResidualMonitor(unittest.TestCase):
         residuals = [1.0, 2.0, 4.0, 8.0]
         result = self.mod.monitor_residuals(residuals)
         self.assertIn("diverging", result["patterns_detected"])
-        self.assertTrue(len(result["alerts"]) > 0)
+        self.assertGreater(len(result["alerts"]), 0)
 
     def test_initial_spike_detection(self):
         """Test detection of initial spike."""

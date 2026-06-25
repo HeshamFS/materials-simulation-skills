@@ -74,14 +74,14 @@ class TestConceptMapper(unittest.TestCase):
             SAMPLE_SUMMARY, term="lattice constant",
             synonyms=TEST_SYNONYMS,
         )
-        self.assertTrue(len(result["matches"]) > 0)
+        self.assertGreater(len(result["matches"]), 0)
         self.assertIn("synonym", result["matches"][0]["match_type"])
         self.assertEqual(result["matches"][0]["matched"], "Lattice Parameter")
 
     def test_exact_match(self):
         # Without synonyms, "Material" should get an exact match
         result = CONCEPT_MAPPER.map_concept(SAMPLE_SUMMARY, term="Material")
-        self.assertTrue(len(result["matches"]) > 0)
+        self.assertGreater(len(result["matches"]), 0)
         self.assertEqual(result["matches"][0]["matched"], "Material")
         self.assertEqual(result["matches"][0]["confidence"], 1.0)
 
@@ -91,7 +91,7 @@ class TestConceptMapper(unittest.TestCase):
             SAMPLE_SUMMARY, term="Material",
             synonyms=TEST_SYNONYMS,
         )
-        self.assertTrue(len(result["matches"]) > 0)
+        self.assertGreater(len(result["matches"]), 0)
         self.assertIn("Material", result["matches"][0]["matched"])
 
     def test_substring_match(self):
@@ -104,7 +104,7 @@ class TestConceptMapper(unittest.TestCase):
             SAMPLE_SUMMARY, terms=["FCC", "space group"],
             synonyms=TEST_SYNONYMS,
         )
-        self.assertTrue(len(result["matches"]) >= 2)
+        self.assertGreaterEqual(len(result["matches"]), 2)
 
     def test_unmatched_term(self):
         result = CONCEPT_MAPPER.map_concept(SAMPLE_SUMMARY, term="zzzznonexistent")
@@ -119,7 +119,7 @@ class TestConceptMapper(unittest.TestCase):
             SAMPLE_SUMMARY, term="space group number",
             property_synonyms=TEST_PROPERTY_SYNONYMS,
         )
-        self.assertTrue(len(result["matches"]) > 0)
+        self.assertGreater(len(result["matches"]), 0)
 
     def test_no_synonyms_falls_to_generic(self):
         """Without synonyms, only generic matching (exact/substring/description) works."""

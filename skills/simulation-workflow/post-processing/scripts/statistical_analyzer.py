@@ -16,7 +16,7 @@ import math
 import os
 import re
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 # Security limits
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
@@ -248,7 +248,6 @@ def detect_distribution_type(
         return {"type": "unknown", "confidence": 0}
 
     n_bins = len(counts)
-    total = sum(counts)
 
     # Find peaks (including edge bins)
     peaks = []

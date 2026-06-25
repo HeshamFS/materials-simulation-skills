@@ -78,9 +78,8 @@ def generate_doe(
         raise ValueError(f"method must be one of: {', '.join(sorted(valid_methods))}")
 
     # --budget is optional only for factorial when --levels is given explicitly.
-    budget_required = not (method == "factorial" and levels is not None)
     if budget is None:
-        if budget_required:
+        if not (method == "factorial" and levels is not None):
             raise ValueError("budget must be positive")
     else:
         if budget <= 0:

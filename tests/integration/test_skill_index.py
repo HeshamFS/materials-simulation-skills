@@ -4,12 +4,15 @@ Guards that the committed skills_index.json / .claude-plugin/marketplace.json ar
 **fresh** (regenerate-and-diff), structurally valid, internally consistent, and
 that every skill belongs to its category bundle.
 """
-import json
 import unittest
-from pathlib import Path
 
-from materials_simulation_skills.skill_index import build_index, build_marketplace, dumps
-from materials_simulation_skills.skill_utils import find_repo_root, resolve_bundle
+from materials_simulation_skills.skill_index import (
+    build_index,
+    build_marketplace,
+    dumps,
+    resolve_bundle,
+)
+from materials_simulation_skills.skill_utils import find_repo_root
 
 ROOT = find_repo_root()
 

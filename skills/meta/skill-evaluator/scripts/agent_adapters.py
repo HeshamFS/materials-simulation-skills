@@ -22,7 +22,6 @@ import argparse
 import json
 import shlex
 import sys
-from pathlib import Path
 from typing import Any
 
 # ---------------------------------------------------------------------------

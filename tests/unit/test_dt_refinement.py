@@ -1,4 +1,3 @@
-import math
 import unittest
 
 from tests.unit._utils import load_module

@@ -15,7 +15,7 @@ import json
 import os
 import re
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 # Security limits
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB

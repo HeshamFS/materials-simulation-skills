@@ -86,7 +86,6 @@ def compute_richardson_extrapolation(spacings, values, order):
     if len(spacings_sorted) >= 3:
         h1 = spacings_sorted[-1]  # finest
         h2 = spacings_sorted[-2]
-        h3 = spacings_sorted[-3]  # coarsest of three
         f1 = values_sorted[-1]
         f2 = values_sorted[-2]
         f3 = values_sorted[-3]

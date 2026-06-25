@@ -1,7 +1,6 @@
 """Unit tests for post-processing profile_extractor.py script."""
 
 import json
-import math
 import os
 import shutil
 import tempfile

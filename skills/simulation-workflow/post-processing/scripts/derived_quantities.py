@@ -336,7 +336,7 @@ def compute_gradient_magnitude(
 
         for j in range(ny):
             for i in range(nx):
-                m = math.sqrt(grad_x[j][i] ** 2 + grad_y[j][i] ** 2)
+                m = math.hypot(grad_x[j][i], grad_y[j][i])
                 mag[j][i] = m
                 all_mag.append(m)
 

@@ -255,8 +255,6 @@ def extract_line_profile(
         }
 
     if ndim == 2:
-        ny, nx = shape
-
         # Generate points along line
         values = []
         distances = []
@@ -279,19 +277,15 @@ def extract_line_profile(
             # Distance along line
             dx = x - start[0]
             dy = y - start[1]
-            dist = math.sqrt(dx * dx + dy * dy)
+            dist = math.hypot(dx, dy)
             distances.append(dist)
 
         # Normalize distances
         if distances[-1] > 0:
-            line_length = math.sqrt(
-                (end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2
-            )
+            line_length = math.hypot(end[0] - start[0], end[1] - start[1])
             # Scale by domain if available
             if "Lx" in grid_info and "Ly" in grid_info:
-                line_length *= math.sqrt(
-                    grid_info["Lx"] ** 2 + grid_info["Ly"] ** 2
-                )
+                line_length *= math.hypot(grid_info["Lx"], grid_info["Ly"])
 
         return {
             "start": start,

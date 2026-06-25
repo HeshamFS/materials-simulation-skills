@@ -30,7 +30,7 @@ import math
 import os
 import re
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 # Security limits
 MAX_RESULT_FILE_SIZE = 10 * 1024 * 1024  # 10 MB

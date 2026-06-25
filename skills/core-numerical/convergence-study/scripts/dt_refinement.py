@@ -71,7 +71,6 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
         for i in range(len(timesteps_sorted) - 2):
             dt_coarse = timesteps_sorted[i]
             dt_mid = timesteps_sorted[i + 1]
-            dt_fine = timesteps_sorted[i + 2]
             f_coarse = values_sorted[i]
             f_mid = values_sorted[i + 1]
             f_fine = values_sorted[i + 2]
@@ -135,7 +134,7 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
 
     if mean_order is not None and mean_order > 0:
         richardson_extrapolated_value = f_fine + (f_fine - f_next) / (r ** mean_order - 1)
-    elif mean_order is not None and mean_order <= 0:
+    elif mean_order is not None:
         # Non-positive observed order: solution appears to be diverging.
         # Do not fall back to expected order; an extrapolated value would be misleading.
         richardson_extrapolated_value = None

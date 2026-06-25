@@ -40,7 +40,7 @@ class TestCliConceptMapper(unittest.TestCase):
         ])
         self.assertEqual(result.returncode, 0, result.stderr)
         data = json.loads(result.stdout)
-        self.assertTrue(len(data["results"]["matches"]) >= 2)
+        self.assertGreaterEqual(len(data["results"]["matches"]), 2)
 
 
 class TestCliCrystalMapper(unittest.TestCase):

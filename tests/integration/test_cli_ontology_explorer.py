@@ -36,7 +36,7 @@ class TestCliClassBrowser(unittest.TestCase):
             "inputs": dict,
             "results": {"roots": list},
         })
-        self.assertTrue(len(data["results"]["roots"]) > 0)
+        self.assertGreater(len(data["results"]["roots"]), 0)
 
     def test_class_lookup_json(self):
         result = self.run_cmd([

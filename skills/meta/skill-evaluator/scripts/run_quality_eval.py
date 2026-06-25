@@ -57,8 +57,7 @@ def _wrapper_prompt(eval_prompt: str, outputs_dir: Path, files: list[str], save_
         f"Save all outputs (files you create) to: {outputs_dir}",
         f"Outputs to save: {save_hint or 'any files or analysis the task calls for'}",
         "",
-        "Also write a short user_notes.md in that outputs directory listing any "
-        "uncertainties, things that need review, or workarounds you used.",
+        "Also write a short user_notes.md in that outputs directory listing any uncertainties, things that need review, or workarounds you used.",
     ]
     return "\n".join(lines)
 

@@ -23,7 +23,7 @@ import json
 import os
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 def load_campaign(config_dir: str) -> Dict[str, Any]:

@@ -1,9 +1,8 @@
-import json
 import sys
 import tempfile
 import unittest
+import unittest.mock as mock
 from pathlib import Path
-from unittest import mock
 
 from tests.unit._utils import load_module
 

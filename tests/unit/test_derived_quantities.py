@@ -1,10 +1,5 @@
 """Unit tests for post-processing derived_quantities.py script."""
 
-import json
-import math
-import os
-import shutil
-import tempfile
 import unittest
 
 from tests.unit._utils import load_module

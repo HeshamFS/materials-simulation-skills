@@ -1,7 +1,6 @@
 """Unit tests for post-processing comparison_tool.py script."""
 
 import json
-import math
 import os
 import shutil
 import tempfile

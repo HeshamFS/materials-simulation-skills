@@ -42,7 +42,7 @@ class TestSensitivitySummary(unittest.TestCase):
     def test_low_sensitivity_note(self):
         """Test low sensitivity adds note."""
         result = self.mod.summarize([0.05, 0.02, 0.01], ["a", "b", "c"])
-        self.assertTrue(len(result["notes"]) > 0)
+        self.assertGreater(len(result["notes"]), 0)
         self.assertTrue(any("low" in note.lower() for note in result["notes"]))
 
     def test_high_sensitivity_no_note(self):

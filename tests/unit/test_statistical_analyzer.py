@@ -1,7 +1,6 @@
 """Unit tests for post-processing statistical_analyzer.py script."""
 
 import json
-import math
 import os
 import shutil
 import subprocess
@@ -149,6 +148,9 @@ class TestStatisticalAnalyzer(unittest.TestCase):
         hist = self.mod.compute_histogram(values, num_bins=10)
         result = self.mod.detect_distribution_type(values, hist)
         # Should detect as roughly uniform or monotonic
+        self.assertIn(result["type"], {"uniform", "monotonic"})
+        self.assertGreaterEqual(result["confidence"], 0.0)
+        self.assertLessEqual(result["confidence"], 1.0)
 
     def test_detect_distribution_type_bimodal(self):
         """Test detecting bimodal distribution."""

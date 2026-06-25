@@ -7,7 +7,7 @@ import json
 import math
 import os
 import sys
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 # Security limits
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB

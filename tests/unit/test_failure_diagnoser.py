@@ -118,7 +118,7 @@ class TestFailureDiagnoser(unittest.TestCase):
     def test_fixes_provided(self):
         """Test recommended fixes are provided."""
         result = self.mod.diagnose("NaN encountered")
-        self.assertTrue(len(result["recommended_fixes"]) > 0)
+        self.assertGreater(len(result["recommended_fixes"]), 0)
         self.assertIn("dt", result["recommended_fixes"][0].lower())
 
     def test_case_insensitive(self):

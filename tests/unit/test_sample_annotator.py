@@ -86,7 +86,7 @@ class TestSampleAnnotator(unittest.TestCase):
             a for a in result["annotations"]
             if a.get("class") == "Chemical Element"
         ]
-        self.assertTrue(len(elements) > 0)
+        self.assertGreater(len(elements), 0)
         self.assertEqual(elements[0]["value"], "Cu")
 
     def test_amorphous_material(self):
@@ -148,7 +148,7 @@ class TestSampleAnnotator(unittest.TestCase):
             a for a in result["annotations"]
             if a.get("class") == "Chemical Element"
         ]
-        self.assertTrue(len(elements) > 0)
+        self.assertGreater(len(elements), 0)
         self.assertEqual(elements[0]["value"], "Au")
 
     def test_generic_defaults_without_mappings(self):
@@ -229,12 +229,12 @@ class TestSampleAnnotatorAsmoRegression(unittest.TestCase):
             mappings=self.mappings,
         )
         # Crystal/sample terms are not in ASMO -> warnings present.
-        self.assertTrue(len(result["validation_warnings"]) > 0)
+        self.assertGreater(len(result["validation_warnings"]), 0)
         # Every flagged annotation has confidence 0.0 and a warning field.
         flagged = [
             a for a in result["annotations"] if "validation_warning" in a
         ]
-        self.assertTrue(len(flagged) > 0)
+        self.assertGreater(len(flagged), 0)
         for ann in flagged:
             self.assertEqual(ann["confidence"], 0.0)
         # The crystal-structure terms specifically are flagged.

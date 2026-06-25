@@ -189,3 +189,11 @@ def build_marketplace(index: dict[str, Any]) -> dict[str, Any]:
 def dumps(obj: Any) -> str:
     """Canonical JSON serialization used for both writing and freshness checks."""
     return json.dumps(obj, indent=2, ensure_ascii=False) + "\n"
+
+
+def resolve_bundle(root: Path, bundle: str) -> list[str]:
+    """Return the skill names in a bundle (from the generated index)."""
+    for b in build_index(root)["bundles"]:
+        if b["name"] == bundle:
+            return list(b["skills"])
+    raise KeyError(f"Unknown bundle: {bundle}")

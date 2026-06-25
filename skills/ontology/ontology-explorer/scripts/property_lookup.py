@@ -149,30 +149,25 @@ def lookup_property(
     if property_name:
         # Search in both object and data properties
         found = None
-        found_type = None
         for name, info in obj_props.items():
             if name.lower() == property_name.lower():
                 found = {"name": name, "type": "object", **info}
-                found_type = "object"
                 break
         if not found:
             for name, info in data_props.items():
                 if name.lower() == property_name.lower():
                     found = {"name": name, "type": "data", **info}
-                    found_type = "data"
                     break
         if not found:
             # Try partial match
             for name, info in obj_props.items():
                 if property_name.lower() in name.lower():
                     found = {"name": name, "type": "object", **info}
-                    found_type = "object"
                     break
             if not found:
                 for name, info in data_props.items():
                     if property_name.lower() in name.lower():
                         found = {"name": name, "type": "data", **info}
-                        found_type = "data"
                         break
         if not found:
             all_names = sorted(list(obj_props.keys()) + list(data_props.keys()))

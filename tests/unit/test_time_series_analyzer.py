@@ -176,6 +176,7 @@ class TestTimeSeriesAnalyzer(unittest.TestCase):
         values = [1.0] * 10  # No change
         result = self.mod.compute_convergence_rate(values)
         # Should recognize as stalled or unknown
+        self.assertIn(result["type"], {"stalled", "unknown"})
 
     def test_extract_quantity(self):
         """Test extracting quantity from data."""

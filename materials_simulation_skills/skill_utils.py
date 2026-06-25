@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -312,15 +311,6 @@ def default_install_dir(agent: str, scope: str, root: Path) -> Path:
     return mapping[agent]
 
 
-def resolve_bundle(root: Path, bundle: str) -> list[str]:
-    """Return the skill names in a bundle (from the generated index)."""
-    from .skill_index import build_index
-    for b in build_index(root)["bundles"]:
-        if b["name"] == bundle:
-            return list(b["skills"])
-    raise KeyError(f"Unknown bundle: {bundle}")
-
-
 def install_skills(
     root: Path,
     agent: str,
@@ -329,15 +319,15 @@ def install_skills(
     install_all: bool,
     dest: Path | None,
     force: bool,
-    bundle: str | None = None,
+    bundle_skills: list[str] | None = None,
 ) -> list[Path]:
-    if not install_all and not skill_name and not bundle:
+    if not install_all and not skill_name and not bundle_skills:
         raise ValueError("Pass --skill NAME, --bundle NAME, or --all")
     target_root = (dest or default_install_dir(agent, scope, root)).expanduser().resolve()
     if install_all:
         records = load_skill_records(root)
-    elif bundle:
-        records = [find_skill(root, n) for n in resolve_bundle(root, bundle)]
+    elif bundle_skills:
+        records = [find_skill(root, n) for n in bundle_skills]
     else:
         records = [find_skill(root, skill_name or "")]
     installed: list[Path] = []

@@ -10,7 +10,6 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.integration._schema import assert_schema
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = ROOT / "skills" / "simulation-workflow" / "post-processing" / "scripts"

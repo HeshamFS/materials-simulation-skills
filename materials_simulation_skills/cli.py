@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from .eval_runner import run_eval_checks
-from .skill_index import build_index
+from .skill_index import build_index, resolve_bundle
 from .skill_utils import (
     collect_metrics,
     find_repo_root,
@@ -125,6 +125,7 @@ def _cmd_bundles(args: argparse.Namespace) -> int:
 
 def _cmd_install(args: argparse.Namespace) -> int:
     root = find_repo_root(Path.cwd())
+    bundle_skills = resolve_bundle(root, args.bundle) if args.bundle else None
     installed = install_skills(
         root=root,
         agent=args.agent,
@@ -133,7 +134,7 @@ def _cmd_install(args: argparse.Namespace) -> int:
         install_all=args.all,
         dest=Path(args.dest) if args.dest else None,
         force=args.force,
-        bundle=args.bundle,
+        bundle_skills=bundle_skills,
     )
     if args.json:
         _print_json({"installed": [str(path) for path in installed]})

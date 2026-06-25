@@ -4,7 +4,6 @@ Uses Hypothesis to verify mathematical invariants of CFL checker,
 von Neumann analyzer, and mesh quality functions.
 """
 
-import math
 import unittest
 
 import numpy as np

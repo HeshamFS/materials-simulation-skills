@@ -136,7 +136,7 @@ def compute_h_refinement(spacings, values, expected_order=None):
 
     if mean_order is not None and mean_order > 0:
         richardson_extrapolated_value = f_fine + (f_fine - f_next) / (r ** mean_order - 1)
-    elif mean_order is not None and mean_order <= 0:
+    elif mean_order is not None:
         # Non-positive observed order: solution appears to be diverging.
         # Do not fall back to expected order; an extrapolated value would be misleading.
         richardson_extrapolated_value = None

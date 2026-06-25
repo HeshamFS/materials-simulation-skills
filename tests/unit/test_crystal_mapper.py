@@ -62,7 +62,7 @@ class TestCrystalMapper(unittest.TestCase):
         result = CRYSTAL_MAPPER.map_crystal(
             system="hexagonal", space_group=225,
         )
-        self.assertTrue(len(result["validation_warnings"]) > 0)
+        self.assertGreater(len(result["validation_warnings"]), 0)
 
     def test_cubic_lattice_mismatch_warning(self):
         result = CRYSTAL_MAPPER.map_crystal(

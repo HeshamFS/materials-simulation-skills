@@ -85,7 +85,7 @@ class TestFairPackager(unittest.TestCase):
 
     def test_recommended_next_steps_populated(self):
         manifest = self._build()
-        self.assertTrue(len(manifest["recommended_next_steps"]) > 0)
+        self.assertGreater(len(manifest["recommended_next_steps"]), 0)
 
     def test_empty_project_name_rejected(self):
         with self.assertRaises(ValueError):
