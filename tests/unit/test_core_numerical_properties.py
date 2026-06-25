@@ -9,7 +9,7 @@ import unittest
 import numpy as np
 
 try:
-    from hypothesis import given, strategies as st, settings, assume
+    from hypothesis import given, strategies as st, settings
     HYPOTHESIS_AVAILABLE = True
 except ImportError:
     HYPOTHESIS_AVAILABLE = False
@@ -19,8 +19,6 @@ except ImportError:
         return decorator
     settings = lambda **kwargs: lambda func: func
     st = None
-    def assume(x):
-        pass
 
 from tests.unit._utils import load_module
 
