@@ -4,6 +4,7 @@ import json
 import math
 import sys
 from typing import Dict, List
+import numpy as np
 
 # Security limits
 MAX_LIST_LENGTH = 100_000
@@ -44,22 +45,26 @@ def _solve(matrix: List[List[float]], rhs: List[float]) -> List[float]:
     return [aug[i][n] / aug[i][i] for i in range(n)]
 
 
-def _poly_fit(x: List[float], y: List[float], degree: int) -> List[float]:
-    """Least-squares polynomial fit via the normal equations.
+def _poly_fit(x, y, degree):
+    """Fit in a centered/scaled basis using SVD least squares; retain that basis."""
+    xx = np.asarray(x, dtype=float)
+    yy = np.asarray(y, dtype=float)
+    if not np.all(np.isfinite(xx)) or not np.all(np.isfinite(yy)):
+        raise ValueError("Polynomial samples must be finite")
+    center = float(xx.min()/2 + xx.max()/2)
+    scale = float(np.max(np.abs(xx-center)))
+    if scale == 0:
+        raise ValueError("Polynomial abscissas have zero span")
+    matrix = np.polynomial.polynomial.polyvander((xx-center)/scale, degree)
+    coeff, _, rank, sv = np.linalg.lstsq(matrix, yy, rcond=None)
+    if rank != degree+1:
+        raise ValueError("Polynomial design is rank deficient")
+    return {"coefficients": coeff, "center": center, "scale": scale,
+            "rank": int(rank), "condition_number": float(sv[0]/sv[-1])}
 
-    Returns coefficients [c0, c1, ..., c_degree] for c0 + c1*x + ... .
-    """
-    n = degree + 1
-    # Vandermonde-based normal equations: (V^T V) c = V^T y.
-    # Precompute power sums to avoid building the full Vandermonde matrix.
-    power_sums = [sum(xi ** p for xi in x) for p in range(2 * degree + 1)]
-    ata = [[power_sums[i + j] for j in range(n)] for i in range(n)]
-    atb = [sum((xi ** i) * yi for xi, yi in zip(x, y)) for i in range(n)]
-    return _solve(ata, atb)
 
-
-def _poly_eval(coeffs: List[float], xi: float) -> float:
-    return sum(c * (xi ** p) for p, c in enumerate(coeffs))
+def _poly_eval(fit, xi):
+    return float(np.polynomial.polynomial.polyval((xi-fit["center"])/fit["scale"], fit["coefficients"]))
 
 
 def _rbf_weights(centers: List[float], y: List[float], epsilon: float) -> List[float]:
@@ -97,6 +102,8 @@ def build_surrogate(x: List[float], y: List[float], model: str) -> Dict[str, obj
     if len(x) < 2:
         raise ValueError("need at least 2 samples")
 
+    if any(not math.isfinite(v) for v in x+y):
+        raise ValueError("Samples must be finite")
     n = len(x)
     mean_y = sum(y) / n
     output_variance = sum((yi - mean_y) ** 2 for yi in y) / n
@@ -111,8 +118,8 @@ def build_surrogate(x: List[float], y: List[float], model: str) -> Dict[str, obj
             mse = sum(r * r for r in residuals) / n
         except ValueError:
             # Fall back to baseline variance if the fit is degenerate.
-            mse = output_variance
-            notes.append("Polynomial fit was degenerate; reporting baseline variance.")
+            mse = None
+            notes.append("Polynomial fit was degenerate; fit unavailable.")
         cv_error = _loo_cv_poly(x, y, degree)
         notes.append(f"Least-squares polynomial fit (degree {degree}); MSE is the fit residual.")
     else:  # rbf
@@ -122,18 +129,20 @@ def build_surrogate(x: List[float], y: List[float], model: str) -> Dict[str, obj
             residuals = [yi - _rbf_eval(x, weights, epsilon, xi) for xi, yi in zip(x, y)]
             mse = sum(r * r for r in residuals) / n
         except ValueError:
-            mse = output_variance
-            notes.append("RBF system was singular; reporting baseline variance.")
+            mse = None
+            notes.append("RBF system was singular; fit unavailable.")
         cv_error = _loo_cv_rbf(x, y, epsilon)
         notes.append(
             "Gaussian RBF interpolation; in-sample MSE is near zero by construction, "
             "so use cv_error (leave-one-out) to judge fit quality."
         )
 
-    notes.append("Surrogate is a lightweight stdlib implementation; use scipy/scikit-learn for production.")
+    notes.append("Polynomial fits use centered/scaled SVD least squares; RBF fits are lightweight. Cross-validation is not physical validation; production use requires domain validation.")
 
     return {
         "model_type": model,
+        "fit_status": "ok" if mse is not None else "failed",
+        "fit_diagnostics": {k: v for k,v in coeffs.items() if k != "coefficients"} if model == "poly" and mse is not None else None,
         "metrics": {
             "mse": mse,
             "cv_error": cv_error,
@@ -147,7 +156,7 @@ def _loo_cv_poly(x: List[float], y: List[float], degree: int) -> float:
     """Leave-one-out cross-validation mean squared error for the poly fit."""
     n = len(x)
     if n <= degree + 1:
-        return float("nan")
+        return None
     total = 0.0
     for i in range(n):
         xt = x[:i] + x[i + 1:]
@@ -156,7 +165,7 @@ def _loo_cv_poly(x: List[float], y: List[float], degree: int) -> float:
             coeffs = _poly_fit(xt, yt, degree)
             pred = _poly_eval(coeffs, x[i])
         except ValueError:
-            return float("nan")
+            return None
         total += (y[i] - pred) ** 2
     return total / n
 
@@ -165,7 +174,7 @@ def _loo_cv_rbf(x: List[float], y: List[float], epsilon: float) -> float:
     """Leave-one-out cross-validation mean squared error for the RBF fit."""
     n = len(x)
     if n < 3:
-        return float("nan")
+        return None
     total = 0.0
     for i in range(n):
         xt = x[:i] + x[i + 1:]
@@ -174,7 +183,7 @@ def _loo_cv_rbf(x: List[float], y: List[float], epsilon: float) -> float:
             weights = _rbf_weights(xt, yt, epsilon)
             pred = _rbf_eval(xt, weights, epsilon, x[i])
         except ValueError:
-            return float("nan")
+            return None
         total += (y[i] - pred) ** 2
     return total / n
 
@@ -213,8 +222,8 @@ def main() -> None:
     metrics = result["metrics"]
     print("Surrogate summary")
     print(f"  model: {result['model_type']}")
-    print(f"  mse: {metrics['mse']:.6g}")
-    print(f"  cv_error: {metrics['cv_error']:.6g}")
+    print(f"  mse: {metrics['mse']}")
+    print(f"  cv_error: {metrics['cv_error']}")
 
 
 if __name__ == "__main__":

@@ -4,6 +4,17 @@ import argparse
 import json
 import math
 import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "_support"))
+from refinement_order import observed_order
+
+
+def finite_float(raw):
+    value = float(raw)
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError("value must be finite")
+    return value
 
 
 def parse_args():
@@ -20,7 +31,7 @@ def parse_args():
         help="Comma-separated solution values at each spacing level",
     )
     parser.add_argument(
-        "--order", type=float, required=True,
+        "--order", type=finite_float, required=True,
         help="Assumed convergence order",
     )
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
@@ -51,7 +62,7 @@ def compute_richardson_extrapolation(spacings, values, order):
         raise ValueError("too many refinement levels (max 10000)")
     if len(spacings) < 2:
         raise ValueError("At least 2 refinement levels required")
-    if order <= 0:
+    if not math.isfinite(order) or order <= 0:
         raise ValueError("order must be positive")
     for s in spacings:
         if not math.isfinite(s) or s <= 0:
@@ -59,6 +70,9 @@ def compute_richardson_extrapolation(spacings, values, order):
     for v in values:
         if not math.isfinite(v):
             raise ValueError("All values must be finite numbers")
+
+    if len(set(spacings)) != len(spacings):
+        raise ValueError("Grid spacings must be distinct")
 
     # Sort by spacing descending (coarsest first)
     paired = sorted(zip(spacings, values), key=lambda x: -x[0])
@@ -74,7 +88,7 @@ def compute_richardson_extrapolation(spacings, values, order):
 
     extrapolated_value = f_fine + (f_fine - f_coarse) / (r ** order - 1)
     error_estimate = abs(f_fine - f_coarse) / (r ** order - 1)
-    relative_error_estimate = error_estimate / abs(extrapolated_value) if extrapolated_value != 0 else float("inf")
+    relative_error_estimate = error_estimate / abs(extrapolated_value) if extrapolated_value != 0 else None
 
     result = {
         "extrapolated_value": extrapolated_value,
@@ -90,17 +104,19 @@ def compute_richardson_extrapolation(spacings, values, order):
         f2 = values_sorted[-2]
         f3 = values_sorted[-3]
 
-        e_fine = abs(f2 - f1)
-        e_coarse = abs(f3 - f2)
-
-        if e_fine > 0 and e_coarse > 0:
-            r_ratio = h2 / h1
-            observed_order = math.log(e_coarse / e_fine) / math.log(r_ratio)
-            result["observed_order"] = observed_order
-            result["order_consistent"] = abs(observed_order - order) / order <= 0.1
-        else:
+        try:
+            p = observed_order(h1, h2, spacings_sorted[-3], f1, f2, f3)
+            result["observed_order"] = p
+            result["order_consistent"] = abs(p-order)/order <= 0.1
+            invalid = p <= 0
+        except ValueError:
             result["observed_order"] = None
-            result["order_consistent"] = None
+            result["order_consistent"] = False
+            invalid = True
+        if invalid:
+            for key in ("extrapolated_value", "error_estimate", "relative_error_estimate"):
+                result[key] = None
+            result["note"] = "Oscillatory, divergent or unresolved sequence; estimate suppressed"
 
     return {
         "inputs": {
@@ -133,9 +149,9 @@ def main():
         r = result["results"]
         print("Richardson Extrapolation")
         print("  assumed order: %.2f" % args.order)
-        print("  extrapolated value: %.6g" % r["extrapolated_value"])
-        print("  error estimate: %.6g" % r["error_estimate"])
-        print("  relative error estimate: %.6g" % r["relative_error_estimate"])
+        print("  extrapolated value: %s" % r["extrapolated_value"])
+        print("  error estimate: %s" % r["error_estimate"])
+        print("  relative error estimate: %s" % r["relative_error_estimate"])
         if "observed_order" in r and r["observed_order"] is not None:
             print("  observed order: %.4f" % r["observed_order"])
             print("  order consistent: %s" % r["order_consistent"])

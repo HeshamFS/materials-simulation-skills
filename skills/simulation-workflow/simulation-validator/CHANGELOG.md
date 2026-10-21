@@ -2,6 +2,14 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.3] - 2026-10-19
+
+### Added
+- 1 defect-focused skill eval scenarios with portable analytic or rejection checks.
+
+### Fixed
+- Reject invalid or incomplete metrics and distinguish the check-pass fraction from physical or statistical confidence.
+
 ## [1.2.2] - 2026-06-24
 
 ### Added

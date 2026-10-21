@@ -22,7 +22,7 @@ python derived_quantities.py --input field.json --quantity volume_fraction \
 ```
 
 **Interpretation:**
-- V_f = 0.5: Equal phase fractions (equilibrium for symmetric systems)
+- V_f = 0.5: Equal thresholded sample fractions; this alone does not establish equilibrium
 - V_f → 0 or 1: Predominantly single phase
 - Time evolution of V_f: Phase transformation kinetics
 
@@ -30,9 +30,12 @@ python derived_quantities.py --input field.json --quantity volume_fraction \
 
 **Definition:** Surface area (3D) or perimeter (2D) of iso-surface at threshold.
 
-**Method:** Marching squares/cubes approximation
-- Count cells where threshold is crossed
-- Multiply by average cell size
+**Method:** In 2D, interpolate contour segments on a fixed triangular subdivision
+of each cell and sum their Euclidean lengths using dx and dy separately.
+Threshold plateaus do not define a unique contour and are rejected. Curved
+contours require a refinement study; triangle orientation can affect coarse
+results. Only the domain spanned by sample coordinates is measured. 3D surface
+area remains explicitly unimplemented.
 
 **Physical Meaning:**
 - Interfacial area controls reaction/diffusion rates
@@ -46,8 +49,7 @@ python derived_quantities.py --input field.json --quantity interface_area \
 ```
 
 **Interpretation:**
-- A(t) ∝ t^(-1/3): Normal coarsening (2D)
-- A(t) ∝ t^(-1/2): Interface-controlled growth
+- Coarsening exponents depend on conservation, transport mechanism, morphology and boundary conditions; no universal exponent is inferred by this tool.
 - Sudden increase: New phase nucleation
 
 ## Gradient Magnitude
@@ -76,11 +78,16 @@ python derived_quantities.py --input field.json --quantity gradient_magnitude \
 
 ## Integral / Total Mass
 
-**Definition:** ∫φ dV ≈ Σφᵢ × ΔV
+**Definition:** ∫φ dV using tensor trapezoidal weights on nodal axes and midpoint
+weights on cell-centered axes. Domain lengths without explicit spacing imply
+nodal grids (L/(n-1)); explicit spacing alone defaults to cell samples. Set
+`centering` to `node` or `cell` in input JSON to disambiguate. Contradictory
+spacing/domain metadata is rejected. Mass and centroid use the same quadrature.
+Centroid coordinates place the first sample at zero; absolute origin is not inferred.
 
 **Physical Meaning:**
 - Total amount of conserved quantity
-- Should be constant for Cahn-Hilliard dynamics
+- Should be constant for closed, source-free Cahn-Hilliard dynamics with compatible boundary conditions
 - May change for Allen-Cahn (non-conserved)
 
 **Usage:**
@@ -90,12 +97,11 @@ python derived_quantities.py --input field.json --quantity integral \
 ```
 
 **Conservation Check:**
-- |M(t) - M(0)| / M(0) < 10⁻¹⁰: Well-conserved
-- Drift > 10⁻⁶: Possible discretization issue
+- Select an absolute and relative tolerance from units, initial mass, resolution, solver accuracy and boundary fluxes. No universal numerical threshold proves conservation.
 
 ## Total Variation
 
-**Definition:** TV(φ) = ∫|∇φ| dV ≈ Σ|φᵢ₊₁ - φᵢ|
+**Definition:** This utility reports the discrete sum of neighbor absolute differences. In 2D it is an unweighted lattice diagnostic, not a physically scaled isotropic ∫|∇φ| dV. Do not compare its raw value across grids or units as a physical interface measurement.
 
 **Physical Meaning:**
 - Measures total "roughness" of field
@@ -152,6 +158,6 @@ All quantities assume consistent units based on grid spacing:
 | Volume fraction | Dimensionless |
 | Interface area | m² (3D) or m (2D) |
 | Gradient | 1/m |
-| Integral | m³ × [field units] |
-| Total variation | m² × [field units] |
+| Integral | m^d × [field units], d = field dimension |
+| Total variation | [field units] for the discrete neighbor-difference diagnostic |
 | Centroid | m |

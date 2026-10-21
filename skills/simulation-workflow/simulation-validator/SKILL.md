@@ -13,15 +13,17 @@ description: >
   these results."
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
-  eval_cases: 5
-  last_reviewed: "2026-06-23"
+  eval_cases: 6
+  last_reviewed: "2026-10-19"
   standards:
     - "Courant-Friedrichs-Lewy (CFL) stability condition (Courant, Friedrichs & Lewy, 1928)"
     - "von Neumann stability analysis (diffusion-Fourier number limit dt <= dx^2/(2*D*dim))"
@@ -73,7 +75,7 @@ Has simulation finished?
 ├── YES → Run Stage 3: result_validator.py
 │         └── Failed checks? → Do NOT use results
 │                            → Run failure_diagnoser.py
-│         └── All passed? → Results are valid
+│         └── All passed? → Selected metric checks passed; physical validity still needs model-specific evidence
 ```
 
 ### Choosing Validation Thresholds
@@ -291,7 +293,14 @@ with the concrete artifact named. Record these in your summary to the user.
 
 ## Version History
 
+- **v1.2.3** (2026-10-19): Reject invalid or incomplete metrics and distinguish the check-pass fraction from physical or statistical confidence.
+
 - **v1.2.2** (2026-06-24): Added a Verification checklist (evidence-based, tied to the four scripts' JSON outputs) and a Common pitfalls & rationalizations table to harden agent interpretation of validation verdicts.
 - **v1.2.0** (2026-06-23): Corrected diagnostic regexes (no false convergence/blow-up on healthy logs), direction-aware dt-collapse detection, NaN/Inf scan in runtime monitor, strict variational energy check, non-vacuous bounds/confidence, config-relative output-dir + correct-volume disk check, and implemented the documented input-validation/file-size safeguards
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, Windows compatibility
 - **v1.0.0**: Initial release with 4 validation scripts
+
+
+### Numerical and evidence limits
+
+The confidence_score field is retained for compatibility and is the fraction of selected checks passed. It is not a statistical confidence level or probability of physical correctness. Energy checks require at least two finite samples. Passing supplied metrics does not validate the governing model, units, boundary conditions or solver execution.

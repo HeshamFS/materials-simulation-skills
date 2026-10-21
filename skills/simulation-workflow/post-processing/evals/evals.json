@@ -75,13 +75,13 @@
     {
       "id": 3,
       "prompt": "Compute the volume fraction of the solid phase (phi > 0.5) and the interface area from evals/files/field_output.json using the phi field with threshold 0.5.",
-      "expected_output": "Agent runs derived_quantities.py twice on evals/files/field_output.json: once for volume_fraction (result 0.32, 32 of 100 cells above 0.5) and once for interface_area (interface_length 2.4 on the 10x10 grid).",
+      "expected_output": "Agent runs derived_quantities.py twice on evals/files/field_output.json: once for volume_fraction (result 0.32, 32 of 100 cells above 0.5) and once for interface_area (interface_length approximately 1.9925113451 on the 10x10 grid).",
       "files": ["evals/files/field_output.json"],
       "assertions": [
         "Invokes scripts/derived_quantities.py with --input evals/files/field_output.json --quantity volume_fraction --field phi --threshold 0.5 --json",
         "Invokes scripts/derived_quantities.py with --input evals/files/field_output.json --quantity interface_area --field phi --threshold 0.5 --json",
         "Reports volume_fraction=0.32 (32 of 100 cells with phi above 0.5)",
-        "Reports interface_length approximately 2.4 from the marching-squares approximation"
+        "Reports interface_length approximately 1.9925113451 from the linearly interpolated marching triangles"
       ],
       "script_checks": [
         {
@@ -97,13 +97,13 @@
           ]
         },
         {
-          "description": "interface length from marching-squares approximation on the same fixture",
+          "description": "interface length from linearly interpolated marching triangles on the same fixture",
           "cmd": ["scripts/derived_quantities.py", "--input", "evals/files/field_output.json", "--quantity", "interface_area", "--field", "phi", "--threshold", "0.5", "--json"],
           "expect_exit": 0,
           "assert": [
-            {"path": "results.interface_length", "op": "approx", "value": 2.4, "rel_tol": 1e-6},
+            {"path": "results.interface_length", "op": "approx", "value": 1.9925113451030811, "rel_tol": 1e-6},
             {"path": "results.cells_crossed", "op": "eq", "value": 24},
-            {"path": "results.method", "op": "eq", "value": "marching_squares_approximation"}
+            {"path": "results.method", "op": "eq", "value": "marching_triangles_linear_interpolation"}
           ]
         }
       ]
@@ -159,6 +159,96 @@
             {"path": "statistics.mean", "op": "approx", "value": 0.6877386934673366, "rel_tol": 1e-4}
           ]
         }
+      ]
+    },
+    {
+      "id": 6,
+      "regression_id": "nodal-mass-unit-domain",
+      "prompt": "Integrate rho in evals/files/uniform_nodal_density.json. These five unit-density samples are nodes over a unit interval, not five full cells.",
+      "expected_output": "Tensor trapezoidal quadrature gives total mass 1 and domain volume 1; summing five full-width nodal samples would incorrectly give 1.25.",
+      "assertions": [
+        "Tensor trapezoidal quadrature gives total mass 1 and domain volume 1; summing five full-width nodal samples would incorrectly give 1.25.",
+        "Uses the specified skill tool and preserves its warnings and evidence limits."
+      ],
+      "script_checks": [
+        {
+          "description": "nodal-mass-unit-domain",
+          "cmd": [
+            "scripts/derived_quantities.py",
+            "--input",
+            "evals/files/uniform_nodal_density.json",
+            "--field",
+            "rho",
+            "--quantity",
+            "mass",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.total_mass",
+              "op": "approx",
+              "value": 1,
+              "rel_tol": 1e-09,
+              "abs_tol": 1e-12
+            },
+            {
+              "path": "results.volume",
+              "op": "approx",
+              "value": 1,
+              "rel_tol": 1e-09,
+              "abs_tol": 1e-12
+            },
+            {
+              "path": "results.method",
+              "op": "eq",
+              "value": "tensor_trapezoid_1d"
+            }
+          ]
+        }
+      ],
+      "files": [
+        "evals/files/uniform_nodal_density.json"
+      ]
+    },
+    {
+      "id": 7,
+      "regression_id": "diagonal-contour-euclidean-length",
+      "prompt": "Find the phi=0 contour length in evals/files/diagonal_contour.json, a nodal field phi=x-y on the unit square.",
+      "expected_output": "The contour is the unit-square diagonal with Euclidean length sqrt(2), not a Manhattan staircase of length 2.",
+      "assertions": [
+        "The contour is the unit-square diagonal with Euclidean length sqrt(2), not a Manhattan staircase of length 2.",
+        "Uses the specified skill tool and preserves its warnings and evidence limits."
+      ],
+      "script_checks": [
+        {
+          "description": "diagonal-contour-euclidean-length",
+          "cmd": [
+            "scripts/derived_quantities.py",
+            "--input",
+            "evals/files/diagonal_contour.json",
+            "--field",
+            "phi",
+            "--quantity",
+            "interface_area",
+            "--threshold",
+            "0",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.interface_length",
+              "op": "approx",
+              "value": 1.4142135623730951,
+              "rel_tol": 1e-09,
+              "abs_tol": 1e-12
+            }
+          ]
+        }
+      ],
+      "files": [
+        "evals/files/diagonal_contour.json"
       ]
     }
   ]

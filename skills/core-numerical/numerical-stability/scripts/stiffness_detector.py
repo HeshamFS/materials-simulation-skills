@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 import argparse
 import json
 import os
@@ -9,6 +10,28 @@ import numpy as np
 
 
 MAX_EIGS = 10000
+
+
+def strict_payload(payload):
+    missing = []
+    def clean(value, path=""):
+        if isinstance(value, float) and not math.isfinite(value):
+            missing.append(path)
+            return None
+        if isinstance(value, dict): return {k:clean(v,path+"/"+str(k)) for k,v in value.items()}
+        if isinstance(value, (list,tuple)): return [clean(v,path+"/"+str(i)) for i,v in enumerate(value)]
+        return value
+    result = clean(payload)
+    if missing:
+        result["nonfinite_diagnostics"] = {"paths": missing, "meaning": "undefined, unbounded or outside floating-point range; not a finite certificate"}
+    return result
+
+
+def finite_float(raw):
+    value = float(raw)
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError("value must be finite")
+    return value
 
 
 def parse_eigs(raw: str) -> np.ndarray:
@@ -35,7 +58,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--threshold",
-        type=float,
+        type=finite_float,
         default=1e3,
         help="Stiffness ratio threshold",
     )
@@ -147,7 +170,7 @@ def main() -> None:
     }
 
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(strict_payload(payload), allow_nan=False, indent=2, sort_keys=True))
         return
 
     print("Stiffness detection")

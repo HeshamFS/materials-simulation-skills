@@ -101,6 +101,37 @@
           ]
         }
       ]
+    },
+    {
+      "id": "solid-diffusion-correction-scope",
+      "regression_id": "solid-diffusion-correction-scope",
+      "prompt": "Plan diffusion analysis for a solid. Should I automatically add the Yeh-Hummer hydrodynamic finite-size correction?",
+      "expected_output": "Do not automatically apply the isotropic bulk-fluid correction to a solid; first establish the diffusion regime and justify the physical applicability.",
+      "assertions": [
+        "Do not automatically apply the isotropic bulk-fluid correction to a solid; first establish the diffusion regime and justify the physical applicability.",
+        "Uses the specified skill tool and preserves its warnings and evidence limits."
+      ],
+      "script_checks": [
+        {
+          "description": "solid-diffusion-correction-scope",
+          "cmd": [
+            "scripts/md_analysis_planner.py",
+            "--system",
+            "solid",
+            "--goals",
+            "diffusion",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.warnings.1",
+              "op": "contains",
+              "value": "Do not apply"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

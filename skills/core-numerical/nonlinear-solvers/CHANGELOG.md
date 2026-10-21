@@ -2,6 +2,11 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.3] - 2026-10-19
+
+### Fixed
+- Use scale-relative rank diagnostics and correct infinity-norm handling.
+
 ## [1.2.2] - 2026-06-24
 
 ### Added

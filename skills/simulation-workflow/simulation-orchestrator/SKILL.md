@@ -13,15 +13,17 @@ description: >
   organize a sweep."
 allowed-tools: Read, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.1.3"
+  version: "1.1.4"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
   eval_cases: 5
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-10-19"
   standards:
     - "Latin Hypercube Sampling (McKay, Beckman & Conover 1979)"
     - "Full factorial / grid Design of Experiments (DOE)"
@@ -340,6 +342,8 @@ Before trusting a campaign's `best_run` or summary statistics, record concrete e
 - `references/aggregation_methods.md` - Result aggregation techniques
 
 ## Version History
+
+- **v1.1.4** (2026-10-19): Preserve failure evidence and unknown exit codes, reject corrupt outputs, and retain small physical statistics without rounding.
 
 See `CHANGELOG.md` for the authoritative, dated history. Summary:
 

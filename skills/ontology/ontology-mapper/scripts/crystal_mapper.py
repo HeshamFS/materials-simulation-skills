@@ -325,6 +325,20 @@ def map_crystal(
         validation_warnings = _validate_lattice(
             effective_system, a, b, c, alpha, beta, gamma,
         )
+    if all(v is not None for v in (alpha,beta,gamma)):
+        ca,cb,cg = (math.cos(math.radians(v)) for v in (alpha,beta,gamma))
+        gram_det = 1 + 2*ca*cb*cg-ca*ca-cb*cb-cg*cg
+        if gram_det <= 1e-12:
+            validation_warnings.append("Lattice metric is not positive definite (or too close to singular); no valid Euclidean cell is certified")
+    if resolved_bravais and effective_system and resolved_bravais not in CRYSTAL_SYSTEMS[effective_system]["bravais"]:
+        validation_warnings.append("Bravais lattice is incompatible with the crystal system or space-group family")
+    expected = None
+    if space_group is not None:
+        reference_path = os.path.join(os.path.dirname(__file__), "..", "references", "space_group_bravais.json")
+        with open(reference_path, encoding="utf-8") as handle:
+            expected = json.load(handle)["groups"][str(space_group)]["bravais"]
+        if resolved_bravais and resolved_bravais != expected:
+            validation_warnings.append(f"Declared Bravais lattice {resolved_bravais} is incompatible with space group {space_group}; the space group requires {expected} in its standard setting. The declared lattice remains {resolved_bravais}.")
     if unrecognized_bravais_warning:
         validation_warnings.append(unrecognized_bravais_warning)
 
@@ -377,12 +391,30 @@ def map_crystal(
                 "type": "data",
             })
 
+    bravais_match = (resolved_bravais == expected) if resolved_bravais and expected else None
+    explanation = []
+    if resolved_bravais:
+        explanation.append(f"The declared lattice {bravais} maps to {resolved_bravais}.")
+    if expected:
+        explanation.append(f"Space group {space_group} requires {expected} in its standard setting.")
+    if bravais_match is not None:
+        explanation.append("These Bravais declarations agree." if bravais_match else "These Bravais declarations conflict; neither declaration has been silently corrected.")
+    explanation.append("Cell lengths and angles alone do not establish lattice centering or atomic symmetry.")
     return {
         "ontology_classes": ontology_classes,
         "ontology_properties": ontology_properties,
         "effective_system": effective_system,
         "inferred_system": inferred_system,
         "bravais_lattice": resolved_bravais,
+        "bravais_evidence": {
+            "declared_label": bravais,
+            "declared_bravais": resolved_bravais,
+            "space_group": space_group,
+            "space_group_required_bravais": expected,
+            "standard_setting_match": bravais_match,
+            "scope": "Bravais declaration consistency only; not atomic symmetry verification",
+        },
+        "scientific_interpretation": " ".join(explanation),
         "validation_warnings": validation_warnings,
         "notes": [],
     }
@@ -458,6 +490,7 @@ def main() -> None:
                 print(f"  {p['property']} = {p['value']}")
         for w in result["validation_warnings"]:
             print(f"  WARNING: {w}")
+        print(result["scientific_interpretation"])
 
 
 if __name__ == "__main__":

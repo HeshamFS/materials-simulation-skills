@@ -2,6 +2,11 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.1.4] - 2026-10-19
+
+### Fixed
+- Preserve failure evidence and unknown exit codes, reject corrupt outputs, and retain small physical statistics without rounding.
+
 ## [1.1.3] - 2026-06-24
 
 ### Added

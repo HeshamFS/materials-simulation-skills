@@ -28,7 +28,7 @@ class TestCflChecker(unittest.TestCase):
         self.assertTrue(result["stable"])
         self.assertAlmostEqual(result["metrics"]["cfl"], 0.1, places=6)
         self.assertAlmostEqual(result["metrics"]["fourier"], 0.1, places=6)
-        self.assertAlmostEqual(result["recommended_dt"], 0.05, places=6)
+        self.assertAlmostEqual(result["recommended_dt"], 1.0 / 31.0, places=6)
 
     def test_explicit_unstable(self):
         result = self.mod.compute_cfl(

@@ -48,8 +48,8 @@ def detect_job_status(
     """Detect job status based on output files.
 
     Status detection logic:
-    1. Check for result file -> completed
-    2. Check for error file -> failed
+    1. Preserve explicit failure/nonzero exit and check error markers
+    2. Check valid result JSON -> inferred completion (exit code remains unknown)
     3. Check for running marker -> running
     4. Otherwise -> pending
 
@@ -63,6 +63,10 @@ def detect_job_status(
     """
     job_id = job["job_id"]
 
+    if job.get("status") == "failed" or job.get("exit_code") not in (None, 0):
+        job["status"] = "failed"
+        return job
+
     # Look for common result file patterns
     result_patterns = [
         f"result_{job_id}.json",
@@ -72,18 +76,6 @@ def detect_job_status(
 
     if result_pattern:
         result_patterns.insert(0, result_pattern.format(job_id=job_id))
-
-    # Check for result files
-    for pattern in result_patterns:
-        result_path = os.path.join(config_dir, pattern)
-        if os.path.exists(result_path):
-            job["status"] = "completed"
-            job["output_file"] = pattern
-            if job["end_time"] is None:
-                job["end_time"] = time.strftime("%Y-%m-%d %H:%M:%S")
-            if job["exit_code"] is None:
-                job["exit_code"] = 0
-            return job
 
     # Check for error markers
     error_patterns = [
@@ -100,6 +92,27 @@ def detect_job_status(
                 job["end_time"] = time.strftime("%Y-%m-%d %H:%M:%S")
             if job["exit_code"] is None:
                 job["exit_code"] = 1
+            return job
+
+    # Check for result files
+    for pattern in result_patterns:
+        result_path = os.path.join(config_dir, pattern)
+        if os.path.exists(result_path):
+            try:
+                with open(result_path, encoding="utf-8") as handle:
+                    output = json.load(handle, parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+                if not isinstance(output, dict):
+                    raise ValueError("Result must be a JSON object")
+            except (OSError, ValueError):
+                job["output_integrity"] = "invalid"
+                continue
+            job["output_integrity"] = "valid_json_object"
+            job["completion_evidence"] = "result_json_presence"
+            job["scientific_validation"] = "not_performed"
+            job["status"] = "completed"
+            job["output_file"] = pattern
+            if job["end_time"] is None:
+                job["end_time"] = time.strftime("%Y-%m-%d %H:%M:%S")
             return job
 
     # Check for running marker

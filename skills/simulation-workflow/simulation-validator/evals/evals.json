@@ -140,6 +140,49 @@
           ]
         }
       ]
+    },
+    {
+      "id": 6,
+      "regression_id": "single-energy-sample-insufficient",
+      "prompt": "Can the one energy sample in evals/files/single_energy_sample.json establish monotone energy decay for a variational solver?",
+      "expected_output": "No. At least two finite samples are needed. The energy check and overall status fail; a single value cannot certify decay.",
+      "assertions": [
+        "No. At least two finite samples are needed. The energy check and overall status fail; a single value cannot certify decay.",
+        "Uses the specified skill tool and preserves its warnings and evidence limits."
+      ],
+      "script_checks": [
+        {
+          "description": "single-energy-sample-insufficient",
+          "cmd": [
+            "scripts/result_validator.py",
+            "--metrics",
+            "evals/files/single_energy_sample.json",
+            "--variational",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.status",
+              "op": "eq",
+              "value": "FAIL"
+            },
+            {
+              "path": "results.checks.energy_monotone",
+              "op": "eq",
+              "value": false
+            },
+            {
+              "path": "results.failed_checks",
+              "op": "contains",
+              "value": "energy_monotone"
+            }
+          ]
+        }
+      ],
+      "files": [
+        "evals/files/single_energy_sample.json"
+      ]
     }
   ]
 }

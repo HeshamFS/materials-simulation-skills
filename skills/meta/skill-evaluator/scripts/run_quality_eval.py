@@ -36,7 +36,9 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "_support"))
 import agent_adapters as A  # noqa: E402
+from evaluation_isolation import isolated_environment, require_fresh, reject_ambient_ancestors
 
 
 def _slug(text: str, n: int = 40) -> str:
@@ -66,21 +68,33 @@ def prepare_run_dir(
     skill_dir: Path, run_dir: Path, cli: str, with_skill: bool, files: list[str], eval_src_dir: Path,
 ) -> Path:
     """Create an isolated working dir; install the skill if with_skill. Returns workdir."""
+    require_fresh(run_dir)
     workdir = run_dir / "workdir"
     outputs = run_dir / "outputs"
+    require_fresh(workdir)
+    reject_ambient_ancestors(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     outputs.mkdir(parents=True, exist_ok=True)
     if with_skill:
         sub = A.get(cli)["skills_project_subdir"]
         dest = workdir / sub / skill_dir.name
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(skill_dir, dest, dirs_exist_ok=True)
+        shutil.copytree(skill_dir, dest, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("evals", "__pycache__"))
     # Copy eval input files into the workdir (preserve relative names)
     for rel in files:
-        src = (eval_src_dir / rel)
-        if src.exists():
-            tgt = workdir / Path(rel).name
-            shutil.copy2(src, tgt)
+        src = (eval_src_dir / rel).resolve()
+        if not src.is_relative_to(eval_src_dir.resolve()):
+            raise ValueError("Evaluation sources must stay within the skill directory")
+        if not src.is_file():
+            src = (eval_src_dir / "evals" / rel).resolve()
+        if not src.is_file():
+            raise ValueError(f"Missing evaluation input: {src}")
+        tgt = (workdir / rel).resolve()
+        if not tgt.is_relative_to(workdir.resolve()):
+            raise ValueError("Evaluation file paths must stay within workdir")
+        tgt.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, tgt)
     return workdir
 
 
@@ -94,7 +108,7 @@ def run_one(
     workdir = prepare_run_dir(skill_dir, run_dir, cli, with_skill, files, eval_src_dir)
     prompt = _wrapper_prompt(
         eval_case["prompt"], outputs_dir.resolve(), files,
-        eval_case.get("expected_output", ""),
+        eval_case.get("save_hint", ""),
     )
     argv = A.build_argv(cli, prompt, workdir=str(workdir.resolve()), model=model, with_skill=with_skill)
     runs_in_cwd = A.runs_in_cwd(cli)
@@ -107,7 +121,8 @@ def run_one(
         "with_skill": with_skill,
         "command": cmd_str,
         "argv": argv,
-        "runs_in_cwd": runs_in_cwd,
+        "runs_in_cwd": True,
+        "isolation": "fresh workdir and allowlisted environment with private home/config; not an OS sandbox",
         "workdir": str(workdir.resolve()),
         "outputs_dir": str(outputs_dir.resolve()),
     }
@@ -116,11 +131,12 @@ def run_one(
         (run_dir / "run.json").write_text(json.dumps(record, indent=2), encoding="utf-8")
         return record
 
-    cwd = str(workdir.resolve()) if runs_in_cwd else os.getcwd()
+    cwd = str(workdir.resolve())
+    env = isolated_environment(run_dir, A.get(cli)["auth_env"])
     start = time.monotonic()
     try:
         proc = subprocess.run(argv, cwd=cwd, capture_output=True, text=True,
-                              timeout=timeout, check=False)
+                              timeout=timeout, check=False, env=env)
         duration_ms = int((time.monotonic() - start) * 1000)
         (run_dir / "response.txt").write_text(proc.stdout, encoding="utf-8")
         if proc.stderr:
@@ -155,12 +171,14 @@ def _extract_tokens(stdout: str, cli: str) -> int | None:
         return None
     usage = doc.get("usage") if isinstance(doc, dict) else None
     if isinstance(usage, dict):
-        total = 0
-        for k in ("input_tokens", "output_tokens", "total_tokens"):
-            v = usage.get(k)
-            if isinstance(v, (int, float)):
-                total += int(v)
-        return total or None
+        import math
+        def valid(v):
+            return isinstance(v, (int,float)) and not isinstance(v,bool) and math.isfinite(v) and v >= 0 and int(v) == v
+        if valid(usage.get("total_tokens")):
+            return int(usage["total_tokens"])
+        parts = [usage.get(k) for k in ("input_tokens", "output_tokens")]
+        if all(valid(v) for v in parts):
+            return sum(int(v) for v in parts)
     return None
 
 
@@ -202,8 +220,12 @@ def main(argv: list[str] | None = None) -> int:
         for cfg in configs:
             run_dir = iter_dir / ename / cfg / "run-1"
             run_dir.mkdir(parents=True, exist_ok=True)
-            rec = run_one(skill_dir, case, cli, cfg, run_dir, args.model,
-                          eval_src_dir=skill_dir, timeout=args.timeout, dry_run=args.dry_run)
+            try:
+                rec = run_one(skill_dir, case, cli, cfg, run_dir, args.model,
+                              eval_src_dir=skill_dir, timeout=args.timeout, dry_run=args.dry_run)
+            except (ValueError, OSError) as exc:
+                print(str(exc), file=sys.stderr)
+                return 2
             plan.append(rec)
 
     auth = A.get(cli)["auth_env"]
@@ -229,7 +251,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"  auth: set one of {auth}")
         for s in summary["next_steps"]:
             print(f"  next: {s}")
-    return 0
+    return 0 if args.dry_run or all(r.get("exit_code") == 0 for r in plan) else 1
 
 
 if __name__ == "__main__":

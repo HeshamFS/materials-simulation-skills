@@ -33,7 +33,9 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "_support"))
 import agent_adapters as A  # noqa: E402
+from evaluation_isolation import isolated_environment, require_fresh, reject_ambient_ancestors
 
 
 def _skill_markers(skill_dir: Path) -> list[str]:
@@ -51,29 +53,35 @@ def _detect_triggered(stdout: str, markers: list[str]) -> bool:
 
 def run_query(skill_dir: Path, query: str, cli: str, model: str | None,
               tmp_root: Path, timeout: int, dry_run: bool) -> dict:
+    require_fresh(tmp_root)
     workdir = tmp_root / "workdir"
+    require_fresh(workdir)
+    reject_ambient_ancestors(workdir)
     workdir.mkdir(parents=True, exist_ok=True)
     sub = A.get(cli)["skills_project_subdir"]
     dest = workdir / sub / skill_dir.name
     if not dry_run:
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(skill_dir, dest, dirs_exist_ok=True)
+        shutil.copytree(skill_dir, dest, dirs_exist_ok=True,
+                        ignore=shutil.ignore_patterns("evals", "__pycache__"))
     argv = A.build_argv(cli, query, workdir=str(workdir.resolve()), model=model, with_skill=True)
     rec: dict[str, Any] = {"command": A.command_string(argv), "argv": argv}
     if dry_run:
         rec["dry_run"] = True
         return rec
-    cwd = str(workdir.resolve()) if A.runs_in_cwd(cli) else os.getcwd()
+    cwd = str(workdir.resolve())
+    env = isolated_environment(tmp_root, A.get(cli)["auth_env"])
     start = time.monotonic()
     try:
         proc = subprocess.run(argv, cwd=cwd, capture_output=True, text=True,
-                              timeout=timeout, check=False)
+                              timeout=timeout, check=False, env=env)
         rec["exit_code"] = proc.returncode
         rec["duration_ms"] = int((time.monotonic() - start) * 1000)
-        rec["triggered"] = _detect_triggered(proc.stdout + proc.stderr, _skill_markers(skill_dir))
+        rec["triggered"] = _detect_triggered(proc.stdout + proc.stderr, _skill_markers(skill_dir)) if proc.returncode == 0 else None
+        if proc.returncode != 0: rec["error"] = "Agent execution failed"
     except subprocess.TimeoutExpired:
         rec["error"] = f"timeout {timeout}s"
-        rec["triggered"] = False
+        rec["triggered"] = None
     except FileNotFoundError:
         rec["error"] = f"binary '{A.get(cli)['binary']}' not found; install: {A.get(cli)['install']}"
         rec["triggered"] = None
@@ -154,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
                 st = "PASS" if r["passed"] else "FAIL"
                 print(f"[{st}] rate={r['trigger_rate']:.2f} expect_trigger={r['should_trigger']}: {r['query'][:60]}")
             print(f"\n{passed}/{len(graded)} trigger cases passed (threshold {args.threshold})")
-    return 0 if (args.dry_run or passed == len(graded)) else 1
+    return 0 if (args.dry_run or (passed == len(queries) and all(not run.get("error") for row in results for run in row["runs"]))) else 1
 
 
 if __name__ == "__main__":

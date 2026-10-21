@@ -174,9 +174,15 @@ def compute_skewness(values: List[float], mean: float, std: float) -> Optional[f
     if len(values) < 3 or std == 0:
         return None
 
-    n = len(values)
-    m3 = sum((x - mean) ** 3 for x in values) / n
-    return m3 / (std ** 3)
+    # Empirical standardized central moments use population normalization.
+    deviations = [x-mean for x in values]
+    scale = max(abs(d) for d in deviations)
+    if scale == 0:
+        return None
+    z = [d/scale for d in deviations]
+    m2 = math.fsum(v*v for v in z)/len(z)
+    moment = math.fsum(v**3 for v in z)/len(z)
+    return moment / m2**(3/2)
 
 
 def compute_kurtosis(values: List[float], mean: float, std: float) -> Optional[float]:
@@ -184,9 +190,15 @@ def compute_kurtosis(values: List[float], mean: float, std: float) -> Optional[f
     if len(values) < 4 or std == 0:
         return None
 
-    n = len(values)
-    m4 = sum((x - mean) ** 4 for x in values) / n
-    return (m4 / (std ** 4)) - 3
+    # Empirical standardized central moments use population normalization.
+    deviations = [x-mean for x in values]
+    scale = max(abs(d) for d in deviations)
+    if scale == 0:
+        return None
+    z = [d/scale for d in deviations]
+    m2 = math.fsum(v*v for v in z)/len(z)
+    moment = math.fsum(v**4 for v in z)/len(z)
+    return moment / m2**(4/2) - 3
 
 
 def compute_histogram(

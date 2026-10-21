@@ -4,6 +4,17 @@ import argparse
 import json
 import math
 import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "_support"))
+from refinement_order import observed_order
+
+
+def finite_float(raw):
+    value = float(raw)
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError("value must be finite")
+    return value
 
 
 def parse_args():
@@ -20,7 +31,7 @@ def parse_args():
         help="Comma-separated solution values at each spacing level",
     )
     parser.add_argument(
-        "--expected-order", type=float, default=None,
+        "--expected-order", type=finite_float, default=None,
         help="Expected convergence order for assessment",
     )
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
@@ -58,6 +69,11 @@ def compute_h_refinement(spacings, values, expected_order=None):
         if not math.isfinite(v):
             raise ValueError("All values must be finite numbers")
 
+    if len(set(spacings)) != len(spacings):
+        raise ValueError("Refinement levels must be distinct")
+    if expected_order is not None and (not math.isfinite(expected_order) or expected_order <= 0):
+        raise ValueError("expected_order must be positive and finite")
+
     # Sort by spacing descending (coarsest first)
     paired = sorted(zip(spacings, values), key=lambda x: -x[0])
     spacings_sorted = [p[0] for p in paired]
@@ -66,40 +82,19 @@ def compute_h_refinement(spacings, values, expected_order=None):
     notes = []
     observed_orders = []
 
-    # Compute observed orders from consecutive triplets using log-ratio
-    if len(spacings_sorted) >= 3:
-        for i in range(len(spacings_sorted) - 2):
-            h_coarse = spacings_sorted[i]
-            h_mid = spacings_sorted[i + 1]
-            h_fine = spacings_sorted[i + 2]
-            f_coarse = values_sorted[i]
-            f_mid = values_sorted[i + 1]
-            f_fine = values_sorted[i + 2]
-
-            e_coarse = abs(f_coarse - f_mid)
-            e_fine = abs(f_mid - f_fine)
-
-            if e_fine == 0 or e_coarse == 0:
-                notes.append(
-                    "Zero error difference at levels %d-%d; "
-                    "cannot compute order for this pair" % (i, i + 2)
-                )
-                continue
-
-            r_coarse = h_coarse / h_mid
-            r_fine = h_mid / h_fine
-
-            if r_coarse <= 0 or r_fine <= 0:
-                continue
-
-            p = math.log(e_coarse / e_fine) / math.log(r_coarse)
-            observed_orders.append(p)
-
-            if p < 0:
-                notes.append(
-                    "Negative observed order (%.2f) at levels %d-%d: "
-                    "possible divergence" % (p, i, i + 2)
-                )
+    invalid_sequence = False
+    for i in range(len(spacings_sorted)-2):
+        hs = spacings_sorted[i:i+3]
+        fs = values_sorted[i:i+3]
+        try:
+            p = observed_order(*reversed(hs), *reversed(fs))
+        except ValueError as exc:
+            invalid_sequence = True
+            notes.append(str(exc))
+            continue
+        observed_orders.append(p)
+        if p <= 0:
+            notes.append("Negative or zero observed order: possible divergence")
 
     # Mean order
     mean_order = None
@@ -121,8 +116,9 @@ def compute_h_refinement(spacings, values, expected_order=None):
         if mean_order is not None and mean_order <= 0:
             in_asymptotic_range = False
     elif len(observed_orders) == 1:
-        # Single estimate: only "asymptotic" if the order is positive (converging).
-        in_asymptotic_range = mean_order is not None and mean_order > 0
+        # One triplet estimates order but cannot establish stability across
+        # triplets. Non-positive order does establish failure to converge.
+        in_asymptotic_range = False if mean_order <= 0 else None
     else:
         in_asymptotic_range = None
 
@@ -134,7 +130,10 @@ def compute_h_refinement(spacings, values, expected_order=None):
     f_next = values_sorted[-2]
     r = h_next / h_fine
 
-    if mean_order is not None and mean_order > 0:
+    if invalid_sequence:
+        in_asymptotic_range = False
+        notes.append("Oscillatory or unresolved differences: Richardson estimate suppressed")
+    elif mean_order is not None and mean_order > 0:
         richardson_extrapolated_value = f_fine + (f_fine - f_next) / (r ** mean_order - 1)
     elif mean_order is not None:
         # Non-positive observed order: solution appears to be diverging.
@@ -164,6 +163,32 @@ def compute_h_refinement(spacings, values, expected_order=None):
     elif len(spacings_sorted) < 3:
         convergence_assessment = "Insufficient levels to compute observed order (need >= 3)"
 
+    if invalid_sequence:
+        convergence_assessment = "FAIL: oscillatory or unresolved refinement sequence"
+
+    relative_order_error = None
+    relative_order_error_overflow = False
+    order_matches = None
+    if expected_order is not None and mean_order is not None and not invalid_sequence:
+        relative_order_error = abs(mean_order - expected_order) / expected_order
+        order_matches = relative_order_error <= 0.1
+        if not math.isfinite(relative_order_error):
+            relative_order_error = None
+            relative_order_error_overflow = True
+    interpretation = []
+    if mean_order is not None:
+        interpretation.append(f"The observed convergence order p is {mean_order:.12g} (dimensionless).")
+    else:
+        interpretation.append("The observed convergence order is unresolved.")
+    if order_matches is not None:
+        difference = "outside finite floating-point range" if relative_order_error_overflow else f"{relative_order_error:.6g}"
+        interpretation.append(f"Compare p with the expected order {expected_order:.12g}: relative difference {difference}, tolerance 0.1; agreement is {order_matches}.")
+    if richardson_extrapolated_value is not None:
+        interpretation.append(f"The Richardson estimate of the observable at zero spacing is {richardson_extrapolated_value:.12g}, in the same units as the input values. It is not an order and must not be compared with the expected order.")
+    else:
+        interpretation.append("No Richardson estimate is justified by this sequence.")
+    interpretation.append("Order agreement is a refinement diagnostic, not proof of physical accuracy or of an asymptotic regime.")
+
     return {
         "inputs": {
             "spacings": spacings_sorted,
@@ -176,6 +201,20 @@ def compute_h_refinement(spacings, values, expected_order=None):
             "richardson_extrapolated_value": richardson_extrapolated_value,
             "in_asymptotic_range": in_asymptotic_range,
             "convergence_assessment": convergence_assessment,
+            "order_comparison": {
+                "quantity": "mean_observed_order", "units": "dimensionless",
+                "observed": mean_order, "expected": expected_order,
+                "relative_difference": relative_order_error,
+                "relative_difference_overflow": relative_order_error_overflow,
+                "relative_tolerance": 0.1, "matches_expected": order_matches,
+            },
+            "extrapolation_evidence": {
+                "quantity": "observable_at_zero_spacing",
+                "units": "same_as_input_values",
+                "value": richardson_extrapolated_value,
+                "order_basis": ("observed" if mean_order is not None else "assumed") if richardson_extrapolated_value is not None else None,
+            },
+            "scientific_interpretation": " ".join(interpretation),
             "notes": notes,
         },
     }
@@ -211,6 +250,7 @@ def main():
         if r["in_asymptotic_range"] is not None:
             print("  in asymptotic range: %s" % r["in_asymptotic_range"])
         print("  assessment: %s" % r["convergence_assessment"])
+        print("  interpretation: %s" % r["scientific_interpretation"])
         for note in r["notes"]:
             print("  note: %s" % note)
 

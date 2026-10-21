@@ -105,6 +105,12 @@ stories at once.
 
 - Semantic version in `metadata.version`; a `CHANGELOG.md` entry per change.
 - `metadata.last_evaluated` records when the skill was last exercised end-to-end.
+- Keep that historical field separate from `metadata.last_deterministic_eval`,
+  which records the latest successful execution of all bundled script checks.
+  A deterministic rerun must not refresh an agent evaluation date.
+- `metadata.agent_evaluation_status` states whether live agent evaluation has
+  been revalidated for the current skill/evaluator combination. Use
+  `not_revalidated` until fresh paired live runs support a current claim.
 - Numeric `results` carry units (in `notes` or a `units` map); outputs destined
   for FAIR packaging expose engine/version/standard identifiers.
 

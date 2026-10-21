@@ -17,10 +17,12 @@ compatibility: >
   and quality layers require one supported coding-agent CLI installed and
   authenticated (claude, codex, agy, cursor-agent, copilot, amp, opencode, grok).
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.0.2"
+  version: "1.0.3"
   security_tier: high
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-10-19"
   eval_cases: 4
   standards:
     - "Agent Skills standard / evaluation spec (agentskills.io)"
@@ -224,3 +226,8 @@ Do not report a verdict until each item that applies to the layers you ran is sa
 - Token accounting is best-effort — only some CLIs report usage in headless output.
 - New CLIs (Antigravity, Grok) are *medium* confidence; verify flags with the
   vendor `--help` and `--dry-run`.
+
+
+### Numerical and evidence limits
+
+Quality and trigger runners require fresh workdirs, reject ancestor agent configuration, and use allowlisted environments plus private home/config directories. This is configuration isolation, not an OS sandbox. System-managed CLI skills/tools and live authentication still require separate qualification. Failed/timed-out executions are ungraded. Token usage remains null when unavailable; paired deltas require complete matched measurements. Trigger detection remains a transcript heuristic, not measured discovery accuracy without a live benchmark.

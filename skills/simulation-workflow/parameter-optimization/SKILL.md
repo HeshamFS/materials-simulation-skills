@@ -13,15 +13,17 @@ description: >
   parameters matter most" or "how do I calibrate my model."
 allowed-tools: Read, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
   eval_cases: 5
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-10-19"
   standards:
     - "Latin Hypercube Sampling (McKay, Beckman & Conover 1979)"
     - "Sobol (1967) low-discrepancy quasi-random sequences"
@@ -224,7 +226,14 @@ python3 scripts/surrogate_builder.py --x 0,1,2 --y 10,12,15 --model rbf --json
 
 ## Version History
 
+- **v1.2.3** (2026-10-19): Center and scale polynomial fits and expose rank-deficient or unvalidated fits.
+
 - **v1.2.2** (2026-06-24): Added Verification checklist and Common pitfalls & rationalizations sections to drive evidence-based use of the DOE, optimizer, sensitivity, and surrogate scripts
 - **v1.2.0** (2026-06-23): Real surrogate fits (`poly` least-squares, `rbf` interpolation) with honest `mse`/`cv_error`/`output_variance`; explicit factorial `--levels` with budget-mismatch warnings; BO dimension cutoff harmonized to dim<=10; corrected Security/Error-Handling/output-field docs to match script behavior
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, conversational examples
 - **v1.0.0**: Initial release with core scripts
+
+
+### Numerical and evidence limits
+
+Polynomial surrogate fits retain a centered/scaled basis and use SVD least squares. Rank failure is reported as unavailable fit metrics. Cross-validation with insufficient samples is null. Neither fit residual nor cross-validation establishes physical validity outside the sampled domain.

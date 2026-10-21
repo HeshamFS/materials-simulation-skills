@@ -4,6 +4,10 @@ import argparse
 import json
 import math
 import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "_support"))
+from refinement_order import observed_order
 
 
 def parse_args():
@@ -65,6 +69,9 @@ def compute_gci(spacings, values, safety_factor=1.25):
     h2, f2 = paired[1]  # medium
     h3, f3 = paired[2]  # coarse
 
+    if not h1 < h2 < h3:
+        raise ValueError("Grid spacings must be distinct")
+
     r21 = h2 / h1
     r32 = h3 / h2
 
@@ -102,62 +109,24 @@ def compute_gci(spacings, values, safety_factor=1.25):
     if e32 == 0:
         raise ValueError("Medium and coarse solutions are identical but fine differs; cannot compute order")
 
-    constant_ratio = abs(r21 - r32) <= 1e-6
-    notes = []
-    if constant_ratio:
-        # Closed-form observed order for equal refinement ratios.
-        p = abs(math.log(abs(e32 / e21))) / math.log(r21)
-        notes.append(
-            "Constant refinement ratio (r21 == r32): the asymptotic_ratio reduces "
-            "algebraically to f1/f2 and therefore only measures the relative gap "
-            "between the two finest QoI values, NOT adherence to the assumed power "
-            "law. Confirm the asymptotic range by comparing the observed order to "
-            "the scheme's expected order and, ideally, by checking order "
-            "consistency across 4+ systematically refined grids."
-        )
-    else:
-        # Non-uniform refinement ratios: solve the ASME V&V 20 / Celik fixed-point
-        # equation iteratively (gci_guidelines.md). Initialize from the simple
-        # equal-ratio formula then iterate to convergence.
-        s = 1.0 if (e32 / e21) > 0 else -1.0
-        ln_ratio = math.log(abs(e32 / e21))
-        ln_r21 = math.log(r21)
-
-        def _g(pp):
-            denom = r32 ** pp - s
-            return abs(ln_ratio + math.log(abs((r21 ** pp - s) / denom))) / ln_r21
-
-        # Damped fixed-point iteration (averaging) for robust convergence;
-        # the undamped Celik iteration oscillates when r21 != r32.
-        p = abs(ln_ratio) / ln_r21
-        converged = False
-        for _ in range(100):
-            denom = r32 ** p - s
-            if denom == 0:
-                break
-            p_new = 0.5 * (p + _g(p))
-            if abs(p_new - p) < 1e-10:
-                p = p_new
-                converged = True
-                break
-            p = p_new
-        if not converged:
-            raise ValueError(
-                "Iterative observed-order solver did not converge for non-uniform "
-                "refinement ratios (r21=%.6g, r32=%.6g)" % (r21, r32)
-            )
-        notes.append(
-            "Non-uniform refinement ratio (r21 != r32): observed order solved "
-            "iteratively per ASME V&V 20 / Celik et al. (2008)."
-        )
+    p = observed_order(h1, h2, h3, f1, f2, f3)
+    notes = ["Constant refinement ratio: the asymptotic ratio is not an independent power-law validation." if math.isclose(r21,r32,rel_tol=1e-6) else "Non-uniform refinement: signed power-law order solved by a bracketed root with residual verification."]
+    if p <= 1e-12:
+        return {"inputs": {"spacings": [h1,h2,h3], "values": [f1,f2,f3], "safety_factor": safety_factor},
+                "results": {"observed_order": p, "gci_fine": None, "gci_coarse": None,
+                "asymptotic_ratio": None, "in_asymptotic_range": False,
+                "refinement_ratio_21": r21, "refinement_ratio_32": r32,
+                "extrapolated_value": None, "notes": notes+["Non-positive order: no finite converged extrapolate is justified."]}}
 
     # GCI fine and coarse
-    gci_fine = safety_factor * abs(e21 / f1) / (r21 ** p - 1) if f1 != 0 else float("inf")
-    gci_coarse = safety_factor * abs(e32 / f2) / (r32 ** p - 1) if f2 != 0 else float("inf")
+    gci_fine = safety_factor * abs(e21 / f1) / (r21 ** p - 1) if f1 != 0 else None
+    gci_coarse = safety_factor * abs(e32 / f2) / (r32 ** p - 1) if f2 != 0 else None
 
     # Asymptotic ratio
     if (
-        gci_fine != 0
+        gci_fine is not None
+        and gci_coarse is not None
+        and gci_fine != 0
         and math.isfinite(gci_fine)
         and math.isfinite(gci_coarse)
         and (r21 ** p) != 0
@@ -218,13 +187,13 @@ def main():
         print("  refinement ratio r32: %.4f" % r["refinement_ratio_32"])
         if r["observed_order"] is not None:
             print("  observed order: %.4f" % r["observed_order"])
-        print("  GCI fine: %.6g" % r["gci_fine"])
-        print("  GCI coarse: %.6g" % r["gci_coarse"])
+        print("  GCI fine: %s" % r["gci_fine"])
+        print("  GCI coarse: %s" % r["gci_coarse"])
         if r["asymptotic_ratio"] is not None:
             print("  asymptotic ratio: %.4f" % r["asymptotic_ratio"])
         if r["in_asymptotic_range"] is not None:
             print("  in asymptotic range: %s" % r["in_asymptotic_range"])
-        print("  extrapolated value: %.6g" % r["extrapolated_value"])
+        print("  extrapolated value: %s" % r["extrapolated_value"])
         for note in r.get("notes", []):
             print("  note: %s" % note)
 

@@ -26,12 +26,16 @@ from pathlib import Path
 
 
 def stats(values: list[float]) -> dict:
+    missing = sum(v is None for v in values)
+    values = [v for v in values if v is not None]
+    if any(not math.isfinite(v) for v in values):
+        raise ValueError("Benchmark measurements must be finite or null")
     if not values:
-        return {"mean": 0.0, "stddev": 0.0, "min": 0.0, "max": 0.0}
+        return {"mean": None, "stddev": None, "min": None, "max": None, "count": 0, "missing": missing}
     n = len(values)
     mean = sum(values) / n
     stddev = math.sqrt(sum((x - mean) ** 2 for x in values) / (n - 1)) if n > 1 else 0.0
-    return {"mean": round(mean, 4), "stddev": round(stddev, 4),
+    return {"count": n, "missing": missing, "mean": round(mean, 4), "stddev": round(stddev, 4),
             "min": round(min(values), 4), "max": round(max(values), 4)}
 
 
@@ -71,12 +75,12 @@ def load_runs(iteration_dir: Path) -> dict[str, list[dict]]:
                 if tpath.exists():
                     try:
                         t = json.loads(tpath.read_text(encoding="utf-8"))
-                        row["time_seconds"] = t.get("total_duration_seconds", 0.0)
-                        row["tokens"] = t.get("total_tokens") or 0
+                        row["time_seconds"] = t.get("total_duration_seconds")
+                        row["tokens"] = t.get("total_tokens")
                     except json.JSONDecodeError:
                         pass
-                row.setdefault("time_seconds", g.get("timing", {}).get("total_duration_seconds", 0.0))
-                row.setdefault("tokens", 0)
+                row.setdefault("time_seconds", g.get("timing", {}).get("total_duration_seconds"))
+                row.setdefault("tokens", None)
                 results[config].append(row)
     return results
 
@@ -88,16 +92,19 @@ def aggregate(results: dict[str, list[dict]]) -> dict:
         runs = results[cfg]
         summary[cfg] = {
             "pass_rate": stats([r["pass_rate"] for r in runs]),
-            "time_seconds": stats([r.get("time_seconds", 0.0) for r in runs]),
-            "tokens": stats([r.get("tokens", 0) for r in runs]),
+            "time_seconds": stats([r.get("time_seconds") for r in runs]),
+            "tokens": stats([r.get("tokens") for r in runs]),
         }
-    if len(configs) >= 2:
-        a, b = summary[configs[0]], summary[configs[1]]
-        summary["delta"] = {
-            "pass_rate": f"{a['pass_rate']['mean'] - b['pass_rate']['mean']:+.2f}",
-            "time_seconds": f"{a['time_seconds']['mean'] - b['time_seconds']['mean']:+.1f}",
-            "tokens": f"{a['tokens']['mean'] - b['tokens']['mean']:+.0f}",
-        }
+    if "with_skill" in results and "without_skill" in results:
+        paired = [{(r["eval_id"],r.get("run_number",1)):r for r in results[cfg]} for cfg in ("with_skill","without_skill")]
+        common = sorted(set(paired[0]) & set(paired[1]), key=str)
+        summary["delta"] = {}
+        for metric, precision in (("pass_rate",2),("time_seconds",1),("tokens",0)):
+            vals = [(paired[0][key].get(metric),paired[1][key].get(metric)) for key in common]
+            if not vals or len(common) != len(paired[0]) or len(common) != len(paired[1]) or any(a is None or b is None for a,b in vals):
+                summary["delta"][metric] = None
+            else:
+                summary["delta"][metric] = f"{sum(a-b for a,b in vals)/len(vals):+.{precision}f}"
     return summary
 
 
@@ -111,7 +118,7 @@ def build_benchmark(iteration_dir: Path, skill_name: str, agent: str = "") -> di
                 "eval_id": r["eval_id"], "configuration": cfg, "run_number": r["run_number"],
                 "result": {"pass_rate": r["pass_rate"], "passed": r["passed"],
                            "failed": r["failed"], "total": r["total"],
-                           "time_seconds": r.get("time_seconds", 0.0), "tokens": r.get("tokens", 0)},
+                           "time_seconds": r.get("time_seconds"), "tokens": r.get("tokens")},
                 "expectations": r["expectations"],
             })
     eval_ids = sorted({r["eval_id"] for rows in results.values() for r in rows}, key=str)
@@ -132,12 +139,12 @@ def to_markdown(b: dict) -> str:
     out = [f"# Skill Benchmark: {m['skill_name']}", "",
            f"**Agent**: {m.get('agent','')}  ", f"**Evals**: {', '.join(map(str, m['evals_run']))}", "",
            f"| Metric | {la} | {lb} | Delta |", "|---|---|---|---|"]
-    pa, pb = rs.get(a, {}).get("pass_rate", {}), rs.get(bb, {}).get("pass_rate", {})
-    out.append(f"| Pass rate | {pa.get('mean',0)*100:.0f}% ± {pa.get('stddev',0)*100:.0f}% | "
-               f"{pb.get('mean',0)*100:.0f}% ± {pb.get('stddev',0)*100:.0f}% | {d.get('pass_rate','—')} |")
-    ta, tb = rs.get(a, {}).get("time_seconds", {}), rs.get(bb, {}).get("time_seconds", {})
-    out.append(f"| Time (s) | {ta.get('mean',0):.1f} ± {ta.get('stddev',0):.1f} | "
-               f"{tb.get('mean',0):.1f} ± {tb.get('stddev',0):.1f} | {d.get('time_seconds','—')} |")
+    for label,key in (("Pass rate","pass_rate"),("Time (s)","time_seconds"),("Tokens","tokens")):
+        def display(cfg):
+            st = rs.get(cfg,{}).get(key,{})
+            if st.get("mean") is None: return "unknown"
+            return f"{st['mean']:.4g} ± {st['stddev']:.4g} (n={st.get('count','?')}, missing={st.get('missing',0)})"
+        out.append(f"| {label} | {display(a)} | {display(bb)} | {d.get(key) if d.get(key) is not None else 'unknown'} |")
     if b.get("notes"):
         out += ["", "## Notes", ""] + [f"- {n}" for n in b["notes"]]
     return "\n".join(out)
@@ -165,7 +172,7 @@ def main(argv: list[str] | None = None) -> int:
         rs = benchmark["run_summary"]
         print(f"Wrote {out_json}")
         for cfg in [k for k in rs if k != "delta"]:
-            print(f"  {cfg.replace('_',' ').title()}: {rs[cfg]['pass_rate']['mean']*100:.1f}% pass rate")
+            print(f"  {cfg.replace('_',' ').title()}: {rs[cfg]['pass_rate']['mean']} pass rate")
         if "delta" in rs:
             print(f"  Delta (pass rate): {rs['delta']['pass_rate']}")
     return 0

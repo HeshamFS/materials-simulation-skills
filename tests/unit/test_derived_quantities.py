@@ -249,17 +249,10 @@ class TestDerivedQuantitiesIO(unittest.TestCase):
         result = self.mod.get_grid_spacing(data, [11])  # 11 points -> 10 spans
         self.assertAlmostEqual(result["dx"], 0.1)
 
-    def test_get_grid_spacing_warns_on_inconsistent(self):
-        """Inconsistent explicit dx vs domain size warns but keeps explicit."""
-        import contextlib
-        import io
-        data = {"dx": 0.1, "Lx": 5.0}
-        shape = [10]  # neither 0.1*10==5 nor 0.1*9==5
-        stderr = io.StringIO()
-        with contextlib.redirect_stderr(stderr):
-            result = self.mod.get_grid_spacing(data, shape)
-        self.assertEqual(result["dx"], 0.1)
-        self.assertIn("inconsistent", stderr.getvalue().lower())
+    def test_get_grid_spacing_rejects_inconsistent(self):
+        """Incompatible spacing and domain metadata must not define a physical integral."""
+        with self.assertRaisesRegex(ValueError, "inconsistent"):
+            self.mod.get_grid_spacing({"dx": 0.1, "Lx": 5.0}, [10])
 
 
 if __name__ == "__main__":

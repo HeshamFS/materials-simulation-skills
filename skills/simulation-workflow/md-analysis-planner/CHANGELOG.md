@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.3] - 2026-10-19
+
+### Added
+- 1 defect-focused skill eval scenarios with portable analytic or rejection checks.
+
+### Fixed
+- Limit finite-size diffusion corrections to their justified physical regime.
+
 ## 1.2.2 - 2026-06-24
 
 - Add a "Verification checklist" section (7 evidence-based items) tying trust in

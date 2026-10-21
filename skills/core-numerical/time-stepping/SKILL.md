@@ -11,15 +11,17 @@ description: >
   the user only says "my run is too slow" or "how often should I save."
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
-  eval_cases: 4
-  last_reviewed: "2026-06-23"
+  eval_cases: 5
+  last_reviewed: "2026-10-19"
   standards:
     - "Courant-Friedrichs-Lewy (CFL) condition (Courant, Friedrichs, Lewy 1928)"
     - "von Neumann stability analysis (Fourier/diffusion and Courant number limits)"
@@ -204,6 +206,8 @@ python3 scripts/checkpoint_planner.py --run-time 36000 --checkpoint-cost 120 --m
 - `references/output_checkpoint_guidelines.md` - Cadence rules
 
 ## Version History
+
+- **v1.2.3** (2026-10-19): Reject minimum timesteps that violate the specified stability limit and safety factor.
 
 - **v1.2.2** (2026-06-24): Added Verification checklist and Common pitfalls & rationalizations sections grounded in the three planning scripts' actual outputs
 - **v1.2.0** (2026-06-23): Corrected overhead/frame-count docs and evals, removed output-time float drift, hardened input validation (checkpoint-cost < run-time, safety <= 1.0, bounded ramp/preview steps, finite checks)

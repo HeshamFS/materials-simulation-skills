@@ -21,6 +21,7 @@ class TestDtRefinement(unittest.TestCase):
         r = result["results"]
         self.assertAlmostEqual(r["mean_order"], 2.0, places=1)
         self.assertIn("PASS", r["convergence_assessment"])
+        self.assertIsNone(r["in_asymptotic_range"])
 
     def test_first_order_convergence(self):
         """Timesteps with f(dt) = 2.0 + 0.1*dt should give order ~1."""

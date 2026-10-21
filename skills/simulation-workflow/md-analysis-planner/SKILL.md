@@ -8,15 +8,17 @@ description: >
   trusting trajectory-derived results.
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-23"
-  eval_cases: 3
-  last_reviewed: "2026-06-24"
+  eval_cases: 4
+  last_reviewed: "2026-10-19"
   standards:
     - "Yeh & Hummer (2004), 1/L finite-size diffusion correction (xi ~= 2.837, cubic box)"
     - "Einstein relation for self-diffusion, D = lim MSD/(2*d*t)"
@@ -112,7 +114,7 @@ recorded against the planner's own output:
 - [ ] Ran `scripts/md_analysis_planner.py` and confirmed no `analysis_plan` entry is `blocked` or `needs time axis`; record any `needs review` goal and how its custom analysis was resolved.
 - [ ] Confirmed every item in the planner's `required_data` list is actually present in the trajectory (e.g. `velocities` for VACF/VDOS, `stress or virial` + `strain history` for stress-strain) before running the corresponding analysis.
 - [ ] For diffusion/MSD: recorded the log-log MSD-vs-time slope and confirmed it is ~1 (diffusive regime) over the fit window, excluding ballistic/sub-diffusive transients, before quoting D = lim MSD/(2*d*t).
-- [ ] For diffusion/MSD: applied the Yeh-Hummer 1/L finite-size correction and recorded the box length L and shear viscosity eta used (D_0 = D_PBC + k_B*T*xi/(6*pi*eta*L), xi~=2.837 cubic box).
+- [ ] For diffusion/MSD: assessed whether a hydrodynamic finite-size correction is applicable. For isotropic bulk fluids in 3D periodic cubic cells, record L, T and shear viscosity eta if applying Yeh-Hummer (D_0 = D_PBC + k_B*T*xi/(6*pi*eta*L), xi~=2.837). Report the measured D_PBC, the correction and its assumptions separately. Do not apply this formula automatically to solids, confined or anisotropic systems, non-cubic cells or ballistic trajectories.
 - [ ] For any displacement-based analysis when `pbc_handling.unwrap_needed` is true: confirmed positions were unwrapped using `cell` + `image flags` before computing displacements (not raw wrapped coordinates).
 - [ ] Worked through the planner's `equilibration_checks`: discarded the startup transient, confirmed temperature/pressure plateaus, and compared first-half vs second-half property estimates before any transport/thermodynamic fit.
 - [ ] Reported an uncertainty from block averaging (or independent trajectories) for every quoted transport/thermodynamic property, not a single-window point value.
@@ -122,7 +124,7 @@ recorded against the planner's own output:
 | Tempting shortcut | Why it's wrong / what to do |
 |-------------------|-----------------------------|
 | "MSD vs time looks straight, so it's diffusive — just fit a line." | A straight-looking MSD can still include ballistic/sub-diffusive transients. Confirm the log-log slope is ~1 over the fit window first, then fit D = lim MSD/(2*d*t). |
-| "D from the simulation is the diffusion coefficient." | PBC self-diffusion is system-size dependent. Apply the Yeh-Hummer 1/L correction with the actual box length L and viscosity eta; report D_0, not D_PBC. |
+| "D from the simulation is the diffusion coefficient." | Assess size dependence and report D_PBC. The Yeh-Hummer 1/L hydrodynamic correction applies under bulk-fluid, 3D periodic cubic-cell assumptions; justify those assumptions and the viscosity before separately reporting a corrected D_0. |
 | "Positions are in the dump, so MSD is fine." | Wrapped coordinates make atoms jump across the box and corrupt displacements. When `unwrap_needed` is true, unwrap using `cell` + `image flags` before any displacement analysis. |
 | "No velocities stored, but I can get VACF/VDOS from positions." | The planner marks VACF/VDOS `blocked` without velocities for a reason. A finite-difference velocity estimate must be explicitly justified (frame spacing, aliasing); otherwise the result is unreliable. |
 | "The run finished, so I can fit transport properties on the whole trajectory." | Run completion is not equilibration. Discard the startup transient and verify temperature/pressure plateaus (the `equilibration_checks`) before fitting. |
@@ -177,9 +179,18 @@ Frontmatter `allowed-tools` is `Read, Bash, Write, Grep, Glob`:
 
 ## References
 
+For a final readiness explanation from trusted, input-verified tool JSON, use
+the [deterministic explanation renderer](../../GROUNDED_EXPLANATIONS.md).
+A blocked VACF plan means readiness is false; the explanation and boolean must
+agree. Null means unresolved, and a ready plan does not validate a computed
+material property.
+
 - See `references/md_analysis_checks.md` for analysis prerequisites and failure modes.
+- Yeh and Hummer (2004), https://doi.org/10.1021/jp0477147: bulk-fluid periodic finite-size correction, not a universal correction for all materials.
 
 ## Version History
+
+- **v1.2.3** (2026-10-19): Limit finite-size diffusion corrections to their justified physical regime.
 
 - 1.2.0: Add deterministic `script_checks` to all three eval cases that pin the
   exact planner output (statuses, sorted `required_data`, PBC note, and the

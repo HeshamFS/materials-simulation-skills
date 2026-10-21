@@ -10,15 +10,17 @@ description: >
   mention "stability" or "CFL."
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
-  eval_cases: 4
-  last_reviewed: "2026-06-23"
+  eval_cases: 7
+  last_reviewed: "2026-10-19"
   standards:
     - "Courant-Friedrichs-Lewy (CFL) condition (Courant, Friedrichs, Lewy 1928)"
     - "von Neumann (Fourier) stability analysis; amplification factor and Fourier limit Fo ≤ 1/(2d)"
@@ -61,7 +63,7 @@ Is the problem stiff (fast + slow dynamics)?
 │         └── Check conditioning with matrix_condition.py
 └── NO → Is CFL/Fourier satisfied with reasonable dt?
     ├── YES → Use explicit scheme (cheaper per step)
-    └── NO → Consider implicit or reduce dx
+    └── NO → Consider implicit or reduce dt (grid refinement requires a coupled timestep reduction)
 ```
 
 ### Stability Limit Quick Reference
@@ -220,7 +222,30 @@ Do not declare a scheme/time step "stable" until each applicable item below is s
 
 ## Version History
 
+- **v1.2.3** (2026-10-19): Use a combined explicit stability budget, reject nonfinite inputs, and serialize undefined diagnostics explicitly.
+
 - **v1.2.2** (2026-06-24): Added a "Verification checklist" (7 evidence-based items tied to the four scripts' JSON outputs) and a "Common pitfalls & rationalizations" table (6 rows) to make stability verdicts reproducible and guard against false-confidence shortcuts
 - **v1.2.0** (2026-06-23): Corrected the phase-field worked example (genuinely unstable Fo=1.0 with D=1.0); fixed eval case 1 Fourier value; reconciled conditioning thresholds and error-message docs with the scripts; real-part-based stiffness classification with imaginary-dominated detection; enforced documented input/file-size/dimension safeguards
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples
 - **v1.0.0**: Initial release with 4 stability analysis scripts
+
+
+### Scope of the stability result
+
+The explicit checker assumes forward Euler, upwind advection, uniform Cartesian
+centered diffusion, and linear decay. For an unsplit update it tests the sum
+of normalized component loads, not separate conditions alone. The scalar
+velocity must represent the total absolute directional speed for multidimensional
+advection. The default reaction bound ensures positivity and is conservative
+relative to absolute stability. Custom limits require a separately justified
+component discretization. Negative diffusion/growth and unspecified implicit
+integrators return no certificate. Refining dx requires reducing dt.
+
+For final explanations, read `component_checks` and `scientific_interpretation`.
+Do not confuse a combined failure with an individual-limit failure: C=0.4 and
+Fo=0.32 each satisfy their separate limits (1 and 0.5), while C+2Fo=1.04 fails
+the combined monotonicity bound. 0.32 is less than 0.5.
+For a final report that does not introduce model-generated arithmetic claims,
+use the [deterministic explanation renderer](../../GROUNDED_EXPLANATIONS.md)
+with trusted, input-verified tool JSON. Unsupported or missing evidence must
+remain unresolved.

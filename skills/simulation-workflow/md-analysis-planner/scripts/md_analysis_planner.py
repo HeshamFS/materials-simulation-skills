@@ -97,9 +97,12 @@ def plan_md_analysis(
                 "exclude ballistic and sub-diffusive transients."
             )
             warnings.append(
-                "Apply a finite-size correction to D (Yeh-Hummer 1/L): "
+                "For isotropic bulk fluids with 3D periodic cubic boxes and a verified diffusive regime, "
+                "consider the hydrodynamic finite-size correction to D (Yeh-Hummer 1/L): "
                 "D_0 = D_PBC + k_B*T*xi/(6*pi*eta*L), xi~=2.837 for a cubic box; "
-                "needs box length L and shear viscosity eta."
+                "needs box length L and shear viscosity eta. "
+                "Do not apply this formula automatically to solids, confined/anisotropic systems, "
+                "non-cubic cells, or ballistic trajectories; report D_PBC and justify any correction."
             )
         if goal in {"diffusion", "msd", "vacf", "vdos", "equilibration"} and timestep_fs is None:
             status = _escalate(status, "needs time axis")

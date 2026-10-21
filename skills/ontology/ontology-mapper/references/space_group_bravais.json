@@ -1,0 +1,1387 @@
+{
+  "source": "https://spglib.readthedocs.io/en/stable/api/python-api.html",
+  "spglib_version": "2.8.0",
+  "convention": "Canonical first Hall setting. Bravais type only; not validation of atom positions, symmetry operations or an arbitrary cell setting.",
+  "groups": {
+    "1": {
+      "bravais": "aP",
+      "hall_number": 1,
+      "international_short": "P1",
+      "setting": ""
+    },
+    "2": {
+      "bravais": "aP",
+      "hall_number": 2,
+      "international_short": "P-1",
+      "setting": ""
+    },
+    "3": {
+      "bravais": "mP",
+      "hall_number": 3,
+      "international_short": "P2",
+      "setting": "b"
+    },
+    "4": {
+      "bravais": "mP",
+      "hall_number": 6,
+      "international_short": "P2_1",
+      "setting": "b"
+    },
+    "5": {
+      "bravais": "mC",
+      "hall_number": 9,
+      "international_short": "C2",
+      "setting": "b1"
+    },
+    "6": {
+      "bravais": "mP",
+      "hall_number": 18,
+      "international_short": "Pm",
+      "setting": "b"
+    },
+    "7": {
+      "bravais": "mP",
+      "hall_number": 21,
+      "international_short": "Pc",
+      "setting": "b1"
+    },
+    "8": {
+      "bravais": "mC",
+      "hall_number": 30,
+      "international_short": "Cm",
+      "setting": "b1"
+    },
+    "9": {
+      "bravais": "mC",
+      "hall_number": 39,
+      "international_short": "Cc",
+      "setting": "b1"
+    },
+    "10": {
+      "bravais": "mP",
+      "hall_number": 57,
+      "international_short": "P2/m",
+      "setting": "b"
+    },
+    "11": {
+      "bravais": "mP",
+      "hall_number": 60,
+      "international_short": "P2_1/m",
+      "setting": "b"
+    },
+    "12": {
+      "bravais": "mC",
+      "hall_number": 63,
+      "international_short": "C2/m",
+      "setting": "b1"
+    },
+    "13": {
+      "bravais": "mP",
+      "hall_number": 72,
+      "international_short": "P2/c",
+      "setting": "b1"
+    },
+    "14": {
+      "bravais": "mP",
+      "hall_number": 81,
+      "international_short": "P2_1/c",
+      "setting": "b1"
+    },
+    "15": {
+      "bravais": "mC",
+      "hall_number": 90,
+      "international_short": "C2/c",
+      "setting": "b1"
+    },
+    "16": {
+      "bravais": "oP",
+      "hall_number": 108,
+      "international_short": "P222",
+      "setting": ""
+    },
+    "17": {
+      "bravais": "oP",
+      "hall_number": 109,
+      "international_short": "P222_1",
+      "setting": ""
+    },
+    "18": {
+      "bravais": "oP",
+      "hall_number": 112,
+      "international_short": "P2_12_12",
+      "setting": ""
+    },
+    "19": {
+      "bravais": "oP",
+      "hall_number": 115,
+      "international_short": "P2_12_12_1",
+      "setting": ""
+    },
+    "20": {
+      "bravais": "oC",
+      "hall_number": 116,
+      "international_short": "C222_1",
+      "setting": ""
+    },
+    "21": {
+      "bravais": "oC",
+      "hall_number": 119,
+      "international_short": "C222",
+      "setting": ""
+    },
+    "22": {
+      "bravais": "oF",
+      "hall_number": 122,
+      "international_short": "F222",
+      "setting": ""
+    },
+    "23": {
+      "bravais": "oI",
+      "hall_number": 123,
+      "international_short": "I222",
+      "setting": ""
+    },
+    "24": {
+      "bravais": "oI",
+      "hall_number": 124,
+      "international_short": "I2_12_12_1",
+      "setting": ""
+    },
+    "25": {
+      "bravais": "oP",
+      "hall_number": 125,
+      "international_short": "Pmm2",
+      "setting": ""
+    },
+    "26": {
+      "bravais": "oP",
+      "hall_number": 128,
+      "international_short": "Pmc2_1",
+      "setting": ""
+    },
+    "27": {
+      "bravais": "oP",
+      "hall_number": 134,
+      "international_short": "Pcc2",
+      "setting": ""
+    },
+    "28": {
+      "bravais": "oP",
+      "hall_number": 137,
+      "international_short": "Pma2",
+      "setting": ""
+    },
+    "29": {
+      "bravais": "oP",
+      "hall_number": 143,
+      "international_short": "Pca2_1",
+      "setting": ""
+    },
+    "30": {
+      "bravais": "oP",
+      "hall_number": 149,
+      "international_short": "Pnc2",
+      "setting": ""
+    },
+    "31": {
+      "bravais": "oP",
+      "hall_number": 155,
+      "international_short": "Pmn2_1",
+      "setting": ""
+    },
+    "32": {
+      "bravais": "oP",
+      "hall_number": 161,
+      "international_short": "Pba2",
+      "setting": ""
+    },
+    "33": {
+      "bravais": "oP",
+      "hall_number": 164,
+      "international_short": "Pna2_1",
+      "setting": ""
+    },
+    "34": {
+      "bravais": "oP",
+      "hall_number": 170,
+      "international_short": "Pnn2",
+      "setting": ""
+    },
+    "35": {
+      "bravais": "oC",
+      "hall_number": 173,
+      "international_short": "Cmm2",
+      "setting": ""
+    },
+    "36": {
+      "bravais": "oC",
+      "hall_number": 176,
+      "international_short": "Cmc2_1",
+      "setting": ""
+    },
+    "37": {
+      "bravais": "oC",
+      "hall_number": 182,
+      "international_short": "Ccc2",
+      "setting": ""
+    },
+    "38": {
+      "bravais": "oC",
+      "hall_number": 185,
+      "international_short": "Amm2",
+      "setting": ""
+    },
+    "39": {
+      "bravais": "oC",
+      "hall_number": 191,
+      "international_short": "Aem2",
+      "setting": ""
+    },
+    "40": {
+      "bravais": "oC",
+      "hall_number": 197,
+      "international_short": "Ama2",
+      "setting": ""
+    },
+    "41": {
+      "bravais": "oC",
+      "hall_number": 203,
+      "international_short": "Aea2",
+      "setting": ""
+    },
+    "42": {
+      "bravais": "oF",
+      "hall_number": 209,
+      "international_short": "Fmm2",
+      "setting": ""
+    },
+    "43": {
+      "bravais": "oF",
+      "hall_number": 212,
+      "international_short": "Fdd2",
+      "setting": ""
+    },
+    "44": {
+      "bravais": "oI",
+      "hall_number": 215,
+      "international_short": "Imm2",
+      "setting": ""
+    },
+    "45": {
+      "bravais": "oI",
+      "hall_number": 218,
+      "international_short": "Iba2",
+      "setting": ""
+    },
+    "46": {
+      "bravais": "oI",
+      "hall_number": 221,
+      "international_short": "Ima2",
+      "setting": ""
+    },
+    "47": {
+      "bravais": "oP",
+      "hall_number": 227,
+      "international_short": "Pmmm",
+      "setting": ""
+    },
+    "48": {
+      "bravais": "oP",
+      "hall_number": 228,
+      "international_short": "Pnnn",
+      "setting": "1"
+    },
+    "49": {
+      "bravais": "oP",
+      "hall_number": 230,
+      "international_short": "Pccm",
+      "setting": ""
+    },
+    "50": {
+      "bravais": "oP",
+      "hall_number": 233,
+      "international_short": "Pban",
+      "setting": "1"
+    },
+    "51": {
+      "bravais": "oP",
+      "hall_number": 239,
+      "international_short": "Pmma",
+      "setting": ""
+    },
+    "52": {
+      "bravais": "oP",
+      "hall_number": 245,
+      "international_short": "Pnna",
+      "setting": ""
+    },
+    "53": {
+      "bravais": "oP",
+      "hall_number": 251,
+      "international_short": "Pmna",
+      "setting": ""
+    },
+    "54": {
+      "bravais": "oP",
+      "hall_number": 257,
+      "international_short": "Pcca",
+      "setting": ""
+    },
+    "55": {
+      "bravais": "oP",
+      "hall_number": 263,
+      "international_short": "Pbam",
+      "setting": ""
+    },
+    "56": {
+      "bravais": "oP",
+      "hall_number": 266,
+      "international_short": "Pccn",
+      "setting": ""
+    },
+    "57": {
+      "bravais": "oP",
+      "hall_number": 269,
+      "international_short": "Pbcm",
+      "setting": ""
+    },
+    "58": {
+      "bravais": "oP",
+      "hall_number": 275,
+      "international_short": "Pnnm",
+      "setting": ""
+    },
+    "59": {
+      "bravais": "oP",
+      "hall_number": 278,
+      "international_short": "Pmmn",
+      "setting": "1"
+    },
+    "60": {
+      "bravais": "oP",
+      "hall_number": 284,
+      "international_short": "Pbcn",
+      "setting": ""
+    },
+    "61": {
+      "bravais": "oP",
+      "hall_number": 290,
+      "international_short": "Pbca",
+      "setting": ""
+    },
+    "62": {
+      "bravais": "oP",
+      "hall_number": 292,
+      "international_short": "Pnma",
+      "setting": ""
+    },
+    "63": {
+      "bravais": "oC",
+      "hall_number": 298,
+      "international_short": "Cmcm",
+      "setting": ""
+    },
+    "64": {
+      "bravais": "oC",
+      "hall_number": 304,
+      "international_short": "Cmce",
+      "setting": ""
+    },
+    "65": {
+      "bravais": "oC",
+      "hall_number": 310,
+      "international_short": "Cmmm",
+      "setting": ""
+    },
+    "66": {
+      "bravais": "oC",
+      "hall_number": 313,
+      "international_short": "Cccm",
+      "setting": ""
+    },
+    "67": {
+      "bravais": "oC",
+      "hall_number": 316,
+      "international_short": "Cmme",
+      "setting": ""
+    },
+    "68": {
+      "bravais": "oC",
+      "hall_number": 322,
+      "international_short": "Ccce",
+      "setting": "1"
+    },
+    "69": {
+      "bravais": "oF",
+      "hall_number": 334,
+      "international_short": "Fmmm",
+      "setting": ""
+    },
+    "70": {
+      "bravais": "oF",
+      "hall_number": 335,
+      "international_short": "Fddd",
+      "setting": "1"
+    },
+    "71": {
+      "bravais": "oI",
+      "hall_number": 337,
+      "international_short": "Immm",
+      "setting": ""
+    },
+    "72": {
+      "bravais": "oI",
+      "hall_number": 338,
+      "international_short": "Ibam",
+      "setting": ""
+    },
+    "73": {
+      "bravais": "oI",
+      "hall_number": 341,
+      "international_short": "Ibca",
+      "setting": ""
+    },
+    "74": {
+      "bravais": "oI",
+      "hall_number": 343,
+      "international_short": "Imma",
+      "setting": ""
+    },
+    "75": {
+      "bravais": "tP",
+      "hall_number": 349,
+      "international_short": "P4",
+      "setting": ""
+    },
+    "76": {
+      "bravais": "tP",
+      "hall_number": 350,
+      "international_short": "P4_1",
+      "setting": ""
+    },
+    "77": {
+      "bravais": "tP",
+      "hall_number": 351,
+      "international_short": "P4_2",
+      "setting": ""
+    },
+    "78": {
+      "bravais": "tP",
+      "hall_number": 352,
+      "international_short": "P4_3",
+      "setting": ""
+    },
+    "79": {
+      "bravais": "tI",
+      "hall_number": 353,
+      "international_short": "I4",
+      "setting": ""
+    },
+    "80": {
+      "bravais": "tI",
+      "hall_number": 354,
+      "international_short": "I4_1",
+      "setting": ""
+    },
+    "81": {
+      "bravais": "tP",
+      "hall_number": 355,
+      "international_short": "P-4",
+      "setting": ""
+    },
+    "82": {
+      "bravais": "tI",
+      "hall_number": 356,
+      "international_short": "I-4",
+      "setting": ""
+    },
+    "83": {
+      "bravais": "tP",
+      "hall_number": 357,
+      "international_short": "P4/m",
+      "setting": ""
+    },
+    "84": {
+      "bravais": "tP",
+      "hall_number": 358,
+      "international_short": "P4_2/m",
+      "setting": ""
+    },
+    "85": {
+      "bravais": "tP",
+      "hall_number": 359,
+      "international_short": "P4/n",
+      "setting": "1"
+    },
+    "86": {
+      "bravais": "tP",
+      "hall_number": 361,
+      "international_short": "P4_2/n",
+      "setting": "1"
+    },
+    "87": {
+      "bravais": "tI",
+      "hall_number": 363,
+      "international_short": "I4/m",
+      "setting": ""
+    },
+    "88": {
+      "bravais": "tI",
+      "hall_number": 364,
+      "international_short": "I4_1/a",
+      "setting": "1"
+    },
+    "89": {
+      "bravais": "tP",
+      "hall_number": 366,
+      "international_short": "P422",
+      "setting": ""
+    },
+    "90": {
+      "bravais": "tP",
+      "hall_number": 367,
+      "international_short": "P42_12",
+      "setting": ""
+    },
+    "91": {
+      "bravais": "tP",
+      "hall_number": 368,
+      "international_short": "P4_122",
+      "setting": ""
+    },
+    "92": {
+      "bravais": "tP",
+      "hall_number": 369,
+      "international_short": "P4_12_12",
+      "setting": ""
+    },
+    "93": {
+      "bravais": "tP",
+      "hall_number": 370,
+      "international_short": "P4_222",
+      "setting": ""
+    },
+    "94": {
+      "bravais": "tP",
+      "hall_number": 371,
+      "international_short": "P4_22_12",
+      "setting": ""
+    },
+    "95": {
+      "bravais": "tP",
+      "hall_number": 372,
+      "international_short": "P4_322",
+      "setting": ""
+    },
+    "96": {
+      "bravais": "tP",
+      "hall_number": 373,
+      "international_short": "P4_32_12",
+      "setting": ""
+    },
+    "97": {
+      "bravais": "tI",
+      "hall_number": 374,
+      "international_short": "I422",
+      "setting": ""
+    },
+    "98": {
+      "bravais": "tI",
+      "hall_number": 375,
+      "international_short": "I4_122",
+      "setting": ""
+    },
+    "99": {
+      "bravais": "tP",
+      "hall_number": 376,
+      "international_short": "P4mm",
+      "setting": ""
+    },
+    "100": {
+      "bravais": "tP",
+      "hall_number": 377,
+      "international_short": "P4bm",
+      "setting": ""
+    },
+    "101": {
+      "bravais": "tP",
+      "hall_number": 378,
+      "international_short": "P4_2cm",
+      "setting": ""
+    },
+    "102": {
+      "bravais": "tP",
+      "hall_number": 379,
+      "international_short": "P4_2nm",
+      "setting": ""
+    },
+    "103": {
+      "bravais": "tP",
+      "hall_number": 380,
+      "international_short": "P4cc",
+      "setting": ""
+    },
+    "104": {
+      "bravais": "tP",
+      "hall_number": 381,
+      "international_short": "P4nc",
+      "setting": ""
+    },
+    "105": {
+      "bravais": "tP",
+      "hall_number": 382,
+      "international_short": "P4_2mc",
+      "setting": ""
+    },
+    "106": {
+      "bravais": "tP",
+      "hall_number": 383,
+      "international_short": "P4_2bc",
+      "setting": ""
+    },
+    "107": {
+      "bravais": "tI",
+      "hall_number": 384,
+      "international_short": "I4mm",
+      "setting": ""
+    },
+    "108": {
+      "bravais": "tI",
+      "hall_number": 385,
+      "international_short": "I4cm",
+      "setting": ""
+    },
+    "109": {
+      "bravais": "tI",
+      "hall_number": 386,
+      "international_short": "I4_1md",
+      "setting": ""
+    },
+    "110": {
+      "bravais": "tI",
+      "hall_number": 387,
+      "international_short": "I4_1cd",
+      "setting": ""
+    },
+    "111": {
+      "bravais": "tP",
+      "hall_number": 388,
+      "international_short": "P-42m",
+      "setting": ""
+    },
+    "112": {
+      "bravais": "tP",
+      "hall_number": 389,
+      "international_short": "P-42c",
+      "setting": ""
+    },
+    "113": {
+      "bravais": "tP",
+      "hall_number": 390,
+      "international_short": "P-42_1m",
+      "setting": ""
+    },
+    "114": {
+      "bravais": "tP",
+      "hall_number": 391,
+      "international_short": "P-42_1c",
+      "setting": ""
+    },
+    "115": {
+      "bravais": "tP",
+      "hall_number": 392,
+      "international_short": "P-4m2",
+      "setting": ""
+    },
+    "116": {
+      "bravais": "tP",
+      "hall_number": 393,
+      "international_short": "P-4c2",
+      "setting": ""
+    },
+    "117": {
+      "bravais": "tP",
+      "hall_number": 394,
+      "international_short": "P-4b2",
+      "setting": ""
+    },
+    "118": {
+      "bravais": "tP",
+      "hall_number": 395,
+      "international_short": "P-4n2",
+      "setting": ""
+    },
+    "119": {
+      "bravais": "tI",
+      "hall_number": 396,
+      "international_short": "I-4m2",
+      "setting": ""
+    },
+    "120": {
+      "bravais": "tI",
+      "hall_number": 397,
+      "international_short": "I-4c2",
+      "setting": ""
+    },
+    "121": {
+      "bravais": "tI",
+      "hall_number": 398,
+      "international_short": "I-42m",
+      "setting": ""
+    },
+    "122": {
+      "bravais": "tI",
+      "hall_number": 399,
+      "international_short": "I-42d",
+      "setting": ""
+    },
+    "123": {
+      "bravais": "tP",
+      "hall_number": 400,
+      "international_short": "P4/mmm",
+      "setting": ""
+    },
+    "124": {
+      "bravais": "tP",
+      "hall_number": 401,
+      "international_short": "P4/mcc",
+      "setting": ""
+    },
+    "125": {
+      "bravais": "tP",
+      "hall_number": 402,
+      "international_short": "P4/nbm",
+      "setting": "1"
+    },
+    "126": {
+      "bravais": "tP",
+      "hall_number": 404,
+      "international_short": "P4/nnc",
+      "setting": "1"
+    },
+    "127": {
+      "bravais": "tP",
+      "hall_number": 406,
+      "international_short": "P4/mbm",
+      "setting": ""
+    },
+    "128": {
+      "bravais": "tP",
+      "hall_number": 407,
+      "international_short": "P4/mnc",
+      "setting": ""
+    },
+    "129": {
+      "bravais": "tP",
+      "hall_number": 408,
+      "international_short": "P4/nmm",
+      "setting": "1"
+    },
+    "130": {
+      "bravais": "tP",
+      "hall_number": 410,
+      "international_short": "P4/ncc",
+      "setting": "1"
+    },
+    "131": {
+      "bravais": "tP",
+      "hall_number": 412,
+      "international_short": "P4_2/mmc",
+      "setting": ""
+    },
+    "132": {
+      "bravais": "tP",
+      "hall_number": 413,
+      "international_short": "P4_2/mcm",
+      "setting": ""
+    },
+    "133": {
+      "bravais": "tP",
+      "hall_number": 414,
+      "international_short": "P4_2/nbc",
+      "setting": "1"
+    },
+    "134": {
+      "bravais": "tP",
+      "hall_number": 416,
+      "international_short": "P4_2/nnm",
+      "setting": "1"
+    },
+    "135": {
+      "bravais": "tP",
+      "hall_number": 418,
+      "international_short": "P4_2/mbc",
+      "setting": ""
+    },
+    "136": {
+      "bravais": "tP",
+      "hall_number": 419,
+      "international_short": "P4_2/mnm",
+      "setting": ""
+    },
+    "137": {
+      "bravais": "tP",
+      "hall_number": 420,
+      "international_short": "P4_2/nmc",
+      "setting": "1"
+    },
+    "138": {
+      "bravais": "tP",
+      "hall_number": 422,
+      "international_short": "P4_2/ncm",
+      "setting": "1"
+    },
+    "139": {
+      "bravais": "tI",
+      "hall_number": 424,
+      "international_short": "I4/mmm",
+      "setting": ""
+    },
+    "140": {
+      "bravais": "tI",
+      "hall_number": 425,
+      "international_short": "I4/mcm",
+      "setting": ""
+    },
+    "141": {
+      "bravais": "tI",
+      "hall_number": 426,
+      "international_short": "I4_1/amd",
+      "setting": "1"
+    },
+    "142": {
+      "bravais": "tI",
+      "hall_number": 428,
+      "international_short": "I4_1/acd",
+      "setting": "1"
+    },
+    "143": {
+      "bravais": "hP",
+      "hall_number": 430,
+      "international_short": "P3",
+      "setting": ""
+    },
+    "144": {
+      "bravais": "hP",
+      "hall_number": 431,
+      "international_short": "P3_1",
+      "setting": ""
+    },
+    "145": {
+      "bravais": "hP",
+      "hall_number": 432,
+      "international_short": "P3_2",
+      "setting": ""
+    },
+    "146": {
+      "bravais": "hR",
+      "hall_number": 433,
+      "international_short": "R3",
+      "setting": "H"
+    },
+    "147": {
+      "bravais": "hP",
+      "hall_number": 435,
+      "international_short": "P-3",
+      "setting": ""
+    },
+    "148": {
+      "bravais": "hR",
+      "hall_number": 436,
+      "international_short": "R-3",
+      "setting": "H"
+    },
+    "149": {
+      "bravais": "hP",
+      "hall_number": 438,
+      "international_short": "P312",
+      "setting": ""
+    },
+    "150": {
+      "bravais": "hP",
+      "hall_number": 439,
+      "international_short": "P321",
+      "setting": ""
+    },
+    "151": {
+      "bravais": "hP",
+      "hall_number": 440,
+      "international_short": "P3_112",
+      "setting": ""
+    },
+    "152": {
+      "bravais": "hP",
+      "hall_number": 441,
+      "international_short": "P3_121",
+      "setting": ""
+    },
+    "153": {
+      "bravais": "hP",
+      "hall_number": 442,
+      "international_short": "P3_212",
+      "setting": ""
+    },
+    "154": {
+      "bravais": "hP",
+      "hall_number": 443,
+      "international_short": "P3_221",
+      "setting": ""
+    },
+    "155": {
+      "bravais": "hR",
+      "hall_number": 444,
+      "international_short": "R32",
+      "setting": "H"
+    },
+    "156": {
+      "bravais": "hP",
+      "hall_number": 446,
+      "international_short": "P3m1",
+      "setting": ""
+    },
+    "157": {
+      "bravais": "hP",
+      "hall_number": 447,
+      "international_short": "P31m",
+      "setting": ""
+    },
+    "158": {
+      "bravais": "hP",
+      "hall_number": 448,
+      "international_short": "P3c1",
+      "setting": ""
+    },
+    "159": {
+      "bravais": "hP",
+      "hall_number": 449,
+      "international_short": "P31c",
+      "setting": ""
+    },
+    "160": {
+      "bravais": "hR",
+      "hall_number": 450,
+      "international_short": "R3m",
+      "setting": "H"
+    },
+    "161": {
+      "bravais": "hR",
+      "hall_number": 452,
+      "international_short": "R3c",
+      "setting": "H"
+    },
+    "162": {
+      "bravais": "hP",
+      "hall_number": 454,
+      "international_short": "P-31m",
+      "setting": ""
+    },
+    "163": {
+      "bravais": "hP",
+      "hall_number": 455,
+      "international_short": "P-31c",
+      "setting": ""
+    },
+    "164": {
+      "bravais": "hP",
+      "hall_number": 456,
+      "international_short": "P-3m1",
+      "setting": ""
+    },
+    "165": {
+      "bravais": "hP",
+      "hall_number": 457,
+      "international_short": "P-3c1",
+      "setting": ""
+    },
+    "166": {
+      "bravais": "hR",
+      "hall_number": 458,
+      "international_short": "R-3m",
+      "setting": "H"
+    },
+    "167": {
+      "bravais": "hR",
+      "hall_number": 460,
+      "international_short": "R-3c",
+      "setting": "H"
+    },
+    "168": {
+      "bravais": "hP",
+      "hall_number": 462,
+      "international_short": "P6",
+      "setting": ""
+    },
+    "169": {
+      "bravais": "hP",
+      "hall_number": 463,
+      "international_short": "P6_1",
+      "setting": ""
+    },
+    "170": {
+      "bravais": "hP",
+      "hall_number": 464,
+      "international_short": "P6_5",
+      "setting": ""
+    },
+    "171": {
+      "bravais": "hP",
+      "hall_number": 465,
+      "international_short": "P6_2",
+      "setting": ""
+    },
+    "172": {
+      "bravais": "hP",
+      "hall_number": 466,
+      "international_short": "P6_4",
+      "setting": ""
+    },
+    "173": {
+      "bravais": "hP",
+      "hall_number": 467,
+      "international_short": "P6_3",
+      "setting": ""
+    },
+    "174": {
+      "bravais": "hP",
+      "hall_number": 468,
+      "international_short": "P-6",
+      "setting": ""
+    },
+    "175": {
+      "bravais": "hP",
+      "hall_number": 469,
+      "international_short": "P6/m",
+      "setting": ""
+    },
+    "176": {
+      "bravais": "hP",
+      "hall_number": 470,
+      "international_short": "P6_3/m",
+      "setting": ""
+    },
+    "177": {
+      "bravais": "hP",
+      "hall_number": 471,
+      "international_short": "P622",
+      "setting": ""
+    },
+    "178": {
+      "bravais": "hP",
+      "hall_number": 472,
+      "international_short": "P6_122",
+      "setting": ""
+    },
+    "179": {
+      "bravais": "hP",
+      "hall_number": 473,
+      "international_short": "P6_522",
+      "setting": ""
+    },
+    "180": {
+      "bravais": "hP",
+      "hall_number": 474,
+      "international_short": "P6_222",
+      "setting": ""
+    },
+    "181": {
+      "bravais": "hP",
+      "hall_number": 475,
+      "international_short": "P6_422",
+      "setting": ""
+    },
+    "182": {
+      "bravais": "hP",
+      "hall_number": 476,
+      "international_short": "P6_322",
+      "setting": ""
+    },
+    "183": {
+      "bravais": "hP",
+      "hall_number": 477,
+      "international_short": "P6mm",
+      "setting": ""
+    },
+    "184": {
+      "bravais": "hP",
+      "hall_number": 478,
+      "international_short": "P6cc",
+      "setting": ""
+    },
+    "185": {
+      "bravais": "hP",
+      "hall_number": 479,
+      "international_short": "P6_3cm",
+      "setting": ""
+    },
+    "186": {
+      "bravais": "hP",
+      "hall_number": 480,
+      "international_short": "P6_3mc",
+      "setting": ""
+    },
+    "187": {
+      "bravais": "hP",
+      "hall_number": 481,
+      "international_short": "P-6m2",
+      "setting": ""
+    },
+    "188": {
+      "bravais": "hP",
+      "hall_number": 482,
+      "international_short": "P-6c2",
+      "setting": ""
+    },
+    "189": {
+      "bravais": "hP",
+      "hall_number": 483,
+      "international_short": "P-62m",
+      "setting": ""
+    },
+    "190": {
+      "bravais": "hP",
+      "hall_number": 484,
+      "international_short": "P-62c",
+      "setting": ""
+    },
+    "191": {
+      "bravais": "hP",
+      "hall_number": 485,
+      "international_short": "P6/mmm",
+      "setting": ""
+    },
+    "192": {
+      "bravais": "hP",
+      "hall_number": 486,
+      "international_short": "P6/mcc",
+      "setting": ""
+    },
+    "193": {
+      "bravais": "hP",
+      "hall_number": 487,
+      "international_short": "P6_3/mcm",
+      "setting": ""
+    },
+    "194": {
+      "bravais": "hP",
+      "hall_number": 488,
+      "international_short": "P6_3/mmc",
+      "setting": ""
+    },
+    "195": {
+      "bravais": "cP",
+      "hall_number": 489,
+      "international_short": "P23",
+      "setting": ""
+    },
+    "196": {
+      "bravais": "cF",
+      "hall_number": 490,
+      "international_short": "F23",
+      "setting": ""
+    },
+    "197": {
+      "bravais": "cI",
+      "hall_number": 491,
+      "international_short": "I23",
+      "setting": ""
+    },
+    "198": {
+      "bravais": "cP",
+      "hall_number": 492,
+      "international_short": "P2_13",
+      "setting": ""
+    },
+    "199": {
+      "bravais": "cI",
+      "hall_number": 493,
+      "international_short": "I2_13",
+      "setting": ""
+    },
+    "200": {
+      "bravais": "cP",
+      "hall_number": 494,
+      "international_short": "Pm-3",
+      "setting": ""
+    },
+    "201": {
+      "bravais": "cP",
+      "hall_number": 495,
+      "international_short": "Pn-3",
+      "setting": "1"
+    },
+    "202": {
+      "bravais": "cF",
+      "hall_number": 497,
+      "international_short": "Fm-3",
+      "setting": ""
+    },
+    "203": {
+      "bravais": "cF",
+      "hall_number": 498,
+      "international_short": "Fd-3",
+      "setting": "1"
+    },
+    "204": {
+      "bravais": "cI",
+      "hall_number": 500,
+      "international_short": "Im-3",
+      "setting": ""
+    },
+    "205": {
+      "bravais": "cP",
+      "hall_number": 501,
+      "international_short": "Pa-3",
+      "setting": ""
+    },
+    "206": {
+      "bravais": "cI",
+      "hall_number": 502,
+      "international_short": "Ia-3",
+      "setting": ""
+    },
+    "207": {
+      "bravais": "cP",
+      "hall_number": 503,
+      "international_short": "P432",
+      "setting": ""
+    },
+    "208": {
+      "bravais": "cP",
+      "hall_number": 504,
+      "international_short": "P4_232",
+      "setting": ""
+    },
+    "209": {
+      "bravais": "cF",
+      "hall_number": 505,
+      "international_short": "F432",
+      "setting": ""
+    },
+    "210": {
+      "bravais": "cF",
+      "hall_number": 506,
+      "international_short": "F4_132",
+      "setting": ""
+    },
+    "211": {
+      "bravais": "cI",
+      "hall_number": 507,
+      "international_short": "I432",
+      "setting": ""
+    },
+    "212": {
+      "bravais": "cP",
+      "hall_number": 508,
+      "international_short": "P4_332",
+      "setting": ""
+    },
+    "213": {
+      "bravais": "cP",
+      "hall_number": 509,
+      "international_short": "P4_132",
+      "setting": ""
+    },
+    "214": {
+      "bravais": "cI",
+      "hall_number": 510,
+      "international_short": "I4_132",
+      "setting": ""
+    },
+    "215": {
+      "bravais": "cP",
+      "hall_number": 511,
+      "international_short": "P-43m",
+      "setting": ""
+    },
+    "216": {
+      "bravais": "cF",
+      "hall_number": 512,
+      "international_short": "F-43m",
+      "setting": ""
+    },
+    "217": {
+      "bravais": "cI",
+      "hall_number": 513,
+      "international_short": "I-43m",
+      "setting": ""
+    },
+    "218": {
+      "bravais": "cP",
+      "hall_number": 514,
+      "international_short": "P-43n",
+      "setting": ""
+    },
+    "219": {
+      "bravais": "cF",
+      "hall_number": 515,
+      "international_short": "F-43c",
+      "setting": ""
+    },
+    "220": {
+      "bravais": "cI",
+      "hall_number": 516,
+      "international_short": "I-43d",
+      "setting": ""
+    },
+    "221": {
+      "bravais": "cP",
+      "hall_number": 517,
+      "international_short": "Pm-3m",
+      "setting": ""
+    },
+    "222": {
+      "bravais": "cP",
+      "hall_number": 518,
+      "international_short": "Pn-3n",
+      "setting": "1"
+    },
+    "223": {
+      "bravais": "cP",
+      "hall_number": 520,
+      "international_short": "Pm-3n",
+      "setting": ""
+    },
+    "224": {
+      "bravais": "cP",
+      "hall_number": 521,
+      "international_short": "Pn-3m",
+      "setting": "1"
+    },
+    "225": {
+      "bravais": "cF",
+      "hall_number": 523,
+      "international_short": "Fm-3m",
+      "setting": ""
+    },
+    "226": {
+      "bravais": "cF",
+      "hall_number": 524,
+      "international_short": "Fm-3c",
+      "setting": ""
+    },
+    "227": {
+      "bravais": "cF",
+      "hall_number": 525,
+      "international_short": "Fd-3m",
+      "setting": "1"
+    },
+    "228": {
+      "bravais": "cF",
+      "hall_number": 527,
+      "international_short": "Fd-3c",
+      "setting": "1"
+    },
+    "229": {
+      "bravais": "cI",
+      "hall_number": 529,
+      "international_short": "Im-3m",
+      "setting": ""
+    },
+    "230": {
+      "bravais": "cI",
+      "hall_number": 530,
+      "international_short": "Ia-3d",
+      "setting": ""
+    }
+  }
+}

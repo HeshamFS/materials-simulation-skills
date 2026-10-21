@@ -1,0 +1,15 @@
+{
+  "centering": "node",
+  "Lx": 1,
+  "fields": {
+    "rho": {
+      "values": [
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  }
+}

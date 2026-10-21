@@ -2,6 +2,14 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.3] - 2026-10-19
+
+### Added
+- 4 defect-focused skill eval scenarios with portable analytic or rejection checks.
+
+### Fixed
+- Correct signed nonuniform refinement fits, suppress invalid extrapolations, and distinguish observed order from the extrapolated observable and asymptotic evidence.
+
 ## [1.2.2] - 2026-06-24
 
 ### Added

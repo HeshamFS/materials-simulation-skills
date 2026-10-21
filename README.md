@@ -31,16 +31,21 @@ Agent: I'll use the numerical-stability skill to check this.
 
 No prompt engineering, no copy-pasting formulas. **24 skills** span numerical methods, simulation workflows, HPC deployment, verification & validation, FAIR data, robustness, and materials ontologies.
 
-### Validated, not just curated
+### Tested scripts and explicit validation limits
 
-Most agent-skill collections are unverified prompt text. These are **measured**:
+The repository includes executable checks at several levels:
 
-- **Tested scripts** — every skill ships Python CLIs with a pure-function core (1283 tests, Python 3.10–3.12).
+- **Tested scripts** — unit, integration, analytic-oracle and negative-control tests exercise the Python CLIs and numerical cores. CI targets Python 3.10–3.12.
 - **100% deterministic eval coverage** — every eval case runs the script and asserts its exact output, so docs can't silently drift from code. Enforced in CI.
-- **Measured uplift** — skills are evaluated *with vs. without* the skill across coding-agent CLIs; value is the pass-rate **delta**, not a claim.
+- **Agent evaluation support** — the harness compares runs with and without a skill. Harness tests and deterministic coverage do not establish an improvement in agent scientific correctness.
 - **Cited science + an enforced [protocol](docs/PROTOCOL.md)** — rules reference authoritative standards (ASME V&V20, the SchedMD `sbatch` spec, CMSO IRIs).
 
 How and why: **[evaluation methodology](docs/EVALUATION_METHODOLOGY.md)** · **[harness](docs/EVAL_HARNESS.md)**.
+
+Latest [deterministic evaluation (2026-10-20)](docs/evaluations/2026-10-20.md): **115 cases, 131 checks, 725 assertions passed**. Live-agent uplift remains unvalidated.
+
+See **[validation scope and remaining limits](docs/VALIDATION_SCOPE.md)** before
+interpreting a passing check as evidence about a physical simulation.
 
 ---
 

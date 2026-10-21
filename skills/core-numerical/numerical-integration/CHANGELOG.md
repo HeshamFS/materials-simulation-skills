@@ -2,6 +2,11 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.3] - 2026-10-19
+
+### Fixed
+- Compute Euclidean error norms without avoidable squaring overflow or underflow.
+
 ## [1.2.2] - 2026-06-24
 
 ### Added

@@ -4,6 +4,17 @@ import argparse
 import json
 import math
 import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "_support"))
+from refinement_order import observed_order
+
+
+def finite_float(raw):
+    value = float(raw)
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError("value must be finite")
+    return value
 
 
 def parse_args():
@@ -20,7 +31,7 @@ def parse_args():
         help="Comma-separated solution values at each timestep level",
     )
     parser.add_argument(
-        "--expected-order", type=float, default=None,
+        "--expected-order", type=finite_float, default=None,
         help="Expected convergence order for assessment",
     )
     parser.add_argument("--json", action="store_true", help="Emit JSON output")
@@ -58,6 +69,11 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
         if not math.isfinite(v):
             raise ValueError("All values must be finite numbers")
 
+    if len(set(timesteps)) != len(timesteps):
+        raise ValueError("Refinement levels must be distinct")
+    if expected_order is not None and (not math.isfinite(expected_order) or expected_order <= 0):
+        raise ValueError("expected_order must be positive and finite")
+
     # Sort by timestep descending (coarsest first)
     paired = sorted(zip(timesteps, values), key=lambda x: -x[0])
     timesteps_sorted = [p[0] for p in paired]
@@ -66,38 +82,19 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
     notes = []
     observed_orders = []
 
-    # Compute observed orders from consecutive triplets using log-ratio
-    if len(timesteps_sorted) >= 3:
-        for i in range(len(timesteps_sorted) - 2):
-            dt_coarse = timesteps_sorted[i]
-            dt_mid = timesteps_sorted[i + 1]
-            f_coarse = values_sorted[i]
-            f_mid = values_sorted[i + 1]
-            f_fine = values_sorted[i + 2]
-
-            e_coarse = abs(f_coarse - f_mid)
-            e_fine = abs(f_mid - f_fine)
-
-            if e_fine == 0 or e_coarse == 0:
-                notes.append(
-                    "Zero error difference at levels %d-%d; "
-                    "cannot compute order for this pair" % (i, i + 2)
-                )
-                continue
-
-            r_coarse = dt_coarse / dt_mid
-
-            if r_coarse <= 0:
-                continue
-
-            p = math.log(e_coarse / e_fine) / math.log(r_coarse)
-            observed_orders.append(p)
-
-            if p < 0:
-                notes.append(
-                    "Negative observed order (%.2f) at levels %d-%d: "
-                    "possible divergence" % (p, i, i + 2)
-                )
+    invalid_sequence = False
+    for i in range(len(timesteps_sorted)-2):
+        hs = timesteps_sorted[i:i+3]
+        fs = values_sorted[i:i+3]
+        try:
+            p = observed_order(*reversed(hs), *reversed(fs))
+        except ValueError as exc:
+            invalid_sequence = True
+            notes.append(str(exc))
+            continue
+        observed_orders.append(p)
+        if p <= 0:
+            notes.append("Negative or zero observed order: possible divergence")
 
     # Mean order
     mean_order = None
@@ -119,8 +116,9 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
         if mean_order is not None and mean_order <= 0:
             in_asymptotic_range = False
     elif len(observed_orders) == 1:
-        # Single estimate: only "asymptotic" if the order is positive (converging).
-        in_asymptotic_range = mean_order is not None and mean_order > 0
+        # One triplet cannot establish persistence of an asymptotic order.
+        in_asymptotic_range = False if mean_order is not None and mean_order <= 0 else None
+        notes.append("One observed order is insufficient to establish an asymptotic range")
     else:
         in_asymptotic_range = None
 
@@ -132,7 +130,10 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
     f_next = values_sorted[-2]
     r = dt_next / dt_fine
 
-    if mean_order is not None and mean_order > 0:
+    if invalid_sequence:
+        in_asymptotic_range = False
+        notes.append("Oscillatory or unresolved differences: Richardson estimate suppressed")
+    elif mean_order is not None and mean_order > 0:
         richardson_extrapolated_value = f_fine + (f_fine - f_next) / (r ** mean_order - 1)
     elif mean_order is not None:
         # Non-positive observed order: solution appears to be diverging.
@@ -161,6 +162,9 @@ def compute_dt_refinement(timesteps, values, expected_order=None):
         convergence_assessment = "Observed order: %.2f (no expected order given for comparison)" % mean_order
     elif len(timesteps_sorted) < 3:
         convergence_assessment = "Insufficient levels to compute observed order (need >= 3)"
+
+    if invalid_sequence:
+        convergence_assessment = "FAIL: oscillatory or unresolved refinement sequence"
 
     return {
         "inputs": {

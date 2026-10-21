@@ -22,17 +22,18 @@ Patrick Roache and is recommended by ASME V&V 20 and AIAA standards.
        r21 = h2 / h1
        r32 = h3 / h2
 
-2. **Compute observed order** p:
+2. **Compute signed observed order** p from same-sign nonzero differences:
 
-       p = |ln|e32/e21|| / ln(r21)
+       p = ln(abs(e32/e21)) / ln(r21)   (equal refinement ratios)
 
-   where e32 = f3 - f2 and e21 = f2 - f1.
+   For unequal ratios solve the nonzero power-law relation
 
-   For non-uniform ratios, an iterative procedure using:
+       e32/e21 = r21^p * (r32^p - 1)/(r21^p - 1)
 
-       p = |ln|e32/e21| + ln((r21^p - s) / (r32^p - s))| / ln(r21)
-
-   where s = sign(e32/e21). This reduces to the simple formula when r21 = r32.
+   using a bracketed root and residual check. Evaluate the continuous limit
+   near p=0 with log/expm1 arithmetic. Do not take abs(p): negative orders
+   indicate divergence. Nonpositive orders suppress GCI and extrapolation.
+   Oscillatory differences are outside this implementation's model.
 
 3. **Compute GCI for fine grid**:
 
@@ -48,8 +49,9 @@ Patrick Roache and is recommended by ASME V&V 20 and AIAA standards.
 
        AR = GCI_coarse / (r21^p * GCI_fine)
 
-   If AR is approximately 1.0 (within 10%), the grids are in the asymptotic
-   range and the GCI is reliable.
+   AR near one is only a heuristic diagnostic. At equal ratios it reduces
+   algebraically to f1/f2 and cannot independently establish an asymptotic
+   regime. Check expected order and consistency on additional grids.
 
 6. **Richardson extrapolated value**:
 
@@ -63,8 +65,7 @@ Patrick Roache and is recommended by ASME V&V 20 and AIAA standards.
 | 2 grids with assumed order | 3.0 | Order not verified, higher uncertainty |
 | Oscillatory convergence | N/A | GCI not applicable |
 
-The factor of 1.25 is analogous to a 95% confidence interval for well-behaved
-convergence data.
+The factor 1.25 is an engineering safety factor, not a calibrated 95% statistical confidence interval.
 
 ## ASME V&V 20 Standard
 
@@ -124,4 +125,4 @@ When reporting GCI results, include:
     GCI_coarse = 0.40%
     Richardson extrapolated value: 1.00000
     Asymptotic ratio: 1.000
-    Conclusion: Solution is in asymptotic range; GCI is reliable.
+    Conclusion: Data are consistent with the assumed quadratic law; additional grids and model validation are required.

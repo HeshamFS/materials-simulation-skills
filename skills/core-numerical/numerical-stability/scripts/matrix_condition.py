@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import math
 import argparse
 import json
 import os
@@ -10,6 +11,28 @@ import numpy as np
 
 MAX_MATRIX_BYTES = 500 * 1024 * 1024  # 500 MB
 MAX_DIM = 100000  # max entries per matrix dimension
+
+
+def strict_payload(payload):
+    missing = []
+    def clean(value, path=""):
+        if isinstance(value, float) and not math.isfinite(value):
+            missing.append(path)
+            return None
+        if isinstance(value, dict): return {k:clean(v,path+"/"+str(k)) for k,v in value.items()}
+        if isinstance(value, (list,tuple)): return [clean(v,path+"/"+str(i)) for i,v in enumerate(value)]
+        return value
+    result = clean(payload)
+    if missing:
+        result["nonfinite_diagnostics"] = {"paths": missing, "meaning": "undefined, unbounded or outside floating-point range; not a finite certificate"}
+    return result
+
+
+def finite_float(raw):
+    value = float(raw)
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError("value must be finite")
+    return value
 
 
 def load_matrix(path: str, delimiter: Optional[str]) -> np.ndarray:
@@ -39,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--symmetry-tol",
-        type=float,
+        type=finite_float,
         default=1e-8,
         help="Tolerance for symmetry check",
     )
@@ -56,7 +79,9 @@ def parse_norm(value: str) -> Union[float, str]:
     value = value.strip().lower()
     if value in {"2", "1", "-1"}:
         return float(value)
-    if value in {"inf", "-inf", "fro"}:
+    if value in {"inf", "-inf"}:
+        return float(value)
+    if value == "fro":
         return value
     raise ValueError("norm must be one of: 2, 1, -1, inf, -inf, fro")
 
@@ -67,6 +92,8 @@ def compute_condition(
     symmetry_tol: float,
     skip_eigs: bool,
 ) -> Dict[str, object]:
+    if not math.isfinite(symmetry_tol) or symmetry_tol < 0:
+        raise ValueError("symmetry_tol must be finite and nonnegative")
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError("matrix must be square")
     if matrix.shape[0] > MAX_DIM:
@@ -137,7 +164,7 @@ def main() -> None:
     }
 
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(strict_payload(payload), allow_nan=False, indent=2, sort_keys=True))
         return
 
     print("Matrix conditioning")

@@ -62,6 +62,8 @@ def plan_timestep(
         raise ValueError("dt_max must be positive")
     if dt_min is not None and dt_max is not None and dt_min > dt_max:
         raise ValueError("dt_min must be <= dt_max")
+    if dt_min is not None and dt_min > dt_limit * safety:
+        raise ValueError("dt_min exceeds the stability limit with safety margin; constraints are infeasible")
 
     if ramp_steps < 0:
         raise ValueError("ramp_steps must be non-negative")

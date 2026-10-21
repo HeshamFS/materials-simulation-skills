@@ -13,8 +13,10 @@ allowed-tools:
   - Bash
   - Read
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   standards:
     - "ASME V&V 20 (Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer)"
     - "Roache, Grid Convergence Index (GCI) method with safety factors Fs in {1.25, 3.0}"
@@ -26,8 +28,8 @@ metadata:
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
-  eval_cases: 4
-  last_reviewed: "2026-06-23"
+  eval_cases: 8
+  last_reviewed: "2026-10-19"
 ---
 
 # Convergence Study
@@ -74,7 +76,7 @@ Provide script-driven convergence analysis for verifying that numerical solution
 ```
 Do you have 3+ refinement levels?
 +-- YES --> Run h_refinement.py or dt_refinement.py
-|           +-- Observed order matches expected? --> Solution verified
+|           +-- Observed order matches expected? --> Order agreement; check persistence and error assumptions
 |           +-- Order too low? --> Check: pre-asymptotic, coding error, insufficient resolution
 |           +-- Order too high? --> Check: superconvergence or cancellation effects
 +-- NO (only 2 levels) --> Use richardson_extrapolation.py with assumed order
@@ -110,7 +112,7 @@ python3 scripts/gci_calculator.py --spacings 0.04,0.02,0.01 --values 1.0128,1.00
 
 | Scenario | Meaning | Action |
 |----------|---------|--------|
-| Observed order matches expected | Strongest evidence of asymptotic range | Report GCI, extrapolate |
+| Observed order matches expected | Evidence consistent with the expected error law | Check persistence across levels; label estimates conditional |
 | Observed order < expected | Pre-asymptotic or coding bug | Refine further or debug |
 | Negative observed order | Solution diverging | Check implementation |
 | GCI asymptotic ratio near 1.0 | See caveat below | Confirm with order comparison |
@@ -125,16 +127,34 @@ python3 scripts/gci_calculator.py --spacings 0.04,0.02,0.01 --values 1.0128,1.00
 > `gci_calculator.py` JSON emits a `notes` entry flagging this. For a real
 > asymptotic-range determination:
 > 1. Compare the observed order `p` to the scheme's theoretical/expected order — a
->    match is the meaningful evidence of being in the asymptotic range.
+>    match supports the expected error law but does not establish an asymptotic range.
 > 2. For stronger verification, use 4+ systematically refined grids and check that
 >    the observed order is consistent across successive grid triplets
 >    (`h_refinement.py` reports one order per triplet plus `mean_order`).
 
 ## Verification checklist
 
+When explaining a refinement result, compare only the dimensionless
+`results.mean_order` with the expected order. The
+`results.richardson_extrapolated_value` estimates the observable at zero spacing
+and has the same units as the input observable; it is never the convergence
+order. Use `order_comparison`, `extrapolation_evidence`, and
+`scientific_interpretation` from `h_refinement.py` to keep these roles explicit.
+For h=(0.2,0.1,0.05) and values=(1.04,1.01,1.0025), p=2 and the extrapolated
+observable=1. Compare 2 with the expected order, not 1. Keep this guidance in
+the final synthesis context. A single grid triplet cannot establish stable
+order across triplets: `in_asymptotic_range` is null for a positive single
+estimate. More grids, residual convergence and model validation remain needed.
+
+Use the [deterministic explanation renderer](../../GROUNDED_EXPLANATIONS.md)
+for final scientific text from trusted, input-verified `h_refinement` JSON.
+An order agreement decision is true when the measured order is within the
+stated tolerance, even though physical accuracy and asymptotic behavior remain
+unproven. The relative tolerance 0.1 means 10%, not 0.1%.
+
 - [ ] Used >= 3 systematically refined grids/timesteps so `h_refinement.py` / `dt_refinement.py` can report a `results.mean_order`; recorded the per-triplet `results.observed_orders` (a single-pair Richardson run does not verify order).
 - [ ] Recorded `results.mean_order` and confirmed `results.convergence_assessment` reads `PASS` (observed order within 10% of the scheme's expected order); a `FAIL` or `unknown` means the result is not yet verified.
-- [ ] Confirmed `results.in_asymptotic_range` is `true` and that no `notes` entry reports pre-asymptotic (>50% order variation), negative/non-positive order, or zero error differences before quoting any GCI or extrapolated value.
+- [ ] Checked `results.in_asymptotic_range` and all notes. Null means insufficient evidence; true is only a successive-order heuristic, not proof. Label any quoted extrapolation conditional on the power-law error assumption, and suppress it for invalid or diverging sequences.
 - [ ] Checked refinement ratios `r21`/`r32` from `gci_calculator.py` are >= 1.3 (round-off noise floor) and that no `Oscillatory convergence detected` error was raised.
 - [ ] Recorded `results.gci_fine` (with the safety factor used: 1.25 for >= 3 grids with verified order, 3.0 for 2 grids with assumed order) as the reported discretization uncertainty, plus `results.extrapolated_value` as the best estimate.
 - [ ] For constant refinement ratios, did NOT treat `asymptotic_ratio` near 1.0 as proof of asymptotic range (it degenerates to `f1/f2`); confirmed the asymptotic range via observed-order-vs-expected and read the `gci_calculator.py` `notes` caveat.

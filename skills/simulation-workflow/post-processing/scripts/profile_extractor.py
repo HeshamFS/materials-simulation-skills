@@ -24,6 +24,13 @@ FIELD_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.-]*$")
 MAX_POINTS = 10_000_000
 
 
+def finite_float(raw):
+    value = float(raw)
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError("value must be finite")
+    return value
+
+
 def _validate_file_size(filepath: str) -> None:
     size = os.path.getsize(filepath)
     if size > MAX_FILE_SIZE:
@@ -382,7 +389,7 @@ def main():
     )
     parser.add_argument(
         "--slice-position",
-        type=float,
+        type=finite_float,
         default=0.5,
         help="Position along perpendicular axis (0-1, default: 0.5)"
     )
@@ -407,7 +414,7 @@ def main():
     )
     parser.add_argument(
         "--threshold",
-        type=float,
+        type=finite_float,
         default=0.5,
         help="Threshold for interface detection (default: 0.5)"
     )

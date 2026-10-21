@@ -100,6 +100,35 @@
           ]
         }
       ]
+    },
+    {
+      "id": 5,
+      "regression_id": "infeasible-minimum-step",
+      "prompt": "Choose dt with target=0.1, stability limit=0.1, safety=0.8, and minimum dt=0.09. Can you meet all constraints?",
+      "expected_output": "The constraints are infeasible: dt_min=0.09 exceeds safety*dt_limit=0.08. Reject the request instead of returning an unstable recommendation.",
+      "assertions": [
+        "The constraints are infeasible: dt_min=0.09 exceeds safety*dt_limit=0.08. Reject the request instead of returning an unstable recommendation.",
+        "Uses the specified skill tool and preserves its warnings and evidence limits."
+      ],
+      "script_checks": [
+        {
+          "description": "infeasible-minimum-step",
+          "cmd": [
+            "scripts/timestep_planner.py",
+            "--dt-target",
+            ".1",
+            "--dt-limit",
+            ".1",
+            "--safety",
+            ".8",
+            "--dt-min",
+            ".09",
+            "--json"
+          ],
+          "expect_exit": 2,
+          "assert": []
+        }
+      ]
     }
   ]
 }

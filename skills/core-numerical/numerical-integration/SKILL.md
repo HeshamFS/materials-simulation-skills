@@ -13,15 +13,17 @@ description: >
   should I use."
 allowed-tools: Read, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
   eval_cases: 4
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-10-19"
   standards:
     - "Hairer, Norsett & Wanner, Solving Ordinary Differential Equations I (Nonstiff): RK45 (Dormand-Prince), DOP853, embedded error estimation"
     - "Hairer & Wanner, Solving ODEs II (Stiff and DAE): BDF, Radau IIA, Rosenbrock methods"
@@ -236,6 +238,8 @@ python3 scripts/splitting_error_estimator.py --dt 1e-4 --scheme strang --commuta
 - `references/multiphase_field_patterns.md` - Phase-field specific splits
 
 ## Version History
+
+- **v1.2.3** (2026-10-19): Compute Euclidean error norms without avoidable squaring overflow or underflow.
 
 - **v1.2.2** (2026-06-24): Added Verification checklist and Common pitfalls & rationalizations sections grounding step acceptance, PI controller usage, integrator selection, and splitting-error checks in the scripts' actual outputs
 - **v1.2.0** (2026-06-23): Fixed PI controller coefficient/sign to standard form, fixed error_norm scale-collapse crash, corrected error-message and controller documentation to match the scripts

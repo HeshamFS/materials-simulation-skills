@@ -12,15 +12,17 @@ description: >
   slow" or "GMRES won't converge."
 allowed-tools: Read, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
   eval_cases: 4
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-10-19"
   standards:
     - "Saad (2003), Iterative Methods for Sparse Linear Systems (Krylov methods, ILU/ILUT, preconditioning)"
     - "Hestenes & Stiefel (1952) Conjugate Gradient method and the (√κ−1)/(√κ+1) error bound"
@@ -242,6 +244,8 @@ Do not trust a solve until each of these is satisfied with a recorded value, not
 - `references/scaling_guidelines.md` - Equilibration guidance
 
 ## Version History
+
+- **v1.2.3** (2026-10-19): Compute Euclidean residual norms without avoidable squaring overflow or underflow.
 
 - **v1.2.0** (2026-06-23): Fixed asymptotic stagnation detection, dense-feasibility solver gating, saddle-point/small-dense direct-solver routing, equilibrating two-sided scaling, CG iteration-bound table, and doc/eval consistency
 - **v1.1.0** (2024-12-24): Enhanced documentation, decision guidance, examples

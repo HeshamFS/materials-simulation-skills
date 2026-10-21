@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,7 @@ name = "materials-simulation-skills"
 version = "1.0.0"
 description = "Agent Skills for materials science simulations - numerical methods, validation, and parameter optimization"
 readme = "README.md"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 requires-python = ">=3.10"
 authors = [
     {name = "Materials Simulation Skills Contributors"}
@@ -28,7 +28,6 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -64,11 +63,15 @@ Issues = "https://github.com/HeshamFS/materials-simulation-skills/issues"
 mss = "materials_simulation_skills.cli:main"
 
 [tool.setuptools]
+include-package-data = false
 packages = ["materials_simulation_skills", "skills"]
 package-dir = {"" = "."}
 
 [tool.setuptools.package-data]
-skills = ["**/*.md", "**/*.json", "**/*.txt", "**/*.py"]
+skills = ["**/*.md", "**/*.json", "**/*.txt", "**/*.py", "**/evals/files/*", "**/evals/files/**/*"]
+
+[tool.setuptools.exclude-package-data]
+skills = ["**/evals/scratch/*", "**/evals/scratch/**/*", "**/evals/files/case3_init/campaign.json", "**/evals/files/mini_summary_out.json"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -84,7 +87,6 @@ addopts = [
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
-asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
 source = ["skills"]

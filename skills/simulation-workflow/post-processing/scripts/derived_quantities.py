@@ -23,6 +23,13 @@ MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 FIELD_NAME_PATTERN = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_.-]*$")
 
 
+def finite_float(raw):
+    value = float(raw)
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError("value must be finite")
+    return value
+
+
 def _validate_file_size(filepath: str) -> None:
     size = os.path.getsize(filepath)
     if size > MAX_FILE_SIZE:
@@ -79,60 +86,56 @@ def get_field_shape(field: List) -> List[int]:
     return shape
 
 
-def get_grid_spacing(data: Dict[str, Any], shape: List[int]) -> Dict[str, float]:
-    """Extract or compute grid spacing.
+class GridSpacing(dict):
+    """Spacing dictionary retaining quadrature conventions per physical axis."""
+    def __init__(self, *args, centering=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.centering = centering or {}
 
-    Explicit ``dx``/``dy``/``dz`` keys in the file take precedence. A domain
-    size ``Lx``/``Ly``/``Lz`` is only used to *derive* a spacing when the
-    corresponding explicit key is absent (node-centered: ``dx = Lx/(nx-1)``).
-    When both an explicit spacing and a domain size are present and they are
-    mutually inconsistent under both the cell-centered (``dx*nx == Lx``) and
-    node-centered (``dx*(nx-1) == Lx``) conventions, a warning is emitted to
-    stderr but the explicit value is kept.
-    """
-    spacing: Dict[str, float] = {}
 
-    # Explicit spacing wins.
-    for key in ["dx", "dy", "dz"]:
-        if key in data and isinstance(data[key], (int, float)):
-            spacing[key] = float(data[key])
-
-    # Derive from domain size only when no explicit spacing was provided, and
-    # warn if an explicit spacing conflicts with the stated domain size.
-    for length_key, space_key, axis in [
-        ("Lx", "dx", -1),
-        ("Ly", "dy", -2),
-        ("Lz", "dz", -3),
-    ]:
-        if length_key not in data:
-            continue
-        if len(shape) < abs(axis):
-            continue
-        n = shape[axis]
-        if n <= 1:
-            continue
-        L = data[length_key]
-        if space_key in spacing:
-            d = spacing[space_key]
-            node_ok = math.isclose(d * (n - 1), L, rel_tol=1e-6)
-            cell_ok = math.isclose(d * n, L, rel_tol=1e-6)
-            if not node_ok and not cell_ok:
-                print(
-                    f"WARNING: explicit {space_key}={d} is inconsistent with "
-                    f"{length_key}={L} for {n} points under both cell-centered "
-                    f"(d*n) and node-centered (d*(n-1)) conventions; "
-                    f"using explicit {space_key}={d}.",
-                    file=sys.stderr,
-                )
-        else:
-            spacing[space_key] = L / (n - 1)
-
-    # Default to 1.0 if not found.
-    spacing.setdefault("dx", 1.0)
-    spacing.setdefault("dy", 1.0)
-    spacing.setdefault("dz", 1.0)
-
+def get_grid_spacing(data, shape):
+    convention = data.get("centering")
+    if convention not in (None, "node", "cell"):
+        raise ValueError("centering must be node or cell")
+    spacing = GridSpacing()
+    for axis, key in enumerate(("dx", "dy", "dz")):
+        n = shape[-1-axis] if axis < len(shape) else None
+        length = data.get(("Lx", "Ly", "Lz")[axis])
+        d = data.get(key)
+        mode = convention or "cell"
+        if length is not None and (not math.isfinite(length) or length <= 0):
+            raise ValueError("Domain lengths must be positive and finite")
+        if d is None and length is not None and n is not None:
+            mode = convention or "node"
+            if mode == "node" and n < 2:
+                raise ValueError("Nodal integration needs at least two nodes per axis")
+            d = length / (n-1 if mode == "node" else n)
+        elif d is not None and length is not None and n is not None:
+            node_ok = math.isclose(d*(n-1), length, rel_tol=1e-6)
+            cell_ok = math.isclose(d*n, length, rel_tol=1e-6)
+            if convention is None and node_ok:
+                mode = "node"
+            elif not (node_ok if mode == "node" else cell_ok):
+                raise ValueError("Explicit spacing is inconsistent with domain length and centering")
+        d = 1.0 if d is None else float(d)
+        if not math.isfinite(d) or d <= 0:
+            raise ValueError("Grid spacing must be positive and finite")
+        spacing[key] = d
+        spacing.centering[key] = mode
     return spacing
+
+
+def _field_array(field):
+    import numpy as np
+    try:
+        arr = np.asarray(field, dtype=float)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("Field must be a rectangular numeric array") from exc
+    if not np.all(np.isfinite(arr)):
+        raise ValueError("Field values must be finite")
+    if arr.ndim not in (1,2,3):
+        raise ValueError("Field must have one, two or three dimensions")
+    return arr
 
 
 def compute_volume_fraction(
@@ -170,46 +173,45 @@ def compute_volume_fraction(
     }
 
 
-def compute_interface_area_2d(
-    field: List[List[float]],
-    threshold: float,
-    dx: float,
-    dy: float
-) -> Dict[str, Any]:
-    """Estimate interface area in 2D using marching squares concept."""
-    ny = len(field)
-    if ny == 0:
-        return {"interface_length": 0, "cells_crossed": 0}
+def compute_interface_area_2d(field, threshold, dx, dy):
+    """Length of the linearly interpolated level set on a fixed triangulation.
 
-    nx = len(field[0])
-
-    interface_segments = 0
-
-    for j in range(ny - 1):
-        for i in range(nx - 1):
-            # Get values at cell corners
-            v00 = field[j][i]
-            v10 = field[j][i + 1]
-            v01 = field[j + 1][i]
-            v11 = field[j + 1][i + 1]
-
-            # Count how many corners are above threshold
-            above = sum(1 for v in [v00, v10, v01, v11] if v >= threshold)
-
-            # If some above and some below, interface crosses cell
-            if 0 < above < 4:
-                interface_segments += 1
-
-    # Approximate interface length
-    avg_cell_size = math.sqrt(dx * dy)
-    interface_length = interface_segments * avg_cell_size
-
-    return {
-        "threshold": threshold,
-        "interface_length": interface_length,
-        "cells_crossed": interface_segments,
-        "method": "marching_squares_approximation"
-    }
+    Sample positions are separated by dx,dy. This measures the sampled-domain
+    contour, with no boundary extension. Curved contours require refinement.
+    """
+    arr = _field_array(field)
+    if arr.ndim != 2 or not math.isfinite(threshold):
+        raise ValueError("A finite threshold and 2D field are required")
+    if any(not math.isfinite(d) or d <= 0 for d in (dx,dy)):
+        raise ValueError("Spacing must be finite and positive")
+    ny,nx = arr.shape
+    segments = set()
+    cells = 0
+    for j in range(ny-1):
+        for i in range(nx-1):
+            corners = [(i,j),(i+1,j),(i+1,j+1),(i,j+1)]
+            crossed = False
+            for tri in ((0,1,2),(0,2,3)):
+                pts = [corners[k] for k in tri]
+                vals = [float(arr[y,x])-threshold for x,y in pts]
+                if all(v == 0 for v in vals):
+                    raise ValueError("Level set contains a flat triangle; contour length is undefined")
+                hits = []
+                for a,b in ((0,1),(1,2),(2,0)):
+                    va,vb = vals[a],vals[b]
+                    pa,pb = pts[a],pts[b]
+                    if va == 0: hits.append(pa)
+                    if (va < 0 < vb) or (vb < 0 < va):
+                        t = abs(va)/(abs(va)+abs(vb))
+                        hits.append((pa[0]+t*(pb[0]-pa[0]),pa[1]+t*(pb[1]-pa[1])))
+                hits = list(dict.fromkeys(hits))
+                if len(hits) == 2:
+                    segments.add(tuple(sorted(hits)))
+                    crossed = True
+            cells += crossed
+    length = math.fsum(math.hypot((b[0]-a[0])*dx,(b[1]-a[1])*dy) for a,b in segments)
+    return {"threshold": threshold, "interface_length": length, "cells_crossed": cells,
+            "method": "marching_triangles_linear_interpolation"}
 
 
 def compute_interface_area(
@@ -256,6 +258,11 @@ def compute_gradient_2d(
             raise ValueError(
                 f"Ragged array: row 0 has {nx} columns but row {j} has {len(field[j])}"
             )
+
+    if nx < 2 or ny < 2:
+        raise ValueError("2D gradients require at least two samples on each axis")
+    if any(not math.isfinite(d) or d <= 0 for d in (dx,dy)):
+        raise ValueError("Spacing must be finite and positive")
 
     grad_x = [[0.0] * nx for _ in range(ny)]
     grad_y = [[0.0] * nx for _ in range(ny)]
@@ -350,36 +357,36 @@ def compute_gradient_magnitude(
     return {"error": "Gradient not implemented for this dimension", "shape": shape}
 
 
-def compute_integral(
-    field: List,
-    spacing: Dict[str, float]
-) -> Dict[str, Any]:
-    """Compute volume integral of field."""
-    values = flatten_field(field)
-    shape = get_field_shape(field)
-
-    if not values:
-        return {"integral": 0, "method": "none"}
-
-    # Compute cell volume
-    if len(shape) == 1:
-        cell_volume = spacing["dx"]
-    elif len(shape) == 2:
-        cell_volume = spacing["dx"] * spacing["dy"]
-    elif len(shape) == 3:
-        cell_volume = spacing["dx"] * spacing["dy"] * spacing["dz"]
-    else:
-        cell_volume = 1.0
-
-    integral = sum(values) * cell_volume
-
-    return {
-        "integral": integral,
-        "mean_value": sum(values) / len(values),
-        "cell_volume": cell_volume,
-        "total_cells": len(values),
-        "method": f"midpoint_quadrature_{len(shape)}d"
-    }
+def compute_integral(field, spacing):
+    """Tensor trapezoid for nodal axes; midpoint sums for cell samples."""
+    import numpy as np
+    arr = _field_array(field)
+    if arr.size == 0:
+        return {"integral": 0.0, "mean_value": None, "cell_volume": 0.0, "total_cells": 0, "domain_volume": 0.0, "method": "none"}
+    weighted = arr.copy()
+    volume = 1.0
+    cell_volume = 1.0
+    nodal = False
+    for axis,n in enumerate(arr.shape):
+        key = ("dx","dy","dz")[arr.ndim-1-axis]
+        d = spacing[key]
+        if not math.isfinite(d) or d <= 0:
+            raise ValueError("Spacing must be positive and finite")
+        cell_volume *= d
+        isnode = getattr(spacing,"centering",{}).get(key,"cell") == "node"
+        w = np.ones(n)*d
+        if isnode:
+            if n < 2: raise ValueError("Nodal quadrature needs two nodes per axis")
+            w[[0,-1]] *= 0.5
+            nodal = True
+        dims = [1]*arr.ndim
+        dims[axis] = n
+        weighted *= w.reshape(dims)
+        volume *= float(w.sum())
+    integral = math.fsum(weighted.ravel())
+    return {"integral": integral, "mean_value": integral/volume,
+            "cell_volume": cell_volume, "total_cells": int(arr.size), "domain_volume": volume,
+            "method": f"tensor_trapezoid_{arr.ndim}d" if nodal else f"midpoint_quadrature_{arr.ndim}d"}
 
 
 def compute_total_variation(field: List, spacing: Dict[str, float]) -> Dict[str, Any]:
@@ -423,45 +430,27 @@ def compute_mass(field: List, spacing: Dict[str, float]) -> Dict[str, Any]:
     return {
         "total_mass": result["integral"],
         "mean_density": result["mean_value"],
-        "volume": result["cell_volume"] * result["total_cells"],
+        "volume": result["domain_volume"],
         "method": result["method"]
     }
 
 
-def compute_centroid(field: List, spacing: Dict[str, float]) -> Dict[str, Any]:
-    """Compute centroid of field (weighted by values)."""
-    shape = get_field_shape(field)
-
-    if len(shape) == 1:
-        dx = spacing["dx"]
-        total = sum(field)
-        if total == 0:
-            return {"centroid_x": None, "total": 0}
-
-        cx = sum(i * dx * field[i] for i in range(len(field))) / total
-        return {"centroid_x": cx, "total": total}
-
-    if len(shape) == 2:
-        ny, nx = shape
-        dx, dy = spacing["dx"], spacing["dy"]
-
-        total = sum(flatten_field(field))
-        if total == 0:
-            return {"centroid_x": None, "centroid_y": None, "total": 0}
-
-        cx = sum(
-            i * dx * field[j][i]
-            for j in range(ny) for i in range(nx)
-        ) / total
-
-        cy = sum(
-            j * dy * field[j][i]
-            for j in range(ny) for i in range(nx)
-        ) / total
-
-        return {"centroid_x": cx, "centroid_y": cy, "total": total}
-
-    return {"error": "Centroid not implemented for this dimension"}
+def compute_centroid(field, spacing):
+    """Quadrature-weighted centroid; first sample coordinate is zero on each axis."""
+    import numpy as np
+    arr = _field_array(field)
+    if arr.ndim > 2:
+        return {"error": "Centroid not implemented for this dimension"}
+    total = compute_integral(field,spacing)["integral"]
+    result = {"total": total, "coordinate_origin": "first sample"}
+    for axis in range(arr.ndim):
+        label = ("x","y")[arr.ndim-1-axis]
+        coord = np.arange(arr.shape[axis])*spacing["d"+label]
+        shape=[1]*arr.ndim
+        shape[axis]=arr.shape[axis]
+        numerator = compute_integral((arr*coord.reshape(shape)).tolist(),spacing)["integral"]
+        result["centroid_"+label] = numerator/total if total != 0 else None
+    return result
 
 
 QUANTITY_FUNCTIONS = {
@@ -497,23 +486,23 @@ def main():
     )
     parser.add_argument(
         "--threshold", "-t",
-        type=float,
+        type=finite_float,
         default=0.5,
         help="Threshold for volume_fraction/interface_area (default: 0.5)"
     )
     parser.add_argument(
         "--dx",
-        type=float,
+        type=finite_float,
         help="Grid spacing in x (overrides file data)"
     )
     parser.add_argument(
         "--dy",
-        type=float,
+        type=finite_float,
         help="Grid spacing in y (overrides file data)"
     )
     parser.add_argument(
         "--dz",
-        type=float,
+        type=finite_float,
         help="Grid spacing in z (overrides file data)"
     )
     parser.add_argument(
@@ -545,11 +534,14 @@ def main():
 
         # Get grid spacing
         spacing = get_grid_spacing(data, shape)
-        if args.dx:
+        if args.dx is not None:
+            if args.dx <= 0: raise ValueError("Spacing must be positive")
             spacing["dx"] = args.dx
-        if args.dy:
+        if args.dy is not None:
+            if args.dy <= 0: raise ValueError("Spacing must be positive")
             spacing["dy"] = args.dy
-        if args.dz:
+        if args.dz is not None:
+            if args.dz <= 0: raise ValueError("Spacing must be positive")
             spacing["dz"] = args.dz
 
         # Compute quantity

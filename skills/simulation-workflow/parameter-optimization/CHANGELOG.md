@@ -2,6 +2,11 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.3] - 2026-10-19
+
+### Fixed
+- Center and scale polynomial fits and expose rank-deficient or unvalidated fits.
+
 ## [1.2.2] - 2026-06-24
 
 ### Added

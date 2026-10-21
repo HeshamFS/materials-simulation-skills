@@ -26,8 +26,8 @@ def _esc(x: object) -> str:
 
 
 def _stat_cell(stat: dict, pct: bool = False, suffix: str = "") -> str:
-    if not stat:
-        return "—"
+    if not stat or stat.get("mean") is None or stat.get("stddev") is None:
+        return "unknown"
     mean = stat.get("mean", 0)
     std = stat.get("stddev", 0)
     if pct:
@@ -47,7 +47,7 @@ def render(benchmark: dict) -> str:
     metrics = [("Pass rate", "pass_rate", True, ""), ("Time", "time_seconds", False, "s"), ("Tokens", "tokens", False, "")]
     for label, key, pct, suf in metrics:
         cells = "".join(f"<td>{_esc(_stat_cell(rs.get(c, {}).get(key, {}), pct, suf))}</td>" for c in configs)
-        d = delta.get(key, "—")
+        d = delta.get(key) if delta.get(key) is not None else "unknown"
         summary_rows += f"<tr><th>{_esc(label)}</th>{cells}<td class='delta'>{_esc(d)}</td></tr>"
 
     config_headers = "".join(f"<th>{_esc(c.replace('_', ' ').title())}</th>" for c in configs)

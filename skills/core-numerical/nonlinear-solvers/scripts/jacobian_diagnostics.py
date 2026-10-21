@@ -15,6 +15,21 @@ MAX_MATRIX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 MAX_MATRIX_DIM = 100_000
 
 
+def strict_payload(payload):
+    missing = []
+    def clean(value, path=""):
+        if isinstance(value, float) and not math.isfinite(value):
+            missing.append(path)
+            return None
+        if isinstance(value, dict): return {k:clean(v,path+"/"+str(k)) for k,v in value.items()}
+        if isinstance(value, (list,tuple)): return [clean(v,path+"/"+str(i)) for i,v in enumerate(value)]
+        return value
+    result = clean(payload)
+    if missing:
+        result["nonfinite_diagnostics"] = {"paths": missing, "meaning": "undefined, unbounded or outside floating-point range; not a finite certificate"}
+    return result
+
+
 def diagnose_jacobian(
     matrix: np.ndarray,
     finite_diff_matrix: Optional[np.ndarray] = None,
@@ -69,7 +84,7 @@ def diagnose_jacobian(
     sv_min = float(singular_values[-1])
 
     # Condition number
-    if sv_min > 1e-30:
+    if sv_min > 0:
         condition_number = sv_max / sv_min
     else:
         condition_number = float("inf")
@@ -80,7 +95,7 @@ def diagnose_jacobian(
     rank_deficient = estimated_rank < min(m, n)
 
     # Classify Jacobian quality
-    if condition_number == float("inf") or sv_min < 1e-14:
+    if condition_number == float("inf") or estimated_rank < min(m, n):
         jacobian_quality = "near-singular"
         notes.append("Near-singular Jacobian; regularization may be needed.")
     elif condition_number > 1e10:
@@ -221,7 +236,7 @@ def main() -> None:
     }
 
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(strict_payload(payload), allow_nan=False, indent=2, sort_keys=True))
         return
 
     print("Jacobian diagnostics")

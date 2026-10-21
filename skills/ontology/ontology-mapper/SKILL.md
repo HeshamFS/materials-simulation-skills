@@ -14,15 +14,17 @@ description: >
   my material" or "annotate this sample for me."
 allowed-tools: Read, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   security_tier: low
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
-  eval_cases: 6
-  last_reviewed: "2026-06-23"
+  eval_cases: 8
+  last_reviewed: "2026-10-19"
   standards:
     - "CMSO (Computational Material Sample Ontology)"
     - "ASMO (Atomistic Simulation Methods Ontology)"
@@ -260,8 +262,30 @@ config would emit unresolvable terms.
 
 ## Version History
 
+- **v1.2.3** (2026-10-19): Validate lattice geometry and Bravais/space-group consistency with a licensed reference table and explicit evidence semantics.
+
 | Date | Version | Changes |
 |------|---------|---------|
 | 2026-06-23 | 1.2 | Validate emitted terms against the loaded ontology (ASMO crystal/sample terms now flagged, not silently emitted); document ASMO is concept-mapping only; clarify synonym-vs-exact confidence precedence; self-contained class_browser suggestion; harden input validation (term/sample size caps, Bravais allowlist) |
 | 2026-02-25 | 1.1 | Refactored for multi-ontology support: externalized CMSO-specific knowledge to config |
 | 2026-02-25 | 1.0 | Initial release with CMSO mapping support |
+
+
+### Numerical and evidence limits
+
+When explaining crystal results, keep the declared lattice and the space-group
+requirement separate. BCC always maps to `cI`; FCC maps to `cF`. Space group 225
+requires `cF` in its standard setting, whereas 229 requires `cI`. Thus BCC with
+225 is a conflict, not a reason to rename BCC as `cF`. Use the distinct fields in
+`bravais_evidence` and the tool's `scientific_interpretation` in the final answer.
+`standard_setting_match` checks only this pair of declarations; inspect all
+validation warnings too. A null match means insufficient declarations. Cubic
+cell lengths and angles do not determine centering or prove atomic symmetry.
+Retain these constraints during answer synthesis, not only tool selection.
+
+The [deterministic explanation renderer](../../GROUNDED_EXPLANATIONS.md)
+can produce the final scientific text directly from trusted, input-verified
+`crystal_mapper` JSON. Do not substitute unrestricted model prose for that text
+when a grounded report is required.
+
+Crystal checks reject or warn on impossible metrics and compare Bravais type with the canonical space-group setting from spglib 2.8.0 (reference and license bundled). This does not verify atomic positions, arbitrary setting transformations or actual symmetry operations.

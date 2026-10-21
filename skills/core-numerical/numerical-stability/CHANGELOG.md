@@ -2,6 +2,14 @@
 
 All notable changes to this skill will be documented in this file.
 
+## [1.2.3] - 2026-10-19
+
+### Added
+- 3 defect-focused skill eval scenarios with portable analytic or rejection checks.
+
+### Fixed
+- Use a combined explicit stability budget, reject nonfinite inputs, and serialize undefined diagnostics explicitly.
+
 ## [1.2.2] - 2026-06-24
 
 ### Added

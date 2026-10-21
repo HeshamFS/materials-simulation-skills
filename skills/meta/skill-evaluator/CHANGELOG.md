@@ -1,5 +1,10 @@
 # Changelog — skill-evaluator
 
+## [1.0.3] - 2026-10-19
+
+### Fixed
+- Isolate evaluator configurations and copied inputs, exclude golden answers, preserve missing usage, and leave failed runs ungraded.
+
 ## v1.0.2 (2026-06-24)
 
 - Added `eval-viewer/generate_review.py`: renders a `benchmark.json` into a

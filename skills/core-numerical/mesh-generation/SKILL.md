@@ -12,6 +12,8 @@ description: >
   or "why is my solver failing."
 allowed-tools: Read, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
   version: "1.2.2"
   standards:

@@ -1,7 +1,7 @@
 # Evaluation Methodology
 
-How this project knows its skills work — the practices behind the "validated, not
-just curated" claim. This complements [EVAL_HARNESS.md](EVAL_HARNESS.md) (the
+How this project evaluates its scripts and agent workflows. This complements
+[EVAL_HARNESS.md](EVAL_HARNESS.md) (the
 tooling) and [PROTOCOL.md](PROTOCOL.md) (the conformance rules) by explaining the
 *reasoning* and reporting the *results*.
 
@@ -10,8 +10,9 @@ tooling) and [PROTOCOL.md](PROTOCOL.md) (the conformance rules) by explaining th
 A skill can fail in two independent ways, so we test for both:
 
 1. **Is the script correct?** Does `compute_cfl()` return the right number? —
-   answered by the unit/integration suite (1283 tests on the pure-function cores
-   and the CLI/JSON contracts, across Python 3.10–3.12).
+   tested with unit/integration cases, analytic oracles and negative controls on
+   the numerical cores and CLI/JSON contracts. CI targets Python 3.10–3.12;
+   a passing finite suite is not an exhaustive correctness proof.
 2. **Does the *skill* work as a skill?** When an agent reads `SKILL.md` and follows
    it on a realistic prompt, does it pick the right script, pass the right
    arguments, trigger when it should, and reach the scientifically correct, useful
@@ -28,22 +29,32 @@ A skill can fail in two independent ways, so we test for both:
 
 ### Layer 1 — deterministic `script_checks` (100% coverage)
 
-Every one of the **101 eval cases** carries machine-checkable `script_checks`
-that run the script and assert its exact `--json` output (**117 checks, 686
+Every one of the **115 eval cases** carries machine-checkable `script_checks`
+that run the script and assert its exact `--json` output (**131 checks, 725
 assertions**). This is the durable guard against the single largest defect class
 we found — *documentation drifting from code* — and it runs in CI with no LLM or
 network. Coverage is enforced: a stale or missing check fails the build.
 
-### Layer 2 & 3 — agent-agnostic, measured uplift
+The [2026-10-20 deterministic evaluation](evaluations/2026-10-20.md) records the
+new defect-focused scenarios, current totals and the boundary with live-agent evidence.
 
-Skills are exercised end-to-end by the [`skill-evaluator`](../skills/meta/skill-evaluator)
+### Layer 2 & 3 — agent evaluation support
+
+The [`skill-evaluator`](../skills/meta/skill-evaluator) supports end-to-end runs
 across coding-agent CLIs (Claude Code, Codex, Antigravity, Cursor, Copilot, Amp,
 opencode, Grok). The headline metric is the **delta**: the with-skill minus
 without-skill pass rate on the *same* prompts. A skill that the agent already
 handles perfectly without help has a delta near zero — and we treat that as a
 signal to make the eval more discriminating, not as success.
 
-## What the evaluation found
+## Historical evaluation report
+
+The findings and aggregate rates below are retained as historical reporting.
+They have not been re-established for the corrected evaluator and current skill
+versions. Configuration isolation, golden-answer exclusion, failed-run handling
+and missing-usage accounting have since changed. Do not use these rates as
+current evidence of scientific uplift. Fresh paired live runs are still needed;
+see [validation scope](VALIDATION_SCOPE.md).
 
 The skills were audited end-to-end: each was handed to a *fresh* agent that used
 it on its eval prompts, ran the scripts, recomputed every numeric claim, and
@@ -61,7 +72,7 @@ re-verified by an independent skeptic** before counting.
 
 All 83 were fixed and locked behind regression tests + `script_checks`.
 
-**Measured uplift** (with vs. without, graded strictly):
+**Previously reported uplift** (not revalidated for the current versions):
 
 - **with-skill mean pass rate ≈ 0.99**, **baseline ≈ 0.64**, **mean delta ≈ +0.35**.
 - 22 of 23 domain skills scored a perfect 1.0 with the skill.
@@ -91,8 +102,8 @@ credential is configured) so it never blocks the deterministic gate.
   baseline often reaches the right conclusion but doesn't run the named script);
   the skill's value there is *reproducible, script-backed evidence*, which we
   consider legitimate but distinct from raw correctness.
-- The newest CLIs (Antigravity, Grok) are *medium* confidence — adapter commands
-  are verified, but full live runs depend on quota/auth.
+- Adapter command construction and controlled subprocess tests are distinct
+  from live agent validation; full live runs depend on quota/auth.
 - Token accounting is best-effort; only some CLIs report usage headlessly.
 
 ## Reproducing

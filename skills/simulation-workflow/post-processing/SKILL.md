@@ -14,15 +14,17 @@ description: >
   reach steady state."
 allowed-tools: Read, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.1.3"
+  version: "1.1.4"
   security_tier: medium
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-23"
-  eval_cases: 5
-  last_reviewed: "2026-06-23"
+  eval_cases: 7
+  last_reviewed: "2026-10-19"
   standards:
     - "Lp error norms (L1/L2/L-infinity) for numerical convergence/verification studies"
     - "Sample variance with Bessel's correction (n-1 denominator)"
@@ -465,6 +467,8 @@ For detailed information, see:
 
 ## Version History
 
+- **v1.1.4** (2026-10-19): Use consistent nodal/cell quadrature, Euclidean contour lengths, standardized moments, and finite-input checks.
+
 See `CHANGELOG.md` for the authoritative record.
 
 - v1.1.3 (2026-06-24): Added a "Verification checklist" (evidence-based, tied to
@@ -489,3 +493,8 @@ See `CHANGELOG.md` for the authoritative record.
 - v1.1.0 (2026-03-26): Optimized description, evaluation suite, security review,
   standardized metadata, CHANGELOG.
 - v1.0.0 (2026-02-25): Initial release.
+
+
+### Numerical and evidence limits
+
+Skewness and excess kurtosis use empirical central moments normalized by n, independently of the sample-standard-deviation field. Nodal integration and centroids use endpoint weights; physical grid conventions must be supplied consistently.

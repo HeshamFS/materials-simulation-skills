@@ -13,15 +13,17 @@ description: >
   the user only says "my Newton iterations aren't converging."
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
-  version: "1.2.2"
+  version: "1.2.3"
   security_tier: high
   security_reviewed: true
   tested_with:
     - claude-code
   last_evaluated: "2026-06-24"
   eval_cases: 5
-  last_reviewed: "2026-06-23"
+  last_reviewed: "2026-10-19"
   standards:
     - "Nocedal & Wright (2006), Numerical Optimization (BFGS/L-BFGS, trust region, dogleg, Steihaug-CG, Wolfe conditions)"
     - "Dennis & Schnabel (1996), Numerical Methods for Unconstrained Optimization and Nonlinear Equations (Newton, Broyden good/bad, line-search globalization)"
@@ -265,6 +267,8 @@ Do not trust a "solved" claim until these concrete artifacts are recorded:
 - `references/globalization_strategies.md` - Line search and trust region
 
 ## Version History
+
+- **v1.2.3** (2026-10-19): Use scale-relative rank diagnostics and correct infinity-norm handling.
 
 - **v1.2.2** (2026-06-24): Added a "Verification checklist" (evidence tied to each script's JSON outputs — convergence type/rate, residual patterns, Jacobian condition/finite-diff error, rank, trust-region step ratio, and solver/globalization agreement) and a "Common pitfalls & rationalizations" table covering constant-ratio-vs-superlinear, run-completion-vs-convergence, too-few-iterations, unverified analytic Jacobians, divergence handling, trust-region acceptance, and large/expensive-Jacobian routing
 - **v1.2.0** (2026-06-23): Added `--problem-type` to `solver_selector.py` with a nonlinear least-squares path (Levenberg-Marquardt / Gauss-Newton); reordered solver selection so problem size dominates high-accuracy and routes large/expensive-Jacobian problems to Newton-Krylov; added `--far-from-solution` to `globalization_advisor.py` and surfaced Levenberg-Marquardt as the trust-region type for least-squares; corrected convergence classification so constant-ratio sequences are linear (not superlinear); RFC-8259-safe JSON (no `-Infinity`); input-validation hardening

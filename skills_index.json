@@ -4,8 +4,8 @@
   "summary": {
     "skills": 24,
     "scripts": 78,
-    "eval_cases": 101,
-    "deterministic_checks": 117,
+    "eval_cases": 115,
+    "deterministic_checks": 131,
     "eval_coverage": 1.0,
     "categories": [
       "core-numerical",
@@ -24,14 +24,16 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/convergence-study",
       "description": "Perform spatial and temporal convergence analysis for solution verification — compute observed convergence orders from grid or timestep refinement studies, apply Richardson extrapolation to estimate discretization error, and calculate the Grid Convergence Index (GCI) per ASME V&V 20 standards. Use when verifying that a numerical solution converges at the expected rate, estimating the error on the finest mesh, checking whether grids are in the asymptotic range, or preparing formal verification reports, even if the user only asks \"is my mesh fine enough\" or \"how accurate is my solution.\"",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "high",
       "allowed_tools": [],
       "scripts": 4,
-      "eval_cases": 4,
-      "deterministic_checks": 4,
+      "eval_cases": 8,
+      "deterministic_checks": 8,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "ASME V&V 20 (Standard for Verification and Validation in Computational Fluid Dynamics and Heat Transfer)",
         "Roache, Grid Convergence Index (GCI) method with safety factors Fs in {1.25, 3.0}",
@@ -59,6 +61,8 @@
       "deterministic_checks": 4,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Fornberg (1988), Generation of finite difference formulas on arbitrarily spaced grids",
         "Taylor-series truncation-error analysis / order-of-accuracy theory",
@@ -72,7 +76,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/linear-solvers",
       "description": "Select and configure linear solvers for Ax=b systems arising in numerical simulations — choose between direct (LU, Cholesky) and iterative (CG, GMRES, BiCGSTAB, MINRES) methods, analyze sparsity patterns and matrix conditioning, recommend preconditioners (AMG, ILU, IC), apply row/column scaling, and diagnose convergence stagnation from residual histories. Use when setting up a linear solve for FEM/FVM assembly, debugging slow or stalled Krylov iterations, choosing a preconditioner for SPD or nonsymmetric systems, or investigating ill-conditioning, even if the user only says \"my solver is slow\" or \"GMRES won't converge.\"",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -85,6 +89,8 @@
       "deterministic_checks": 7,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Saad (2003), Iterative Methods for Sparse Linear Systems (Krylov methods, ILU/ILUT, preconditioning)",
         "Hestenes & Stiefel (1952) Conjugate Gradient method and the (√κ−1)/(√κ+1) error bound",
@@ -111,6 +117,8 @@
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "ANSYS Fluent/ICEM equiangle skewness metric (max(|90-theta|)/90 for quads/hexes; (theta_max-60)/120 for triangles)",
         "Knupp (2001), Algebraic mesh quality metrics (aspect ratio, Jacobian ratio, warpage)",
@@ -124,7 +132,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/nonlinear-solvers",
       "description": "Select and configure nonlinear solvers for root-finding f(x)=0, optimization min F(x), and least-squares problems — choose among Newton, Newton-Krylov, quasi-Newton (BFGS, L-BFGS), Broyden, Anderson acceleration, and Levenberg-Marquardt methods, configure line search or trust-region globalization, diagnose convergence rate (quadratic, linear, stagnated), and assess Jacobian quality and conditioning. Use when a Newton solver converges slowly or diverges, choosing between line search and trust region, debugging nonlinear iteration failures in FEM or phase-field codes, or selecting a solver for large-scale unconstrained optimization, even if the user only says \"my Newton iterations aren't converging.\"",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -138,6 +146,8 @@
       "deterministic_checks": 7,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Nocedal & Wright (2006), Numerical Optimization (BFGS/L-BFGS, trust region, dogleg, Steihaug-CG, Wolfe conditions)",
         "Dennis & Schnabel (1996), Numerical Methods for Unconstrained Optimization and Nonlinear Equations (Newton, Broyden good/bad, line-search globalization)",
@@ -151,7 +161,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/numerical-integration",
       "description": "Select and configure time integration methods for ODE and PDE simulations — choose among explicit Runge-Kutta, BDF, Rosenbrock, and Adams families, set relative and absolute error tolerances, implement adaptive step-size control with P/PI step-size controllers, plan IMEX operator splitting for mixed stiff and non-stiff terms, and estimate splitting errors. Use when picking an integrator for a new simulation, diagnosing step rejections or tolerance failures, setting up operator splitting for phase-field or reaction-diffusion problems, or deciding between explicit and implicit time marching, even if the user only says \"my solver keeps rejecting steps\" or \"which ODE method should I use.\"",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -164,6 +174,8 @@
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Hairer, Norsett & Wanner, Solving Ordinary Differential Equations I (Nonstiff): RK45 (Dormand-Prince), DOP853, embedded error estimation",
         "Hairer & Wanner, Solving ODEs II (Stiff and DAE): BDF, Radau IIA, Rosenbrock methods",
@@ -177,7 +189,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/numerical-stability",
       "description": "Analyze numerical stability for time-dependent PDE simulations — check CFL and Fourier criteria, perform von Neumann stability analysis, detect stiffness, evaluate matrix conditioning, and recommend explicit vs implicit time-stepping schemes. Use when selecting time steps, diagnosing numerical blow-up or solver divergence, checking convergence criteria, or evaluating scheme stability for advection, diffusion, or reaction problems, even if the user doesn't explicitly mention \"stability\" or \"CFL.\"",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -187,10 +199,12 @@
         "Glob"
       ],
       "scripts": 4,
-      "eval_cases": 4,
-      "deterministic_checks": 4,
+      "eval_cases": 7,
+      "deterministic_checks": 7,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Courant-Friedrichs-Lewy (CFL) condition (Courant, Friedrichs, Lewy 1928)",
         "von Neumann (Fourier) stability analysis; amplification factor and Fourier limit Fo ≤ 1/(2d)",
@@ -204,7 +218,7 @@
       "category": "core-numerical",
       "path": "skills/core-numerical/time-stepping",
       "description": "Plan and control time-step policies for transient simulations — couple CFL and physics-based stability limits with adaptive stepping, ramp initial transients through sharp gradients or phase changes, schedule output intervals and checkpoint cadence, and plan restart strategies for long-running jobs. Use when choosing dt for a new simulation, diagnosing adaptive time-step oscillations, deciding checkpoint frequency to minimize lost work, or setting up output schedules aligned with physical time scales, even if the user only says \"my run is too slow\" or \"how often should I save.\"",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -214,10 +228,12 @@
         "Glob"
       ],
       "scripts": 3,
-      "eval_cases": 4,
-      "deterministic_checks": 4,
+      "eval_cases": 5,
+      "deterministic_checks": 5,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Courant-Friedrichs-Lewy (CFL) condition (Courant, Friedrichs, Lewy 1928)",
         "von Neumann stability analysis (Fourier/diffusion and Courant number limits)",
@@ -244,6 +260,8 @@
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-23",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "FAIR Guiding Principles (Wilkinson et al. 2016, Sci. Data)",
         "OPTIMADE API specification",
@@ -270,6 +288,8 @@
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-23",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "SchedMD SLURM sbatch / GRES specification (--gpus, --gpus-per-node, --gres=gpu:N, --cpus-per-task)",
         "MPI Standard (MPI Forum) process/rank model",
@@ -296,6 +316,8 @@
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "SchedMD SLURM sbatch specification (#SBATCH directives, directive-ordering rule, --mem units, --time formats)",
         "SchedMD SLURM srun task-launch model (srun --ntasks/--cpus-per-task placement, --gpu-bind/--ntasks-per-gpu)",
@@ -307,7 +329,7 @@
       "category": "meta",
       "path": "skills/meta/skill-evaluator",
       "description": "Rigorously evaluate an Agent Skill end-to-end across ANY coding-agent CLI — verify its scripts emit the documented numbers (deterministic checks), test whether its description triggers on the right prompts, and measure whether an agent following the SKILL.md beats a no-skill baseline (with/without pass-rate delta, mean ± stddev, benchmarked). Use whenever you need to test, benchmark, validate, grade, or quantify a skill's quality, check if a skill \"actually works,\" compare two skill versions, optimize a skill's triggering, or set up an eval suite — even if the user just says \"is this skill any good,\" \"does my skill work,\" or \"benchmark this skill.\" Drives Claude Code, OpenAI Codex, Antigravity (agy), Cursor, GitHub Copilot, Amp, opencode, or Grok in headless mode.",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -321,6 +343,8 @@
       "deterministic_checks": 6,
       "eval_coverage": 1.0,
       "last_evaluated": "",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Agent Skills standard / evaluation spec (agentskills.io)",
         "Anthropic open-source skill-creator reference (evaluation methodology and grader rubric)",
@@ -345,6 +369,8 @@
       "deterministic_checks": 8,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "W3C OWL 2 Web Ontology Language; RDF Schema (RDFS) and XSD datatypes",
         "W3C SKOS Simple Knowledge Organization System (skos:definition / preferred labels)",
@@ -358,7 +384,7 @@
       "category": "ontology",
       "path": "skills/ontology/ontology-mapper",
       "description": "Map materials science terms, crystal structures, and sample descriptions to standardized ontology classes and properties — resolve natural-language concepts to ontology entries with confidence scores, translate Bravais lattice types, space groups, and lattice constants into ontology-compliant annotations, and produce full sample metadata from structured descriptions. Supports any ontology in ontology_registry.json (CMSO, ASMO, etc.). Use when annotating simulation inputs with FAIR metadata, translating \"BCC iron\" or \"FCC copper\" into formal ontology terms, preparing machine- readable sample descriptions, or bridging between lab vocabulary and ontology vocabulary, even if the user only says \"what CMSO terms describe my material\" or \"annotate this sample for me.\"",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "low",
       "allowed_tools": [
         "Read",
@@ -366,10 +392,12 @@
         "Glob"
       ],
       "scripts": 3,
-      "eval_cases": 6,
-      "deterministic_checks": 6,
+      "eval_cases": 8,
+      "deterministic_checks": 8,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "CMSO (Computational Material Sample Ontology)",
         "ASMO (Atomistic Simulation Methods Ontology)",
@@ -393,6 +421,8 @@
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "CMSO — Computational Material Sample Ontology v0.0.1 (OCDO, purls.helmholtz-metadaten.de/cmso/)",
         "ASMO — Atomistic Simulation Methods Ontology (OCDO)",
@@ -419,6 +449,8 @@
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-23",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "SchedMD Slurm sbatch specification (--mem / --mem-per-cpu memory request flags)",
         "POSIX signal semantics (SIGSEGV / signal 11, core dump) for crash classification",
@@ -432,7 +464,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/md-analysis-planner",
       "description": "Plan molecular dynamics post-processing for materials simulations, including RDF, MSD and diffusion, VACF/VDOS, coordination numbers, bond-angle distributions, stress-strain curves, equilibration detection, PBC unwrapping, and trajectory format choices. Use before writing MD analysis scripts or trusting trajectory-derived results.",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -442,10 +474,12 @@
         "Glob"
       ],
       "scripts": 1,
-      "eval_cases": 3,
-      "deterministic_checks": 3,
+      "eval_cases": 4,
+      "deterministic_checks": 4,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-23",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Yeh & Hummer (2004), 1/L finite-size diffusion correction (xi ~= 2.837, cubic box)",
         "Einstein relation for self-diffusion, D = lim MSD/(2*d*t)",
@@ -458,7 +492,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/parameter-optimization",
       "description": "Explore and optimize simulation parameters via design of experiments (DOE), sensitivity analysis, and optimizer selection — generate Latin Hypercube, quasi-random, or factorial sample plans, rank parameter influence with sensitivity scores, recommend Bayesian optimization, CMA-ES, or gradient- based methods based on dimension and budget, and fit surrogate models for expensive evaluations. Use when calibrating material properties against experimental data, planning a parameter sweep, performing uncertainty quantification, or choosing an optimization strategy for a simulation with a limited evaluation budget, even if the user only says \"which parameters matter most\" or \"how do I calibrate my model.\"",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -471,6 +505,8 @@
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Latin Hypercube Sampling (McKay, Beckman & Conover 1979)",
         "Sobol (1967) low-discrepancy quasi-random sequences",
@@ -497,6 +533,8 @@
       "deterministic_checks": 5,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Amdahl (1967), serial-fraction speedup law S(N)=1/(f+(1-f)/N)",
         "Gustafson (1988), scaled speedup law S(N)=N-f(N-1)",
@@ -510,7 +548,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/post-processing",
       "description": "Extract, analyze, and summarize simulation output data — pull spatial fields at specific timesteps, compute time-series trends and detect steady state, extract line profiles through the domain, generate statistical summaries and distributions, calculate derived quantities (gradients, fluxes, volume fractions, interface area), compare results against analytical solutions or experimental data, and produce automated analysis reports. Use when interpreting finished simulation results, checking mass or energy conservation, comparing two runs or meshes, extracting interface profiles from phase-field output, or preparing publication-quality analysis, even if the user only says \"what do my results look like\" or \"did my simulation reach steady state.\"",
-      "version": "1.1.3",
+      "version": "1.1.4",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -519,10 +557,12 @@
         "Glob"
       ],
       "scripts": 7,
-      "eval_cases": 5,
-      "deterministic_checks": 7,
+      "eval_cases": 7,
+      "deterministic_checks": 9,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-23",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Lp error norms (L1/L2/L-infinity) for numerical convergence/verification studies",
         "Sample variance with Bessel's correction (n-1 denominator)",
@@ -536,7 +576,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/simulation-orchestrator",
       "description": "Orchestrate multi-simulation campaigns — generate parameter sweep configurations (grid, linspace, or Latin Hypercube sampling), initialize and track batch job campaigns, monitor job completion status, and aggregate results with summary statistics across all runs. Use when running a parameter study across dt, kappa, or other simulation inputs, managing dozens or hundreds of simulation configurations, combining outputs from completed batch runs to find the best result, or automating the generate-run-collect workflow for systematic studies, even if the user only says \"I need to try many parameter combinations\" or \"how do I organize a sweep.\"",
-      "version": "1.1.3",
+      "version": "1.1.4",
       "security_tier": "medium",
       "allowed_tools": [
         "Read",
@@ -549,6 +589,8 @@
       "deterministic_checks": 6,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Latin Hypercube Sampling (McKay, Beckman & Conover 1979)",
         "Full factorial / grid Design of Experiments (DOE)",
@@ -562,7 +604,7 @@
       "category": "simulation-workflow",
       "path": "skills/simulation-workflow/simulation-validator",
       "description": "Validate simulations across three stages — run pre-flight checks on configuration files (parameter ranges, required fields, disk space), monitor runtime logs for residual growth, NaN/Inf, and adaptive dt collapse, and perform post-flight validation of results (physical bounds, mass/energy conservation, convergence). Diagnose failed simulations with probable-cause analysis and recommended fixes. Use when preparing to launch a simulation, checking whether a running job is healthy, verifying that finished results are trustworthy, or debugging a crash or blow-up, even if the user only says \"my simulation crashed\" or \"can I trust these results.\"",
-      "version": "1.2.2",
+      "version": "1.2.3",
       "security_tier": "high",
       "allowed_tools": [
         "Read",
@@ -572,10 +614,12 @@
         "Glob"
       ],
       "scripts": 4,
-      "eval_cases": 5,
-      "deterministic_checks": 6,
+      "eval_cases": 6,
+      "deterministic_checks": 7,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-24",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Courant-Friedrichs-Lewy (CFL) stability condition (Courant, Friedrichs & Lewy, 1928)",
         "von Neumann stability analysis (diffusion-Fourier number limit dt <= dx^2/(2*D*dim))",
@@ -603,6 +647,8 @@
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-23",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "Ganose et al. (2025), atomate2: high-throughput workflows",
         "Rosen et al. (2024), jobflow workflow library",
@@ -630,6 +676,8 @@
       "deterministic_checks": 3,
       "eval_coverage": 1.0,
       "last_evaluated": "2026-06-23",
+      "last_deterministic_eval": "2026-10-20",
+      "agent_evaluation_status": "not_revalidated",
       "standards": [
         "ASME V&V 20-2009 (Verification and Validation in Computational Fluid Dynamics and Heat Transfer)",
         "Roache (1998), Verification and Validation in Computational Science and Engineering",

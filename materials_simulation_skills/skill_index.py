@@ -59,7 +59,8 @@ def _metadata_scalars(skill_dir: Path) -> dict[str, str]:
         stripped = line.strip()
         if stripped.startswith("allowed-tools:"):
             out["allowed_tools"] = stripped.split(":", 1)[1].strip()
-        for key in ("version", "security_tier", "last_evaluated"):
+        for key in ("version", "security_tier", "last_evaluated",
+                    "last_deterministic_eval", "agent_evaluation_status"):
             if stripped.startswith(f"{key}:"):
                 out[key] = stripped.split(":", 1)[1].strip().strip('"').strip("'")
     return out
@@ -99,6 +100,8 @@ def _skill_record(root: Path, skill_dir: Path) -> dict[str, Any]:
         "deterministic_checks": deterministic_checks,
         "eval_coverage": coverage,
         "last_evaluated": meta.get("last_evaluated", ""),
+        "last_deterministic_eval": meta.get("last_deterministic_eval", ""),
+        "agent_evaluation_status": meta.get("agent_evaluation_status", "unknown"),
         "standards": frontmatter_standards(skill_dir),
     }
 

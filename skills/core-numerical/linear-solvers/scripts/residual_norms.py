@@ -9,6 +9,21 @@ from typing import Dict, List, Optional, Tuple
 MAX_LIST_LENGTH = 100_000
 
 
+def strict_payload(payload):
+    missing = []
+    def clean(value, path=""):
+        if isinstance(value, float) and not math.isfinite(value):
+            missing.append(path)
+            return None
+        if isinstance(value, dict): return {k:clean(v,path+"/"+str(k)) for k,v in value.items()}
+        if isinstance(value, (list,tuple)): return [clean(v,path+"/"+str(i)) for i,v in enumerate(value)]
+        return value
+    result = clean(payload)
+    if missing:
+        result["nonfinite_diagnostics"] = {"paths": missing, "meaning": "undefined, unbounded or outside floating-point range; not a finite certificate"}
+    return result
+
+
 def parse_list(raw: str) -> List[float]:
     parts = [p.strip() for p in raw.split(",") if p.strip()]
     if not parts:
@@ -29,7 +44,7 @@ def compute_norms(vec: List[float]) -> Dict[str, float]:
     if any(not math.isfinite(v) for v in vec):
         raise ValueError("vector contains non-finite values")
     l1 = sum(abs(v) for v in vec)
-    l2 = math.sqrt(sum(v * v for v in vec))
+    l2 = math.hypot(*vec)
     linf = max(abs(v) for v in vec)
     return {"l1": l1, "l2": l2, "linf": linf}
 
@@ -166,7 +181,7 @@ def main() -> None:
     }
 
     if args.json:
-        print(json.dumps(payload, indent=2, sort_keys=True))
+        print(json.dumps(strict_payload(payload), allow_nan=False, indent=2, sort_keys=True))
         return
 
     print("Residual norms")

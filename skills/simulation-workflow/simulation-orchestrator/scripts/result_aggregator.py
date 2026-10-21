@@ -27,6 +27,7 @@ Output (JSON):
 import argparse
 import json
 import math
+import statistics as _statistics
 import os
 import re
 import sys
@@ -191,17 +192,16 @@ def compute_statistics(values: List[float]) -> Dict[str, Optional[float]]:
         return {"min": None, "max": None, "mean": None, "std": None, "median": None}
 
     n = len(values)
-    mean_val = sum(values) / n
+    mean_val = _statistics.mean(values)
     sorted_vals = sorted(values)
 
     if n % 2 == 0:
-        median_val = (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2
+        median_val = _statistics.mean(sorted_vals[n // 2 - 1:n // 2 + 1])
     else:
         median_val = sorted_vals[n // 2]
 
     if n > 1:
-        variance = sum((x - mean_val) ** 2 for x in values) / (n - 1)
-        std_val = math.sqrt(variance)
+        std_val = _statistics.stdev(values)
     else:
         std_val = 0.0
 
@@ -380,7 +380,7 @@ def main() -> None:
             output = {
                 "summary": results["summary"],
                 "statistics": {
-                    k: round(v, 8) if v is not None else None
+                    k: v
                     for k, v in results["statistics"].items()
                 },
                 "best_run": results["best_run"],

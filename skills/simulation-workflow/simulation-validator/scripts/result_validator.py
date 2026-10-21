@@ -46,6 +46,30 @@ def validate_metrics(
     failed: List[str] = []
     notes: List[str] = []
 
+    if not isinstance(metrics, dict):
+        raise ValueError("Metrics must be a JSON object")
+    if not math.isfinite(mass_tol) or mass_tol <= 0:
+        raise ValueError("mass_tol must be positive and finite")
+    if any(v is not None and not math.isfinite(v) for v in (bound_min,bound_max)):
+        raise ValueError("Bounds must be finite")
+    if bound_min is not None and bound_max is not None and bound_min > bound_max:
+        raise ValueError("Bounds must be ordered")
+    for key in ("field_min", "field_max", "mass_initial", "mass_final"):
+        if key in metrics:
+            try:
+                value = float(metrics[key])
+                if not math.isfinite(value):
+                    raise ValueError("nonfinite metric")
+            except (ValueError, TypeError):
+                return {"checks": {"finite_metrics": False}, "failed_checks": [key],
+                        "confidence_score": 0.0, "status": "FAIL", "notes": ["Metrics must contain finite numbers"]}
+    if ("mass_initial" in metrics) != ("mass_final" in metrics):
+        checks["mass_verifiable"] = False
+        failed.append("mass_verifiable")
+    if "field_min" in metrics and "field_max" in metrics and float(metrics["field_min"]) > float(metrics["field_max"]):
+        checks["ordered_field_bounds"] = False
+        failed.append("ordered_field_bounds")
+
     mass_initial = metrics.get("mass_initial")
     mass_final = metrics.get("mass_final")
     if mass_initial is not None and mass_final is not None:
@@ -64,9 +88,13 @@ def validate_metrics(
     # check is used, which does NOT detect mid-run spikes.
     energy_history = metrics.get("energy_history")
     use_variational = variational or bool(metrics.get("energy_variational"))
-    if isinstance(energy_history, list) and energy_history:
+    if energy_history is not None:
         try:
+            if not isinstance(energy_history, list) or len(energy_history) < 2:
+                raise ValueError("Energy needs at least two samples")
             energies = [float(v) for v in energy_history]
+            if any(not math.isfinite(v) for v in energies):
+                raise ValueError("Energy must be finite")
             if use_variational:
                 rel_tol = 1e-8
                 abs_tol = 1e-12
@@ -121,7 +149,7 @@ def validate_metrics(
 
     has_nan = metrics.get("has_nan")
     if has_nan is not None:
-        checks["no_nan"] = not bool(has_nan)
+        checks["no_nan"] = has_nan is False
         if not checks["no_nan"]:
             failed.append("no_nan")
 
@@ -145,6 +173,8 @@ def validate_metrics(
         "checks": checks,
         "failed_checks": failed,
         "confidence_score": confidence,
+        "checks_pass_fraction": confidence,
+        "score_semantics": "Fraction of selected checks passed; not statistical confidence or physical correctness probability",
         "status": status,
     }
     if notes:

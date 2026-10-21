@@ -8,6 +8,8 @@ description: >
   only plausible.
 allowed-tools: Read, Bash, Write, Grep, Glob
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
   version: "1.1.3"
   security_tier: high

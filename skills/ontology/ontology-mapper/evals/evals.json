@@ -172,6 +172,88 @@
           ]
         }
       ]
+    },
+    {
+      "id": 7,
+      "regression_id": "bcc-space-group-225",
+      "prompt": "My metadata declares BCC and space group 225. Are these declarations consistent? Do not silently rename the lattice.",
+      "expected_output": "BCC remains cI; space group 225 requires cF. The declarations conflict, and this check is not atomic-structure symmetry verification.",
+      "assertions": [
+        "BCC remains cI; space group 225 requires cF. The declarations conflict, and this check is not atomic-structure symmetry verification.",
+        "Uses the specified skill tool and preserves its warnings and evidence limits."
+      ],
+      "script_checks": [
+        {
+          "description": "bcc-space-group-225",
+          "cmd": [
+            "scripts/crystal_mapper.py",
+            "--bravais",
+            "BCC",
+            "--space-group",
+            "225",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.bravais_lattice",
+              "op": "eq",
+              "value": "cI"
+            },
+            {
+              "path": "results.bravais_evidence.space_group_required_bravais",
+              "op": "eq",
+              "value": "cF"
+            },
+            {
+              "path": "results.bravais_evidence.standard_setting_match",
+              "op": "eq",
+              "value": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "regression_id": "bcc-space-group-229",
+      "prompt": "My metadata declares BCC and space group 229. Are these declarations consistent? Do not silently rename the lattice.",
+      "expected_output": "BCC remains cI; space group 229 requires cI. The declarations agree, and this check is not atomic-structure symmetry verification.",
+      "assertions": [
+        "BCC remains cI; space group 229 requires cI. The declarations agree, and this check is not atomic-structure symmetry verification.",
+        "Uses the specified skill tool and preserves its warnings and evidence limits."
+      ],
+      "script_checks": [
+        {
+          "description": "bcc-space-group-229",
+          "cmd": [
+            "scripts/crystal_mapper.py",
+            "--bravais",
+            "BCC",
+            "--space-group",
+            "229",
+            "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.bravais_lattice",
+              "op": "eq",
+              "value": "cI"
+            },
+            {
+              "path": "results.bravais_evidence.space_group_required_bravais",
+              "op": "eq",
+              "value": "cI"
+            },
+            {
+              "path": "results.bravais_evidence.standard_setting_match",
+              "op": "eq",
+              "value": true
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -22,6 +22,13 @@ MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB
 MAX_WINDOW = 10_000_000
 
 
+def finite_float(raw):
+    value = float(raw)
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError("value must be finite")
+    return value
+
+
 def _validate_file_size(filepath: str) -> None:
     size = os.path.getsize(filepath)
     if size > MAX_FILE_SIZE:
@@ -436,13 +443,13 @@ def main():
     )
     parser.add_argument(
         "--tolerance",
-        type=float,
+        type=finite_float,
         default=1e-6,
         help="Relative tolerance for steady state detection (default: 1e-6)"
     )
     parser.add_argument(
         "--absolute-threshold",
-        type=float,
+        type=finite_float,
         default=None,
         help="Absolute convergence threshold for residual/error quantities. "
              "When set, reports convergence as final value <= threshold "

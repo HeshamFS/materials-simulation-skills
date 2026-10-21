@@ -14,6 +14,8 @@ description: >
   FCC copper simulation" or "show me the CMSO class hierarchy."
 allowed-tools: Read, Bash
 metadata:
+  last_deterministic_eval: "2026-10-20"
+  agent_evaluation_status: "not_revalidated"
   author: HeshamFS
   version: "1.2.2"
   standards:
