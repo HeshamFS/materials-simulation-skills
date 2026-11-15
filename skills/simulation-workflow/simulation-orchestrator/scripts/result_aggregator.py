@@ -179,6 +179,25 @@ def extract_metric(result: Dict[str, Any], metric: str) -> Optional[float]:
     return None
 
 
+def _sample_std(values: List[float]) -> float:
+    """Sample standard deviation that survives extreme magnitudes.
+
+    On Python 3.10, ``statistics.stdev`` converts the variance to a float
+    before taking the square root, so inputs near 1e300 raise OverflowError
+    and inputs near 1e-300 underflow to 0.0. When that happens, recompute on
+    values normalised by the largest magnitude and scale the result back.
+    Ordinary inputs keep the standard-library result unchanged.
+    """
+    try:
+        std_val = _statistics.stdev(values)
+    except OverflowError:
+        std_val = None
+    if std_val is not None and (std_val > 0.0 or min(values) == max(values)):
+        return std_val
+    scale = max(abs(v) for v in values)
+    return scale * _statistics.stdev([v / scale for v in values])
+
+
 def compute_statistics(values: List[float]) -> Dict[str, Optional[float]]:
     """Compute basic statistics for a list of values.
 
@@ -201,7 +220,7 @@ def compute_statistics(values: List[float]) -> Dict[str, Optional[float]]:
         median_val = sorted_vals[n // 2]
 
     if n > 1:
-        std_val = _statistics.stdev(values)
+        std_val = _sample_std(values)
     else:
         std_val = 0.0
 

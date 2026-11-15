@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -111,7 +110,6 @@ def run_one(
         eval_case.get("save_hint", ""),
     )
     argv = A.build_argv(cli, prompt, workdir=str(workdir.resolve()), model=model, with_skill=with_skill)
-    runs_in_cwd = A.runs_in_cwd(cli)
     cmd_str = A.command_string(argv)
 
     record: dict[str, Any] = {

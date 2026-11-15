@@ -92,6 +92,20 @@ class GridSpacing(dict):
         super().__init__(*args, **kwargs)
         self.centering = centering or {}
 
+    def __eq__(self, other):
+        # Two GridSpacing objects are equal only when the quadrature convention
+        # matches too. Against a plain mapping, compare the spacings alone.
+        if isinstance(other, GridSpacing):
+            return dict.__eq__(self, other) and self.centering == other.centering
+        return dict.__eq__(self, other)
+
+    def __ne__(self, other):
+        result = self.__eq__(other)
+        return result if result is NotImplemented else not result
+
+    # Mutable mapping: unhashable, like dict.
+    __hash__ = None
+
 
 def get_grid_spacing(data, shape):
     convention = data.get("centering")

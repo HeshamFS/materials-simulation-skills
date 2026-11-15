@@ -174,6 +174,8 @@ def analyze_field_files(directory: str, files: List[str]) -> Dict[str, Any]:
                         "count": len(flat)
                     }
         except Exception:
+            # The final-state summary is best effort: an unreadable or malformed
+            # field file leaves it empty instead of failing the whole report.
             pass
 
     return analysis
@@ -268,6 +270,8 @@ def analyze_history_files(directory: str, files: List[str]) -> Dict[str, Any]:
                             analysis["convergence"][key]["converged"] = rel_var < 0.01
 
     except Exception:
+        # The history summary is best effort: an unreadable or malformed history
+        # file leaves it empty instead of failing the whole report.
         pass
 
     return analysis

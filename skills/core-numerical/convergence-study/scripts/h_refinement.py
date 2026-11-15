@@ -143,7 +143,8 @@ def compute_h_refinement(spacings, values, expected_order=None):
             "Observed order is non-positive -- solution appears to be diverging; "
             "Richardson extrapolation is not meaningful and was not computed."
         )
-    elif expected_order is not None and expected_order > 0:
+    elif expected_order is not None:
+        # expected_order was validated as positive and finite on entry.
         richardson_extrapolated_value = f_fine + (f_fine - f_next) / (r ** expected_order - 1)
         notes.append("Richardson extrapolation used expected order (no observed order available)")
 

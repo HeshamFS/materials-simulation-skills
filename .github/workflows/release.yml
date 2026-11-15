@@ -1,0 +1,66 @@
+name: Release
+
+# Builds the sdist and wheel for every published GitHub release and uploads them
+# to PyPI through Trusted Publishing (OIDC), so no API token is stored anywhere.
+#
+# One-time setup on pypi.org: add a trusted publisher for this repository with
+# workflow "release.yml" and environment "pypi". Then either run this workflow
+# manually on a tag, or set the repository variable PYPI_PUBLISH to "true" so
+# each published release uploads on its own.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          python -m twine check --strict dist/*
+
+      - name: Install the wheel and run the CLI
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-venv"
+          "$RUNNER_TEMP/wheel-venv/bin/pip" install dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/wheel-venv/bin/mss" list
+          "$RUNNER_TEMP/wheel-venv/bin/mss" run numerical-stability cfl_checker -- --dx 0.01 --dt 0.001 --velocity 2.0 --json
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.PYPI_PUBLISH == 'true' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/materials-simulation-skills/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
