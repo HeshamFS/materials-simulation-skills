@@ -66,6 +66,7 @@ def parse_log(
                 dts.append(float(reduce_match.group(1)))
                 continue
             except ValueError:
+                # Not a parseable number: fall through to the generic dt pattern.
                 pass
         dt_match = dt_re.search(line)
         if dt_match:

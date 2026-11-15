@@ -2,7 +2,7 @@
 Author: Hesham Salama <hesham.salama@rub.de>.
 No live model calls: evaluation tests run a local subprocess probe.
 """
-import json,math,os,subprocess,sys
+import json,math,subprocess,sys
 from pathlib import Path
 import numpy as np
 import pytest

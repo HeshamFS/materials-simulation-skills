@@ -78,6 +78,7 @@ def load_runs(iteration_dir: Path) -> dict[str, list[dict]]:
                         row["time_seconds"] = t.get("total_duration_seconds")
                         row["tokens"] = t.get("total_tokens")
                     except json.JSONDecodeError:
+                        # Corrupt timing.json: fall back to the grader's timing below.
                         pass
                 row.setdefault("time_seconds", g.get("timing", {}).get("total_duration_seconds"))
                 row.setdefault("tokens", None)
