@@ -16,9 +16,11 @@ gh skill install HeshamFS/materials-simulation-skills --pin v1.0.0   # version-p
 ### Bundles via the `mss` CLI
 
 Install a curated **bundle** into a specific agent (`mss bundles` lists them —
-e.g. `verification-and-validation`, `reproducible-campaigns`, `core-numerical`, `full`):
+e.g. `verification-and-validation`, `reproducible-campaigns`, `core-numerical`, `full`).
+The `mss` CLI comes with the PyPI package:
 
 ```bash
+pip install materials-simulation-skills
 mss bundles
 mss install --agent claude --bundle verification-and-validation
 mss install --agent codex  --bundle full --scope project
