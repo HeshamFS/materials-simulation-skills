@@ -18,7 +18,7 @@ Agent: I'll use the numerical-stability skill to check this.
        Recommended max dt = 0.005 with safety factor 1.0.
 ```
 
-**24 skills** cover numerical methods, simulation workflows, HPC deployment, verification and validation, FAIR data, robustness, and materials ontologies. They follow the open [Agent Skills standard](https://agentskills.io) and work in **20+ tools**, including Claude Code, Codex, Cursor, Antigravity and GitHub Copilot.
+**25 skills** cover numerical methods, simulation workflows, HPC deployment, verification and validation, FAIR data, robustness, and materials ontologies. They follow the open [Agent Skills standard](https://agentskills.io) and work in **20+ tools**, including Claude Code, Codex, Cursor, Antigravity and GitHub Copilot.
 
 ---
 
@@ -103,14 +103,14 @@ mss run numerical-stability cfl_checker -- --dx 0.01 --dt 0.001 --velocity 2.0 -
 
 ## What's inside
 
-**24 skills** in 8 categories. The full catalog is in **[docs/SKILLS.md](docs/SKILLS.md)**, and in machine-readable form in [`skills_index.json`](skills_index.json).
+**25 skills** in 8 categories. The full catalog is in **[docs/SKILLS.md](docs/SKILLS.md)**, and in machine-readable form in [`skills_index.json`](skills_index.json).
 
 | Category | Skills | Focus |
 |---|---|---|
 | Core Numerical | 8 | stability, time-stepping, meshing, convergence, integration, differentiation, linear/nonlinear solvers |
 | Simulation Workflow | 7 | validation, DOE/optimization, orchestration, post-processing, profiling, workflow mapping, MD analysis |
 | Ontology | 3 | CMSO/ASMO exploration, mapping, validation |
-| HPC Deployment | 2 | SLURM script generation, runtime diagnosis |
+| HPC Deployment | 3 | SLURM script and [PBS header](skills/hpc-deployment/pbs-job-script-generator/SKILL.md) generation, runtime diagnosis |
 | Verification & Validation | 1 | manufactured solutions, benchmarks, pass/fail reports |
 | Data Management | 1 | FAIR reproducibility packaging |
 | Robustness | 1 | cross-code failure triage and retry ladders |

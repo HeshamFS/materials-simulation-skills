@@ -2,10 +2,10 @@
   "schema": "materials-simulation-skills.index.v1",
   "repository": "HeshamFS/materials-simulation-skills",
   "summary": {
-    "skills": 24,
-    "scripts": 78,
-    "eval_cases": 115,
-    "deterministic_checks": 131,
+    "skills": 25,
+    "scripts": 79,
+    "eval_cases": 118,
+    "deterministic_checks": 134,
     "eval_coverage": 1.0,
     "categories": [
       "core-numerical",
@@ -295,6 +295,28 @@
         "MPI Standard (MPI Forum) process/rank model",
         "OpenMP API specification (OMP_NUM_THREADS thread/task affinity)",
         "NVIDIA CUDA programming model and Kokkos performance-portability backend"
+      ]
+    },
+    {
+      "name": "pbs-job-script-generator",
+      "category": "hpc-deployment",
+      "path": "skills/hpc-deployment/pbs-job-script-generator",
+      "description": "Generates PBS Professional and OpenPBS job headers with uniform MPI and OpenMP layouts. Use when translating a basic SLURM resource request to PBS or composing and checking PBS CPU, memory, walltime and queue directives.",
+      "version": "1.0.0",
+      "security_tier": "",
+      "allowed_tools": [
+        "Read",
+        "Bash"
+      ],
+      "scripts": 1,
+      "eval_cases": 3,
+      "deterministic_checks": 3,
+      "eval_coverage": 1.0,
+      "last_evaluated": "",
+      "last_deterministic_eval": "",
+      "agent_evaluation_status": "not_revalidated",
+      "standards": [
+        "PBS Professional and OpenPBS resource directives: https://docs.nvidia.com/base-command-manager/product-manuals/10/user/pbspro"
       ]
     },
     {
@@ -716,6 +738,7 @@
       "description": "All hpc deployment skills.",
       "skills": [
         "hpc-runtime-doctor",
+        "pbs-job-script-generator",
         "slurm-job-script-generator"
       ]
     },
@@ -813,6 +836,7 @@
         "ontology-mapper",
         "ontology-validator",
         "parameter-optimization",
+        "pbs-job-script-generator",
         "performance-profiling",
         "post-processing",
         "simulation-failure-triage",
