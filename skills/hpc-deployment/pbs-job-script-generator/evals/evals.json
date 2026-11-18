@@ -1,0 +1,73 @@
+{
+  "skill_name": "pbs-job-script-generator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Generate a PBS header for 2 chunks, 4 MPI ranks per chunk and 8 threads per rank, with 32 GB per chunk and 30 minutes in the compute queue.",
+      "expected_output": "The header separates the per-chunk CPU and memory resources from the job-wide walltime.",
+      "assertions": [
+        "Each chunk requests 32 CPUs for four MPI ranks and eight threads per rank.",
+        "Walltime and queue are separate PBS directives."
+      ],
+      "script_checks": [
+        {
+          "description": "Uniform PBS MPI and OpenMP resource request",
+          "cmd": [
+            "scripts/pbs_script_generator.py", "--job-name", "example",
+            "--time", "00:30:00", "--nodes", "2", "--ntasks-per-node", "4",
+            "--cpus-per-task", "8", "--mem-gb", "32", "--queue", "compute", "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {"path": "results.directives", "op": "contains", "value": "#PBS -l select=2:ncpus=32:mpiprocs=4:ompthreads=8:mem=32gb"},
+            {"path": "results.directives", "op": "contains", "value": "#PBS -l walltime=00:30:00"},
+            {"path": "results.directives", "op": "contains", "value": "#PBS -q compute"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Generate a PBS header with one default CPU chunk, no queue override, and a one-hour time limit.",
+      "expected_output": "One CPU, one rank and one thread are requested in a single chunk.",
+      "assertions": ["The scheduler defaults supply the memory and queue."],
+      "script_checks": [
+        {
+          "description": "Default single-chunk PBS request",
+          "cmd": [
+            "scripts/pbs_script_generator.py", "--job-name", "small",
+            "--time", "1:00:00", "--json"
+          ],
+          "expect_exit": 0,
+          "assert": [
+            {
+              "path": "results.directives",
+              "op": "eq",
+              "value": [
+                "#PBS -N small",
+                "#PBS -l select=1:ncpus=1:mpiprocs=1:ompthreads=1",
+                "#PBS -l walltime=01:00:00"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Generate a PBS header with a walltime of 01:72:00.",
+      "expected_output": "The malformed walltime is rejected as invalid.",
+      "assertions": ["The script exits with code 2 for invalid input."],
+      "script_checks": [
+        {
+          "description": "Reject walltime with a minute component above 59",
+          "cmd": [
+            "scripts/pbs_script_generator.py", "--job-name", "bad",
+            "--time", "01:72:00", "--json"
+          ],
+          "expect_exit": 2
+        }
+      ]
+    }
+  ]
+}

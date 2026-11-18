@@ -4,7 +4,7 @@ The full list of skills. For a machine-readable version (with versions, security
 tiers, eval coverage, and bundles) see [`skills_index.json`](../skills_index.json),
 or run `mss list` / `mss index`.
 
-**24 skills** across 8 categories.
+**25 skills** across 8 categories.
 
 ## Core Numerical (`skills/core-numerical/`)
 
@@ -42,6 +42,7 @@ Deployment and job submission tooling for running simulations on HPC systems.
 | Skill | What it does |
 |-------|-------------|
 | `slurm-job-script-generator` | Generate `sbatch` scripts, sanity-check resource requests, and standardize `#SBATCH` directives |
+| `pbs-job-script-generator` | Generate PBS Professional and OpenPBS headers for uniform MPI and OpenMP resources |
 | `hpc-runtime-doctor` | Diagnose module, MPI/OpenMP/GPU, scheduler, scratch, restart, walltime, and resource mismatch issues |
 
 ## Verification & Validation (`skills/verification-validation/`)

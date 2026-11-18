@@ -42,6 +42,7 @@
       "strict": false,
       "skills": [
         "./skills/hpc-deployment/hpc-runtime-doctor",
+        "./skills/hpc-deployment/pbs-job-script-generator",
         "./skills/hpc-deployment/slurm-job-script-generator"
       ]
     },
@@ -147,6 +148,7 @@
         "./skills/ontology/ontology-mapper",
         "./skills/ontology/ontology-validator",
         "./skills/simulation-workflow/parameter-optimization",
+        "./skills/hpc-deployment/pbs-job-script-generator",
         "./skills/simulation-workflow/performance-profiling",
         "./skills/simulation-workflow/post-processing",
         "./skills/robustness/simulation-failure-triage",
